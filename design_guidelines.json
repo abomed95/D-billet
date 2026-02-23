@@ -1,0 +1,120 @@
+{
+  "identity": {
+    "name": "D-Billet Neon",
+    "persona": "E1 - The Electric Nightlife Designer",
+    "vibe": "Immersive, High-Energy, Dark Mode Only, Neon-Drenched",
+    "principles": [
+      "Fusion: Cyberpunk aesthetics meets functional ticketing",
+      "Emotion: Every interaction feels like the start of a party",
+      "Content: Events are heroes; UI is the stage",
+      "Contrast: Deepest blacks vs. blinding neons"
+    ]
+  },
+  "typography": {
+    "headings": {
+      "family": "Unbounded, sans-serif",
+      "weights": ["600", "800"],
+      "usage": "Page titles, Event names, Hero text",
+      "letterSpacing": "tracking-tight"
+    },
+    "body": {
+      "family": "Manrope, sans-serif",
+      "weights": ["300", "400", "500"],
+      "usage": "Descriptions, UI labels, Legal text"
+    },
+    "mono": {
+      "family": "JetBrains Mono, monospace",
+      "weights": ["400"],
+      "usage": "Prices, Countdowns, Ticket IDs, OTP inputs"
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": "#050505",
+      "surface": "#0F0F12",
+      "surface_highlight": "#1A1A20",
+      "primary": "#7C3AED",
+      "primary_glow": "#8B5CF6",
+      "secondary": "#00F0FF",
+      "accent_pink": "#FF0080",
+      "accent_lime": "#CCFF00",
+      "text_primary": "#FFFFFF",
+      "text_secondary": "#A1A1AA",
+      "border": "#27272A"
+    },
+    "gradients": {
+      "primary": "linear-gradient(135deg, #7C3AED 0%, #FF0080 100%)",
+      "glass": "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)",
+      "overlay": "linear-gradient(to top, #050505 0%, transparent 100%)"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "className": "backdrop-blur-xl bg-black/40 border border-white/10",
+      "usage": "Sticky headers, Bottom navigation, Floating action buttons, Toast notifications"
+    },
+    "neon_glow": {
+      "className": "shadow-[0_0_20px_rgba(124,58,237,0.5)]",
+      "usage": "Primary buttons, Active states, Selected filters"
+    },
+    "borders": {
+      "default": "border border-white/10",
+      "active": "border border-primary/50"
+    },
+    "rounded": {
+      "cards": "rounded-2xl",
+      "buttons": "rounded-full",
+      "inputs": "rounded-xl"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-white font-unbounded tracking-wide hover:bg-primary/90 shadow-[0_0_15px_rgba(124,58,237,0.4)] transition-all hover:scale-105 active:scale-95",
+      "secondary": "bg-white/5 text-white border border-white/10 hover:bg-white/10 font-manrope",
+      "ghost": "text-gray-400 hover:text-white hover:bg-white/5"
+    },
+    "cards": {
+      "event": "group relative overflow-hidden rounded-2xl bg-card border border-white/5 hover:border-primary/30 transition-all duration-300",
+      "ticket": "bg-[#111] border-x-2 border-primary/20 relative mask-ticket"
+    },
+    "inputs": {
+      "default": "bg-white/5 border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary/50 placeholder:text-gray-600 h-12"
+    },
+    "navigation": {
+      "bottom_bar": "fixed bottom-4 left-4 right-4 h-16 bg-black/80 backdrop-blur-lg border border-white/10 rounded-full flex items-center justify-around z-50 shadow-2xl"
+    }
+  },
+  "layout_strategies": {
+    "mobile_first": true,
+    "container_padding": "px-4 md:px-8 lg:px-12",
+    "section_spacing": "py-12 md:py-20",
+    "grids": {
+      "events_feed": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
+      "bento_hero": "grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[500px]"
+    }
+  },
+  "image_urls": {
+    "hero_concert": "https://images.unsplash.com/photo-1639323252699-23cd48cccea6?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "nightlife_dj": "https://images.unsplash.com/photo-1625612446042-afd3fe024131?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "festival_stage": "https://images.unsplash.com/photo-1727096857692-e9dadf2bc92e?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "crowd_vibe": "https://images.unsplash.com/photo-1545128485-c400e7702796?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "ticket_bg_pattern": "https://images.unsplash.com/photo-1639323252613-00dd92e6c7d5?crop=entropy&cs=srgb&fm=jpg&q=85"
+  },
+  "instructions_to_main_agent": [
+    "STRICTLY follow the Dark Mode requirement. No white backgrounds.",
+    "Use 'Unbounded' font for all headings to give that distinct modern techno look.",
+    "Implement the 'Bottom Navigation' for mobile views instead of a top hamburger menu for better UX.",
+    "Use the 'sonner' library for toasts (already in ui/sonner.jsx).",
+    "For the 'Countdown', use a monospace font and make it large and red/pink when under 5 minutes.",
+    "Ensure the 'QR Code' on the ticket page is high contrast (White on Black) for scanning reliability.",
+    "Use the 'glass' utility class defined in index.css for overlays.",
+    "For the 'Admin Dashboard', use a dense grid layout but keep the neon accents for active states.",
+    "Legal pages should use a single column layout with generous text spacing for readability."
+  ],
+  "universal_guidelines": [
+    "Do not use generic gradients. Use the specific primary gradient defined in colors.",
+    "Always add hover states to interactive elements.",
+    "Use 'data-testid' for all interactive elements.",
+    "Ensure touch targets are at least 44px for mobile users."
+  ]
+}
