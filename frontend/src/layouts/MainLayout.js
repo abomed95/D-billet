@@ -74,58 +74,22 @@ const MainLayout = () => {
           );
         })}
         
-        {/* Auth/Profile with Dropdown */}
+        {/* Auth/Profile */}
         {user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className={`flex flex-col items-center justify-center w-14 h-full transition-all
-                  ${location.pathname === '/profile' || location.pathname.includes('/admin') || location.pathname.includes('/organizer') 
-                    ? 'text-green-400' : 'text-gray-500 hover:text-white'}`}
-                data-testid="nav-profile"
-              >
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-cyan-500 flex items-center justify-center text-black font-bold text-xs">
-                  {user.full_name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <span className="text-[10px] mt-1">Profil</span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 mb-2">
-              <div className="px-3 py-2">
-                <p className="text-sm font-medium text-white">{user.full_name}</p>
-                <p className="text-xs text-gray-400">{user.email || user.phone}</p>
-                <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs ${
-                  isAdmin ? 'bg-red-500/20 text-red-400' : 
-                  isOrganizer ? 'bg-purple-500/20 text-purple-400' : 
-                  'bg-green-500/20 text-green-400'
-                }`}>
-                  {isAdmin ? 'Admin' : isOrganizer ? 'Organisateur' : 'Client'}
-                </span>
-              </div>
-              <DropdownMenuSeparator />
-              {isAdmin && (
-                <DropdownMenuItem onClick={() => navigate('/admin')}>
-                  <Settings size={16} className="mr-2" />
-                  Dashboard Admin
-                </DropdownMenuItem>
-              )}
-              {isOrganizer && !isAdmin && (
-                <DropdownMenuItem onClick={() => navigate('/organizer')}>
-                  <Settings size={16} className="mr-2" />
-                  Dashboard Organisateur
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => navigate('/my-tickets')}>
-                <Ticket size={16} className="mr-2" />
-                Mes Billets
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-400">
-                <LogOut size={16} className="mr-2" />
-                Déconnexion
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Link
+            to={isAdmin ? '/admin' : isOrganizer ? '/organizer' : '/my-tickets'}
+            className={`flex flex-col items-center justify-center w-14 h-full transition-all
+              ${location.pathname === '/profile' || location.pathname.includes('/admin') || location.pathname.includes('/organizer') 
+                ? 'text-green-400' : 'text-gray-500 hover:text-white'}`}
+            data-testid="nav-profile"
+          >
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-cyan-500 flex items-center justify-center text-black font-bold text-xs">
+              {user.full_name?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <span className="text-[10px] mt-1">
+              {isAdmin ? 'Admin' : isOrganizer ? 'Espace' : 'Profil'}
+            </span>
+          </Link>
         ) : (
           <Link
             to="/auth"
