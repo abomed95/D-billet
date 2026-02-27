@@ -1,21 +1,28 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { DollarSign, Ticket, Calendar, TrendingUp, Users } from 'lucide-react';
+import { DollarSign, Ticket, Calendar, TrendingUp, Wallet, Users } from 'lucide-react';
 import { Skeleton } from '../../components/ui/skeleton';
 import { useAuth } from '../../context/AuthContext';
+import { Button } from '../../components/ui/button';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const OrganizerDashboard = () => {
   const { getAuthHeaders } = useAuth();
   const [stats, setStats] = useState(null);
+  const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [chartPeriod, setChartPeriod] = useState(7);
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 30000); // Refresh every 30s
+    const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [chartPeriod]);
 
   const fetchStats = async () => {
     try {
@@ -30,8 +37,25 @@ const OrganizerDashboard = () => {
     }
   };
 
+  const fetchChartData = async () => {
+    try {
+      const response = await axios.get(`${API}/organizer/sales-chart?days=${chartPeriod}`, {
+        headers: getAuthHeaders()
+      });
+      setChartData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch chart data:', error);
+    }
+  };
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';
+  };
+
+  const formatShortPrice = (price) => {
+    if (price >= 1000000) return (price / 1000000).toFixed(1) + 'M';
+    if (price >= 1000) return (price / 1000).toFixed(0) + 'K';
+    return price.toString();
   };
 
   if (loading) {
@@ -42,42 +66,56 @@ const OrganizerDashboard = () => {
             <Skeleton key={i} className="h-32 rounded-2xl" />
           ))}
         </div>
+        <Skeleton className="h-80 rounded-2xl" />
       </div>
     );
   }
 
   if (!stats) return null;
 
+  const ticketsRemaining = stats.total_tickets_available - stats.total_tickets_sold;
+
   const statCards = [
     {
-      title: 'Ventes Totales',
-      value: formatPrice(stats.total_revenue),
-      icon: DollarSign,
-      color: 'text-green-400',
-      bgColor: 'bg-green-500/20',
-    },
-    {
-      title: 'Commission D-Billet (8%)',
-      value: formatPrice(stats.commission),
-      icon: TrendingUp,
-      color: 'text-yellow-400',
-      bgColor: 'bg-yellow-500/20',
-    },
-    {
       title: 'Billets Vendus',
-      value: `${stats.total_tickets_sold} / ${stats.total_tickets_available}`,
+      value: stats.total_tickets_sold,
+      subtitle: `sur ${stats.total_tickets_available} disponibles`,
       icon: Ticket,
       color: 'text-cyan-400',
       bgColor: 'bg-cyan-500/20',
     },
     {
-      title: 'Mes Événements',
-      value: stats.events_count,
+      title: 'Chiffre d\'Affaires',
+      value: formatPrice(stats.total_revenue),
+      subtitle: 'Total généré',
+      icon: DollarSign,
+      color: 'text-green-400',
+      bgColor: 'bg-green-500/20',
+    },
+    {
+      title: 'Billets Restants',
+      value: ticketsRemaining,
+      subtitle: 'À vendre',
       icon: Calendar,
       color: 'text-purple-400',
       bgColor: 'bg-purple-500/20',
     },
+    {
+      title: 'Solde Net',
+      value: formatPrice(stats.net_revenue),
+      subtitle: 'Après commission 8%',
+      icon: Wallet,
+      color: 'text-yellow-400',
+      bgColor: 'bg-yellow-500/20',
+    },
   ];
+
+  // Calculate chart dimensions
+  const chartHeight = 200;
+  const chartWidth = 100;
+  
+  const maxRevenue = chartData ? Math.max(...chartData.data.map(d => d.revenue), 1) : 1;
+  const maxTickets = chartData ? Math.max(...chartData.data.map(d => d.tickets), 1) : 1;
 
   return (
     <div className="space-y-8">
@@ -86,22 +124,159 @@ const OrganizerDashboard = () => {
         <h1 className="font-unbounded font-bold text-2xl md:text-3xl text-white mb-2">
           Tableau de Bord
         </h1>
-        <p className="text-gray-400">Vos statistiques en temps réel</p>
+        <p className="text-gray-400">Vue d'ensemble de vos ventes en temps réel</p>
       </div>
 
-      {/* Stats Cards */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, index) => (
-          <div key={index} className="glass p-6 rounded-xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
-                <stat.icon className={stat.color} size={24} />
+          <div key={index} className="glass p-5 rounded-xl" data-testid={`stat-card-${index}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className={`w-11 h-11 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
+                <stat.icon className={stat.color} size={22} />
               </div>
             </div>
             <p className="text-gray-400 text-sm mb-1">{stat.title}</p>
-            <p className="font-mono font-bold text-2xl text-white">{stat.value}</p>
+            <p className="font-mono font-bold text-xl text-white">{stat.value}</p>
+            <p className="text-gray-500 text-xs mt-1">{stat.subtitle}</p>
           </div>
         ))}
+      </div>
+
+      {/* Sales Chart */}
+      <div className="glass p-6 rounded-xl">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="font-unbounded font-semibold text-lg text-white">
+              Courbe des Ventes
+            </h3>
+            <p className="text-gray-500 text-sm">Évolution sur les {chartPeriod} derniers jours</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={chartPeriod === 7 ? "default" : "outline"}
+              size="sm"
+              onClick={() => setChartPeriod(7)}
+              className={chartPeriod === 7 ? "bg-green-500 text-black" : ""}
+            >
+              7 jours
+            </Button>
+            <Button
+              variant={chartPeriod === 30 ? "default" : "outline"}
+              size="sm"
+              onClick={() => setChartPeriod(30)}
+              className={chartPeriod === 30 ? "bg-green-500 text-black" : ""}
+            >
+              30 jours
+            </Button>
+          </div>
+        </div>
+
+        {chartData && chartData.data.length > 0 ? (
+          <div className="relative">
+            {/* Chart Container */}
+            <div className="flex items-end justify-between gap-1 h-[200px] border-b border-l border-white/10 pl-12 pb-8 relative">
+              {/* Y-axis labels */}
+              <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-gray-500">
+                <span>{formatShortPrice(maxRevenue)}</span>
+                <span>{formatShortPrice(maxRevenue / 2)}</span>
+                <span>0</span>
+              </div>
+
+              {/* Data points and line */}
+              <svg className="absolute inset-0 ml-12 mb-8" style={{ overflow: 'visible' }}>
+                {/* Gradient definition */}
+                <defs>
+                  <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#00FF94" />
+                    <stop offset="100%" stopColor="#22D3EE" />
+                  </linearGradient>
+                  <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#00FF94" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#00FF94" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+
+                {/* Area fill */}
+                <path
+                  d={`
+                    M 0 ${chartHeight}
+                    ${chartData.data.map((d, i) => {
+                      const x = (i / (chartData.data.length - 1)) * chartWidth;
+                      const y = chartHeight - (d.revenue / maxRevenue) * chartHeight;
+                      return `L ${x}% ${y}`;
+                    }).join(' ')}
+                    L 100% ${chartHeight}
+                    Z
+                  `}
+                  fill="url(#areaGradient)"
+                />
+
+                {/* Line */}
+                <path
+                  d={chartData.data.map((d, i) => {
+                    const x = (i / (chartData.data.length - 1)) * chartWidth;
+                    const y = chartHeight - (d.revenue / maxRevenue) * chartHeight;
+                    return `${i === 0 ? 'M' : 'L'} ${x}% ${y}`;
+                  }).join(' ')}
+                  fill="none"
+                  stroke="url(#lineGradient)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+
+                {/* Data points */}
+                {chartData.data.map((d, i) => {
+                  const x = (i / (chartData.data.length - 1)) * chartWidth;
+                  const y = chartHeight - (d.revenue / maxRevenue) * chartHeight;
+                  return (
+                    <g key={i}>
+                      <circle
+                        cx={`${x}%`}
+                        cy={y}
+                        r="5"
+                        fill="#0A0A0F"
+                        stroke="#00FF94"
+                        strokeWidth="2"
+                      />
+                      {/* Hover tooltip area */}
+                      <title>{`${d.date}: ${formatPrice(d.revenue)} (${d.tickets} billets)`}</title>
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {/* X-axis labels */}
+              <div className="absolute bottom-0 left-12 right-0 flex justify-between text-xs text-gray-500 transform translate-y-6">
+                {chartData.data.filter((_, i) => {
+                  const step = chartPeriod === 7 ? 1 : 5;
+                  return i % step === 0 || i === chartData.data.length - 1;
+                }).map((d, i) => (
+                  <span key={i}>{d.date.slice(5)}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Chart Legend */}
+            <div className="flex items-center justify-center gap-6 mt-8 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                <span className="text-gray-400">Revenus</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users size={14} className="text-cyan-400" />
+                <span className="text-gray-400">
+                  {chartData.data.reduce((sum, d) => sum + d.tickets, 0)} billets cette période
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="h-[200px] flex items-center justify-center text-gray-500">
+            Aucune donnée de ventes pour cette période
+          </div>
+        )}
       </div>
 
       {/* Events Progress */}
@@ -110,27 +285,33 @@ const OrganizerDashboard = () => {
           Progression des Ventes par Événement
         </h3>
         <div className="space-y-4">
-          {stats.events?.map((event) => (
-            <div key={event.id} className="p-4 rounded-xl bg-white/5">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="text-white font-medium">{event.title}</p>
-                  <p className="text-gray-500 text-sm">{event.date}</p>
+          {stats.events?.length > 0 ? (
+            stats.events.map((event) => (
+              <div key={event.id} className="p-4 rounded-xl bg-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-white font-medium">{event.title}</p>
+                    <p className="text-gray-500 text-sm">{event.date}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono font-bold text-green-400">{formatPrice(event.revenue)}</p>
+                    <p className="text-gray-500 text-sm">{event.sold} / {event.total} vendus</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-mono font-bold text-green-400">{formatPrice(event.revenue)}</p>
-                  <p className="text-gray-500 text-sm">{event.sold} / {event.total} vendus</p>
+                <div className="w-full bg-white/10 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-green-500 to-cyan-500 h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${event.percentage}%` }}
+                  />
                 </div>
+                <p className="text-right text-xs text-gray-500 mt-1">{event.percentage}%</p>
               </div>
-              <div className="w-full bg-white/10 rounded-full h-3">
-                <div 
-                  className="bg-green-500 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${event.percentage}%` }}
-                />
-              </div>
-              <p className="text-right text-xs text-gray-500 mt-1">{event.percentage}%</p>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Aucun événement. Créez votre premier événement!
             </div>
-          ))}
+          )}
         </div>
       </div>
 
