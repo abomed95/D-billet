@@ -2045,7 +2045,7 @@ async def get_platform_settings(admin: dict = Depends(get_admin_user)):
     
     if not settings:
         # Default settings
-        settings = {
+        default_settings = {
             "type": "platform",
             "commission_rate": 8.0,
             "min_withdrawal": 1000,
@@ -2062,7 +2062,8 @@ async def get_platform_settings(admin: dict = Depends(get_admin_user)):
             "banner_text": "",
             "banner_active": False
         }
-        await db.settings.insert_one(settings)
+        await db.settings.insert_one(default_settings)
+        settings = await db.settings.find_one({"type": "platform"}, {"_id": 0})
     
     return settings
 
