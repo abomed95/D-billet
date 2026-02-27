@@ -175,7 +175,7 @@ const OrganizerDashboard = () => {
         {chartData && chartData.data.length > 0 ? (
           <div className="relative">
             {/* Chart Container */}
-            <div className="flex items-end justify-between gap-1 h-[200px] border-b border-l border-white/10 pl-12 pb-8 relative">
+            <div className="h-[220px] border-b border-l border-white/10 pl-12 pb-8 relative">
               {/* Y-axis labels */}
               <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-gray-500">
                 <span>{formatShortPrice(maxRevenue)}</span>
@@ -183,9 +183,13 @@ const OrganizerDashboard = () => {
                 <span>0</span>
               </div>
 
-              {/* Data points and line */}
-              <svg className="absolute inset-0 ml-12 mb-8" style={{ overflow: 'visible' }}>
-                {/* Gradient definition */}
+              {/* SVG Chart */}
+              <svg 
+                className="absolute left-12 top-0 right-0 bottom-8" 
+                viewBox="0 0 800 180"
+                preserveAspectRatio="none"
+              >
+                {/* Gradient definitions */}
                 <defs>
                   <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#00FF94" />
@@ -199,48 +203,44 @@ const OrganizerDashboard = () => {
 
                 {/* Area fill */}
                 <path
-                  d={`
-                    M 0 ${chartHeight}
-                    ${chartData.data.map((d, i) => {
-                      const x = (i / (chartData.data.length - 1)) * chartWidth;
-                      const y = chartHeight - (d.revenue / maxRevenue) * chartHeight;
-                      return `L ${x}% ${y}`;
-                    }).join(' ')}
-                    L 100% ${chartHeight}
-                    Z
-                  `}
+                  d={`M 0 180 ${chartData.data.map((d, i) => {
+                    const x = chartData.data.length === 1 ? 400 : (i / (chartData.data.length - 1)) * 800;
+                    const y = 180 - (d.revenue / maxRevenue) * 160;
+                    return `L ${x} ${y}`;
+                  }).join(' ')} L 800 180 Z`}
                   fill="url(#areaGradient)"
                 />
 
                 {/* Line */}
                 <path
                   d={chartData.data.map((d, i) => {
-                    const x = (i / (chartData.data.length - 1)) * chartWidth;
-                    const y = chartHeight - (d.revenue / maxRevenue) * chartHeight;
-                    return `${i === 0 ? 'M' : 'L'} ${x}% ${y}`;
+                    const x = chartData.data.length === 1 ? 400 : (i / (chartData.data.length - 1)) * 800;
+                    const y = 180 - (d.revenue / maxRevenue) * 160;
+                    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
                   }).join(' ')}
                   fill="none"
                   stroke="url(#lineGradient)"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
                 />
 
                 {/* Data points */}
                 {chartData.data.map((d, i) => {
-                  const x = (i / (chartData.data.length - 1)) * chartWidth;
-                  const y = chartHeight - (d.revenue / maxRevenue) * chartHeight;
+                  const x = chartData.data.length === 1 ? 400 : (i / (chartData.data.length - 1)) * 800;
+                  const y = 180 - (d.revenue / maxRevenue) * 160;
                   return (
                     <g key={i}>
                       <circle
-                        cx={`${x}%`}
+                        cx={x}
                         cy={y}
-                        r="5"
+                        r="6"
                         fill="#0A0A0F"
                         stroke="#00FF94"
                         strokeWidth="2"
+                        vectorEffect="non-scaling-stroke"
                       />
-                      {/* Hover tooltip area */}
                       <title>{`${d.date}: ${formatPrice(d.revenue)} (${d.tickets} billets)`}</title>
                     </g>
                   );
@@ -250,7 +250,7 @@ const OrganizerDashboard = () => {
               {/* X-axis labels */}
               <div className="absolute bottom-0 left-12 right-0 flex justify-between text-xs text-gray-500 transform translate-y-6">
                 {chartData.data.filter((_, i) => {
-                  const step = chartPeriod === 7 ? 1 : 5;
+                  const step = chartPeriod === 7 ? 1 : Math.ceil(chartData.data.length / 6);
                   return i % step === 0 || i === chartData.data.length - 1;
                 }).map((d, i) => (
                   <span key={i}>{d.date.slice(5)}</span>
