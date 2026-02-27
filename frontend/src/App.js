@@ -22,6 +22,8 @@ import AdminOrganizers from "./pages/admin/AdminOrganizers";
 import OrganizerDashboard from "./pages/organizer/OrganizerDashboard";
 import OrganizerEvents from "./pages/organizer/OrganizerEvents";
 import OrganizerPromoCodes from "./pages/organizer/OrganizerPromoCodes";
+import OrganizerParticipants from "./pages/organizer/OrganizerParticipants";
+import OrganizerFinances from "./pages/organizer/OrganizerFinances";
 
 // Layout
 import MainLayout from "./layouts/MainLayout";
@@ -86,7 +88,9 @@ function AppRoutes() {
       <Route path="/organizer" element={<ProtectedRoute organizerOnly><OrganizerLayout /></ProtectedRoute>}>
         <Route index element={<OrganizerDashboard />} />
         <Route path="events" element={<OrganizerEvents />} />
+        <Route path="participants" element={<OrganizerParticipants />} />
         <Route path="promo-codes" element={<OrganizerPromoCodes />} />
+        <Route path="finances" element={<OrganizerFinances />} />
       </Route>
       
       {/* Admin Routes */}
