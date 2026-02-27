@@ -1,20 +1,12 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { Home, Ticket, ShoppingCart, User, Train, Ship, LogOut, Settings } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu';
+import { Home, Ticket, ShoppingCart, User, Train, Ship } from 'lucide-react';
 
 const MainLayout = () => {
-  const { user, logout, isAdmin, isOrganizer } = useAuth();
+  const { user, isAdmin, isOrganizer } = useAuth();
   const { cartCount } = useCart();
   const location = useLocation();
-  const navigate = useNavigate();
 
   const navItems = [
     { path: '/', icon: Home, label: 'Accueil' },
@@ -23,23 +15,6 @@ const MainLayout = () => {
     { path: '/my-tickets', icon: Ticket, label: 'Billets', auth: true },
     { path: '/cart', icon: ShoppingCart, label: 'Panier', auth: true, badge: cartCount },
   ];
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  const handleProfileClick = () => {
-    if (!user) {
-      navigate('/auth');
-    } else if (isAdmin) {
-      navigate('/admin');
-    } else if (isOrganizer) {
-      navigate('/organizer');
-    } else {
-      navigate('/profile');
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#050505]">
