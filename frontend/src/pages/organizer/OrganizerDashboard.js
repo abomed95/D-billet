@@ -110,12 +110,7 @@ const OrganizerDashboard = () => {
     },
   ];
 
-  // Calculate chart dimensions
-  const chartHeight = 200;
-  const chartWidth = 100;
-  
   const maxRevenue = chartData ? Math.max(...chartData.data.map(d => d.revenue), 1) : 1;
-  const maxTickets = chartData ? Math.max(...chartData.data.map(d => d.tickets), 1) : 1;
 
   return (
     <div className="space-y-8">
