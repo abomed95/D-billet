@@ -1725,6 +1725,511 @@ async def admin_scan_ticket(qr_data: str, admin: dict = Depends(get_admin_user))
         }
     }
 
+# ============== ADMIN DASHBOARD ALERTS ==============
+
+@api_router.get("/admin/alerts")
+async def get_admin_alerts(admin: dict = Depends(get_admin_user)):
+    """Get urgent alerts for admin dashboard"""
+    # Pending event approvals
+    pending_events = await db.events.count_documents({"status": "pending"})
+    
+    # Pending withdrawal requests
+    pending_withdrawals = await db.withdrawals.count_documents({"status": "pending"})
+    pending_withdrawals_amount = 0
+    withdrawals = await db.withdrawals.find({"status": "pending"}, {"amount": 1, "_id": 0}).to_list(100)
+    pending_withdrawals_amount = sum(w["amount"] for w in withdrawals)
+    
+    # Pending refund requests
+    pending_refunds = await db.refunds.count_documents({"status": "pending"})
+    
+    return {
+        "pending_events": pending_events,
+        "pending_withdrawals": pending_withdrawals,
+        "pending_withdrawals_amount": pending_withdrawals_amount,
+        "pending_refunds": pending_refunds,
+        "total_alerts": pending_events + pending_withdrawals + pending_refunds
+    }
+
+# ============== ADMIN EVENT MANAGEMENT ==============
+
+@api_router.put("/admin/events/{event_id}/status")
+async def update_event_status(
+    event_id: str, 
+    status: str = Query(..., regex="^(approved|pending|blocked)$"),
+    admin: dict = Depends(get_admin_user)
+):
+    """Approve, block or set event to pending"""
+    event = await db.events.find_one({"id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    await db.events.update_one(
+        {"id": event_id}, 
+        {"$set": {"status": status, "status_updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": f"Événement {status}", "event_id": event_id, "status": status}
+
+@api_router.put("/admin/events/{event_id}/featured")
+async def toggle_event_featured(
+    event_id: str,
+    featured: bool,
+    admin: dict = Depends(get_admin_user)
+):
+    """Set event as featured (À la une) on homepage"""
+    event = await db.events.find_one({"id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    await db.events.update_one({"id": event_id}, {"$set": {"featured": featured}})
+    
+    return {"message": "Événement mis à la une" if featured else "Événement retiré de la une", "event_id": event_id}
+
+@api_router.get("/admin/events")
+async def get_all_events_admin(admin: dict = Depends(get_admin_user)):
+    """Get all events with admin details"""
+    events = await db.events.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    result = []
+    for event in events:
+        # Get organizer info
+        organizer = None
+        if event.get("organizer_id"):
+            organizer = await db.users.find_one({"id": event["organizer_id"]}, {"_id": 0, "hashed_password": 0})
+        
+        # Calculate tickets sold
+        total = sum(tt["quantity"] for tt in event.get("ticket_types", []))
+        sold = sum(tt.get("sold", 0) for tt in event.get("ticket_types", []))
+        revenue = sum(tt.get("sold", 0) * tt["price"] for tt in event.get("ticket_types", []))
+        
+        result.append({
+            **event,
+            "total_tickets": total,
+            "sold_tickets": sold,
+            "revenue": revenue,
+            "status": event.get("status", "approved"),
+            "featured": event.get("featured", False),
+            "organizer": organizer
+        })
+    
+    return result
+
+# ============== ADMIN USER MANAGEMENT ==============
+
+@api_router.get("/admin/users")
+async def get_all_users(
+    admin: dict = Depends(get_admin_user),
+    role: Optional[str] = None,
+    search: Optional[str] = None
+):
+    """Get all users with filters"""
+    query = {}
+    if role:
+        query["role"] = role
+    
+    users = await db.users.find(query, {"_id": 0, "hashed_password": 0}).sort("created_at", -1).to_list(1000)
+    
+    result = []
+    for user in users:
+        # Get user stats
+        tickets_count = await db.tickets.count_documents({"user_id": user["id"]})
+        tickets_total = 0
+        user_tickets = await db.tickets.find({"user_id": user["id"]}, {"price": 1, "_id": 0}).to_list(1000)
+        tickets_total = sum(t["price"] for t in user_tickets)
+        
+        user_data = {
+            **user,
+            "tickets_purchased": tickets_count,
+            "total_spent": tickets_total
+        }
+        
+        # Apply search filter
+        if search:
+            search_lower = search.lower()
+            if not (
+                search_lower in user.get("full_name", "").lower() or
+                search_lower in user.get("email", "").lower() or
+                search_lower in user.get("phone", "").lower() or
+                search_lower in user.get("company_name", "").lower()
+            ):
+                continue
+        
+        result.append(user_data)
+    
+    return result
+
+@api_router.get("/admin/users/{user_id}")
+async def get_user_detail(user_id: str, admin: dict = Depends(get_admin_user)):
+    """Get detailed user info with purchase history"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    # Get purchase history
+    tickets = await db.tickets.find({"user_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Get events if organizer
+    events = []
+    if user.get("role") == "organizer":
+        events = await db.events.find({"organizer_id": user_id}, {"_id": 0}).to_list(100)
+    
+    return {
+        **user,
+        "purchase_history": tickets,
+        "events": events
+    }
+
+@api_router.put("/admin/users/{user_id}/commission")
+async def set_custom_commission(
+    user_id: str,
+    commission_rate: float = Query(..., ge=0, le=50),
+    admin: dict = Depends(get_admin_user)
+):
+    """Set custom commission rate for an organizer"""
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    if user.get("role") != "organizer":
+        raise HTTPException(status_code=400, detail="Seuls les organisateurs peuvent avoir une commission personnalisée")
+    
+    await db.users.update_one(
+        {"id": user_id}, 
+        {"$set": {"custom_commission": commission_rate}}
+    )
+    
+    return {"message": f"Commission personnalisée définie à {commission_rate}%", "user_id": user_id}
+
+# ============== ADMIN TRANSACTIONS ==============
+
+@api_router.get("/admin/transactions")
+async def get_all_transactions(
+    admin: dict = Depends(get_admin_user),
+    payment_method: Optional[str] = None,
+    days: int = 30
+):
+    """Get all transactions/payments"""
+    start_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    
+    query = {"created_at": {"$gte": start_date}}
+    if payment_method:
+        query["payment_method"] = payment_method
+    
+    tickets = await db.tickets.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Enrich with user info
+    transactions = []
+    for ticket in tickets:
+        user = await db.users.find_one({"id": ticket["user_id"]}, {"_id": 0, "hashed_password": 0, "full_name": 1, "email": 1})
+        transactions.append({
+            "id": ticket["id"],
+            "type": "ticket_purchase",
+            "amount": ticket["price"],
+            "payment_method": ticket.get("payment_method", "unknown"),
+            "event_title": ticket["event_title"],
+            "ticket_type": ticket.get("ticket_type", "Standard"),
+            "buyer_name": user.get("full_name") if user else ticket.get("passenger_name", "Inconnu"),
+            "buyer_email": user.get("email") if user else None,
+            "status": ticket["status"],
+            "created_at": ticket["created_at"]
+        })
+    
+    # Get totals by payment method
+    totals = {}
+    for t in transactions:
+        method = t["payment_method"]
+        if method not in totals:
+            totals[method] = {"count": 0, "amount": 0}
+        totals[method]["count"] += 1
+        totals[method]["amount"] += t["amount"]
+    
+    return {
+        "transactions": transactions,
+        "totals_by_method": totals,
+        "total_count": len(transactions),
+        "total_amount": sum(t["amount"] for t in transactions)
+    }
+
+# ============== ADMIN PAYOUTS (Withdrawal Management) ==============
+
+@api_router.get("/admin/payouts")
+async def get_all_payouts(
+    admin: dict = Depends(get_admin_user),
+    status: Optional[str] = None
+):
+    """Get all withdrawal requests"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    withdrawals = await db.withdrawals.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Enrich with organizer info
+    result = []
+    for w in withdrawals:
+        organizer = await db.users.find_one({"id": w["organizer_id"]}, {"_id": 0, "hashed_password": 0})
+        result.append({
+            **w,
+            "organizer": organizer
+        })
+    
+    return result
+
+@api_router.put("/admin/payouts/{payout_id}/status")
+async def update_payout_status(
+    payout_id: str,
+    status: str = Query(..., regex="^(pending|processing|completed|rejected)$"),
+    admin: dict = Depends(get_admin_user),
+    notes: Optional[str] = None
+):
+    """Approve or reject a withdrawal request"""
+    withdrawal = await db.withdrawals.find_one({"id": payout_id})
+    if not withdrawal:
+        raise HTTPException(status_code=404, detail="Demande de retrait non trouvée")
+    
+    update_data = {
+        "status": status,
+        "processed_by": admin["id"],
+        "processed_at": datetime.now(timezone.utc).isoformat()
+    }
+    if notes:
+        update_data["admin_notes"] = notes
+    
+    await db.withdrawals.update_one({"id": payout_id}, {"$set": update_data})
+    
+    return {"message": f"Statut mis à jour: {status}", "payout_id": payout_id}
+
+# ============== ADMIN REFUNDS ==============
+
+@api_router.get("/admin/refunds")
+async def get_refund_requests(admin: dict = Depends(get_admin_user)):
+    """Get all refund requests"""
+    refunds = await db.refunds.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return refunds
+
+@api_router.post("/admin/refunds")
+async def create_refund(
+    ticket_id: str,
+    reason: str,
+    admin: dict = Depends(get_admin_user)
+):
+    """Create a refund for a ticket"""
+    ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Billet non trouvé")
+    
+    refund_id = str(uuid.uuid4())
+    refund_doc = {
+        "id": refund_id,
+        "ticket_id": ticket_id,
+        "user_id": ticket["user_id"],
+        "amount": ticket["price"],
+        "reason": reason,
+        "status": "completed",
+        "processed_by": admin["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.refunds.insert_one(refund_doc)
+    
+    # Mark ticket as refunded
+    await db.tickets.update_one({"id": ticket_id}, {"$set": {"status": "refunded"}})
+    
+    return {"message": "Remboursement effectué", "refund_id": refund_id, "amount": ticket["price"]}
+
+# ============== ADMIN SETTINGS ==============
+
+@api_router.get("/admin/settings")
+async def get_platform_settings(admin: dict = Depends(get_admin_user)):
+    """Get platform settings"""
+    settings = await db.settings.find_one({"type": "platform"}, {"_id": 0})
+    
+    if not settings:
+        # Default settings
+        settings = {
+            "type": "platform",
+            "commission_rate": 8.0,
+            "min_withdrawal": 1000,
+            "categories": [
+                {"id": "cinema", "name": "Cinéma", "color": "#FF0055", "active": True},
+                {"id": "football", "name": "Football", "color": "#00FF94", "active": True},
+                {"id": "concerts", "name": "Concerts", "color": "#7000FF", "active": True},
+                {"id": "conferences", "name": "Conférences", "color": "#FF5C00", "active": True},
+                {"id": "theatre", "name": "Théâtre", "color": "#00D4FF", "active": True},
+                {"id": "formations", "name": "Formations", "color": "#FFD700", "active": True}
+            ],
+            "terms_content": "",
+            "legal_content": "",
+            "banner_text": "",
+            "banner_active": False
+        }
+        await db.settings.insert_one(settings)
+    
+    return settings
+
+@api_router.put("/admin/settings")
+async def update_platform_settings(
+    admin: dict = Depends(get_admin_user),
+    commission_rate: Optional[float] = None,
+    min_withdrawal: Optional[int] = None,
+    terms_content: Optional[str] = None,
+    legal_content: Optional[str] = None,
+    banner_text: Optional[str] = None,
+    banner_active: Optional[bool] = None
+):
+    """Update platform settings"""
+    update_data = {}
+    if commission_rate is not None:
+        update_data["commission_rate"] = commission_rate
+    if min_withdrawal is not None:
+        update_data["min_withdrawal"] = min_withdrawal
+    if terms_content is not None:
+        update_data["terms_content"] = terms_content
+    if legal_content is not None:
+        update_data["legal_content"] = legal_content
+    if banner_text is not None:
+        update_data["banner_text"] = banner_text
+    if banner_active is not None:
+        update_data["banner_active"] = banner_active
+    
+    if update_data:
+        await db.settings.update_one(
+            {"type": "platform"},
+            {"$set": update_data},
+            upsert=True
+        )
+    
+    return await get_platform_settings(admin)
+
+@api_router.post("/admin/settings/categories")
+async def add_category(
+    name: str,
+    color: str = "#00FF94",
+    admin: dict = Depends(get_admin_user)
+):
+    """Add a new event category"""
+    cat_id = name.lower().replace(" ", "_")
+    
+    await db.settings.update_one(
+        {"type": "platform"},
+        {"$push": {"categories": {"id": cat_id, "name": name, "color": color, "active": True}}},
+        upsert=True
+    )
+    
+    return {"message": "Catégorie ajoutée", "id": cat_id}
+
+@api_router.delete("/admin/settings/categories/{cat_id}")
+async def delete_category(cat_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete an event category"""
+    await db.settings.update_one(
+        {"type": "platform"},
+        {"$pull": {"categories": {"id": cat_id}}}
+    )
+    return {"message": "Catégorie supprimée"}
+
+# ============== ADMIN TRANSPORT SETTINGS (Train & Ferry) ==============
+
+@api_router.get("/admin/transport/settings")
+async def get_transport_settings(admin: dict = Depends(get_admin_user)):
+    """Get train and ferry settings"""
+    settings = await db.settings.find_one({"type": "transport"}, {"_id": 0})
+    
+    if not settings:
+        settings = {
+            "type": "transport",
+            "train": {
+                "active": True,
+                "routes": [
+                    {"from": "Nagad", "to": "Holl-Holl", "price": 400, "duration": "1h30"},
+                    {"from": "Nagad", "to": "Ali-Sabieh", "price": 800, "duration": "3h"},
+                    {"from": "Nagad", "to": "Dire-Dawa", "price": 3200, "duration": "8h"},
+                    {"from": "Ali-Sabieh", "to": "Holl-Holl", "price": 400, "duration": "1h30"},
+                    {"from": "Ali-Sabieh", "to": "Nagad", "price": 800, "duration": "3h"}
+                ],
+                "schedule": {
+                    "even_days": {"departure": "Nagad", "destinations": ["Holl-Holl", "Ali-Sabieh", "Dire-Dawa"]},
+                    "odd_days": {"departure": "Ali-Sabieh", "destinations": ["Holl-Holl", "Nagad"]},
+                    "first_of_month": "holiday"
+                },
+                "departure_time": "06:00"
+            },
+            "ferry": {
+                "active": True,
+                "routes": [
+                    {"from": "Djibouti", "to": "Tadjoura", "price": 700, "duration": "2h30"},
+                    {"from": "Djibouti", "to": "Obock", "price": 700, "duration": "3h"},
+                    {"from": "Tadjoura", "to": "Djibouti", "price": 700, "duration": "2h30"},
+                    {"from": "Obock", "to": "Djibouti", "price": 700, "duration": "3h"}
+                ],
+                "schedule": {
+                    "tuesday": "Tadjoura",
+                    "wednesday": "Obock",
+                    "thursday": "Tadjoura",
+                    "friday": "Tadjoura",
+                    "saturday": "Tadjoura",
+                    "sunday": "Obock",
+                    "monday": "closed"
+                },
+                "departure_time": "08:00",
+                "return_time": "12:00"
+            }
+        }
+        await db.settings.insert_one(settings)
+    
+    return settings
+
+@api_router.put("/admin/transport/train")
+async def update_train_settings(
+    admin: dict = Depends(get_admin_user),
+    active: Optional[bool] = None,
+    departure_time: Optional[str] = None,
+    routes: Optional[List[dict]] = None
+):
+    """Update train settings"""
+    update_data = {}
+    if active is not None:
+        update_data["train.active"] = active
+    if departure_time:
+        update_data["train.departure_time"] = departure_time
+    if routes:
+        update_data["train.routes"] = routes
+    
+    if update_data:
+        await db.settings.update_one(
+            {"type": "transport"},
+            {"$set": update_data},
+            upsert=True
+        )
+    
+    return await get_transport_settings(admin)
+
+@api_router.put("/admin/transport/ferry")
+async def update_ferry_settings(
+    admin: dict = Depends(get_admin_user),
+    active: Optional[bool] = None,
+    departure_time: Optional[str] = None,
+    return_time: Optional[str] = None,
+    routes: Optional[List[dict]] = None
+):
+    """Update ferry settings"""
+    update_data = {}
+    if active is not None:
+        update_data["ferry.active"] = active
+    if departure_time:
+        update_data["ferry.departure_time"] = departure_time
+    if return_time:
+        update_data["ferry.return_time"] = return_time
+    if routes:
+        update_data["ferry.routes"] = routes
+    
+    if update_data:
+        await db.settings.update_one(
+            {"type": "transport"},
+            {"$set": update_data},
+            upsert=True
+        )
+    
+    return await get_transport_settings(admin)
+
 # ============== TESTIMONIALS & NEWS ==============
 
 @api_router.get("/testimonials")
