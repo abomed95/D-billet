@@ -19,6 +19,11 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminEvents from "./pages/admin/AdminEvents";
 import AdminScanner from "./pages/admin/AdminScanner";
 import AdminOrganizers from "./pages/admin/AdminOrganizers";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminPayouts from "./pages/admin/AdminPayouts";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminTransport from "./pages/admin/AdminTransport";
 import OrganizerDashboard from "./pages/organizer/OrganizerDashboard";
 import OrganizerEvents from "./pages/organizer/OrganizerEvents";
 import OrganizerPromoCodes from "./pages/organizer/OrganizerPromoCodes";
@@ -97,6 +102,11 @@ function AppRoutes() {
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="events" element={<AdminEvents />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="transactions" element={<AdminTransactions />} />
+        <Route path="payouts" element={<AdminPayouts />} />
+        <Route path="settings" element={<AdminSettings />} />
+        <Route path="transport" element={<AdminTransport />} />
         <Route path="scanner" element={<AdminScanner />} />
         <Route path="organizers" element={<AdminOrganizers />} />
       </Route>
