@@ -1253,6 +1253,241 @@ async def get_organizer_events(user: dict = Depends(get_organizer_user)):
     
     return result
 
+# ============== ORGANIZER PARTICIPANTS (GUESTLIST) ==============
+
+@api_router.get("/organizer/participants")
+async def get_organizer_participants(
+    user: dict = Depends(get_organizer_user),
+    event_id: Optional[str] = None,
+    search: Optional[str] = None
+):
+    """Get all participants (ticket buyers) for organizer's events"""
+    # Get organizer's events
+    events_query = {} if user.get("role") == "admin" else {"organizer_id": user["id"]}
+    events = await db.events.find(events_query, {"id": 1, "_id": 0}).to_list(100)
+    event_ids = [e["id"] for e in events]
+    
+    # Build tickets query
+    tickets_query = {"event_id": {"$in": event_ids}}
+    if event_id:
+        tickets_query["event_id"] = event_id
+    
+    tickets = await db.tickets.find(tickets_query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Enrich with user info and filter by search
+    participants = []
+    for ticket in tickets:
+        user_doc = await db.users.find_one({"id": ticket["user_id"]}, {"_id": 0, "hashed_password": 0})
+        
+        participant = {
+            "ticket_id": ticket["id"],
+            "event_id": ticket["event_id"],
+            "event_title": ticket["event_title"],
+            "event_date": ticket["event_date"],
+            "ticket_type": ticket.get("ticket_type", "Standard"),
+            "price": ticket["price"],
+            "status": ticket["status"],
+            "purchased_at": ticket["created_at"],
+            "buyer_name": ticket.get("passenger_name") or (user_doc["full_name"] if user_doc else "Inconnu"),
+            "buyer_email": user_doc.get("email") if user_doc else None,
+            "buyer_phone": ticket.get("passenger_phone") or (user_doc.get("phone") if user_doc else None),
+            "passenger_id": ticket.get("passenger_id")
+        }
+        
+        # Apply search filter
+        if search:
+            search_lower = search.lower()
+            if not (
+                search_lower in participant["buyer_name"].lower() or
+                (participant["buyer_email"] and search_lower in participant["buyer_email"].lower()) or
+                (participant["buyer_phone"] and search_lower in participant["buyer_phone"]) or
+                search_lower in participant["event_title"].lower()
+            ):
+                continue
+        
+        participants.append(participant)
+    
+    return {
+        "total": len(participants),
+        "participants": participants
+    }
+
+@api_router.get("/organizer/participants/export")
+async def export_participants_csv(
+    user: dict = Depends(get_organizer_user),
+    event_id: Optional[str] = None
+):
+    """Export participants list as CSV"""
+    import csv
+    from io import StringIO
+    
+    # Get participants
+    events_query = {} if user.get("role") == "admin" else {"organizer_id": user["id"]}
+    events = await db.events.find(events_query, {"id": 1, "_id": 0}).to_list(100)
+    event_ids = [e["id"] for e in events]
+    
+    tickets_query = {"event_id": {"$in": event_ids}}
+    if event_id:
+        tickets_query["event_id"] = event_id
+    
+    tickets = await db.tickets.find(tickets_query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Create CSV
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Nom", "Email", "Téléphone", "Événement", "Date", "Type Billet", "Prix (DJF)", "Statut", "Date Achat"])
+    
+    for ticket in tickets:
+        user_doc = await db.users.find_one({"id": ticket["user_id"]}, {"_id": 0})
+        writer.writerow([
+            ticket.get("passenger_name") or (user_doc["full_name"] if user_doc else "Inconnu"),
+            user_doc.get("email") if user_doc else "",
+            ticket.get("passenger_phone") or (user_doc.get("phone") if user_doc else ""),
+            ticket["event_title"],
+            ticket["event_date"],
+            ticket.get("ticket_type", "Standard"),
+            ticket["price"],
+            "Utilisé" if ticket["status"] == "used" else "Valide",
+            ticket["created_at"][:10]
+        ])
+    
+    output.seek(0)
+    
+    from fastapi.responses import Response
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=participants-{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
+
+# ============== ORGANIZER SALES CHART DATA ==============
+
+@api_router.get("/organizer/sales-chart")
+async def get_sales_chart_data(
+    user: dict = Depends(get_organizer_user),
+    days: int = 7
+):
+    """Get daily sales data for chart (last N days)"""
+    # Get organizer's events
+    events_query = {} if user.get("role") == "admin" else {"organizer_id": user["id"]}
+    events = await db.events.find(events_query, {"id": 1, "_id": 0}).to_list(100)
+    event_ids = [e["id"] for e in events]
+    
+    # Calculate date range
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+    
+    # Get all tickets in range
+    tickets = await db.tickets.find({
+        "event_id": {"$in": event_ids},
+        "created_at": {"$gte": start_date.isoformat()}
+    }, {"_id": 0, "created_at": 1, "price": 1}).to_list(10000)
+    
+    # Group by day
+    daily_sales = {}
+    for i in range(days):
+        day = (end_date - timedelta(days=days-1-i)).strftime("%Y-%m-%d")
+        daily_sales[day] = {"date": day, "tickets": 0, "revenue": 0}
+    
+    for ticket in tickets:
+        day = ticket["created_at"][:10]
+        if day in daily_sales:
+            daily_sales[day]["tickets"] += 1
+            daily_sales[day]["revenue"] += ticket["price"]
+    
+    return {
+        "period": f"{days} derniers jours",
+        "data": list(daily_sales.values())
+    }
+
+# ============== ORGANIZER FINANCES & WITHDRAWALS ==============
+
+class WithdrawalRequest(BaseModel):
+    amount: int
+    payment_method: str  # dmoney, waafi, bank_transfer
+    account_info: str  # Phone number or bank account
+
+@api_router.get("/organizer/finances")
+async def get_organizer_finances(user: dict = Depends(get_organizer_user)):
+    """Get financial summary for organizer"""
+    # Get organizer's events
+    events_query = {} if user.get("role") == "admin" else {"organizer_id": user["id"]}
+    events = await db.events.find(events_query, {"_id": 0}).to_list(100)
+    
+    # Calculate total revenue
+    total_revenue = 0
+    for event in events:
+        for tt in event.get("ticket_types", []):
+            sold = tt.get("sold", 0)
+            total_revenue += sold * tt["price"]
+    
+    commission = int(total_revenue * 0.08)
+    net_revenue = total_revenue - commission
+    
+    # Get withdrawal history
+    withdrawal_query = {} if user.get("role") == "admin" else {"organizer_id": user["id"]}
+    withdrawals = await db.withdrawals.find(withdrawal_query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    total_withdrawn = sum(w["amount"] for w in withdrawals if w["status"] == "completed")
+    pending_withdrawals = sum(w["amount"] for w in withdrawals if w["status"] == "pending")
+    
+    available_balance = net_revenue - total_withdrawn - pending_withdrawals
+    
+    return {
+        "total_revenue": total_revenue,
+        "commission": commission,
+        "commission_rate": "8%",
+        "net_revenue": net_revenue,
+        "total_withdrawn": total_withdrawn,
+        "pending_withdrawals": pending_withdrawals,
+        "available_balance": available_balance,
+        "withdrawals": withdrawals
+    }
+
+@api_router.post("/organizer/withdrawals")
+async def request_withdrawal(data: WithdrawalRequest, user: dict = Depends(get_organizer_user)):
+    """Request a withdrawal"""
+    # Get available balance
+    finances = await get_organizer_finances(user)
+    
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Montant invalide")
+    
+    if data.amount > finances["available_balance"]:
+        raise HTTPException(status_code=400, detail=f"Solde insuffisant. Disponible: {finances['available_balance']} DJF")
+    
+    if data.amount < 1000:
+        raise HTTPException(status_code=400, detail="Retrait minimum: 1000 DJF")
+    
+    withdrawal_id = str(uuid.uuid4())
+    withdrawal_doc = {
+        "id": withdrawal_id,
+        "organizer_id": user["id"],
+        "organizer_name": user.get("full_name", ""),
+        "amount": data.amount,
+        "payment_method": data.payment_method,
+        "account_info": data.account_info,
+        "status": "pending",  # pending, processing, completed, rejected
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None
+    }
+    await db.withdrawals.insert_one(withdrawal_doc)
+    
+    return {
+        "message": "Demande de retrait soumise",
+        "withdrawal_id": withdrawal_id,
+        "amount": data.amount,
+        "status": "pending",
+        "estimated_processing": "24-48h"
+    }
+
+@api_router.get("/organizer/withdrawals")
+async def get_withdrawals(user: dict = Depends(get_organizer_user)):
+    """Get withdrawal history"""
+    query = {} if user.get("role") == "admin" else {"organizer_id": user["id"]}
+    withdrawals = await db.withdrawals.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return withdrawals
+
 # ============== TRAIN BOOKING ==============
 
 TRAIN_PRICES = {
