@@ -1,151 +1,192 @@
 # D-Billet - Plateforme de Billetterie Djibouti
 
 ## Problème Original
-Développer une application web moderne et responsive appelée "D-Billet", une plateforme de billetterie centralisée pour Djibouti. L'application permet aux utilisateurs d'acheter des billets pour divers événements et services de transport et de recevoir un billet numérique avec QR code.
+Développer une application web moderne et responsive appelée "D-Billet" (Ticket Djibouti), une plateforme de billetterie centralisée pour Djibouti avec gestion complète pour les administrateurs et organisateurs.
 
 ## Personas Utilisateurs
-- **Utilisateurs finaux**: Résidents de Djibouti souhaitant acheter des billets pour événements et transport
-- **Administrateurs**: Gestionnaires de la plateforme pour créer des événements et valider des billets
-- **Organisateurs**: Créent leurs propres événements, gèrent les codes promo, voient leur dashboard, gèrent leurs finances
+- **Clients**: Achètent des billets pour événements et transport
+- **Organisateurs**: Créent événements, gèrent ventes et retraits
+- **Administrateur**: Contrôle total de la plateforme (événements, utilisateurs, finances, transport)
 
 ## Stack Technique
 - **Frontend**: React + Tailwind CSS + Shadcn/UI
 - **Backend**: FastAPI (Python)
 - **Base de données**: MongoDB
-- **Authentification**: JWT (email/mot de passe) + OTP simulé (téléphone)
-
-## Catégories d'Événements
-- Cinéma
-- Ferry (transport)
-- Football
-- Train (transport)
-- Concerts
-- Conférences
-
-## Méthodes de Paiement (SIMULÉES)
-- Waafi (avec logo)
-- D-Money (avec logo)
-- CAC Bank (avec logo)
+- **Authentification**: JWT (email/mot de passe) + OTP simulé
 
 ---
 
 ## Ce qui a été implémenté
 
-### Février 2025
+### 27 Février 2026 - Dashboard Admin Complet
 
-#### MVP Complet
-- [x] Thème sombre moderne avec design glass-morphism
-- [x] Authentification JWT (email/mot de passe)
-- [x] Authentification OTP simulée (téléphone)
-- [x] CRUD événements (admin/organisateur)
-- [x] Rôles: Admin, Organisateur, User
-- [x] Système de réservation Train avec logique jour pair/impair
-- [x] Système de réservation Ferry avec horaires fixes
-- [x] Génération de QR codes pour billets
-- [x] Téléchargement PDF des billets (redesigné style Ethio-Djibouti Railway)
-- [x] Dashboard admin avec statistiques et commission 8%
-- [x] Scanner de billets pour validation
-- [x] Codes promo pour organisateurs
+#### Vue d'ensemble (Dashboard Admin)
+- [x] **KPIs**: CA global, Revenus plateforme (commission 8%), Utilisateurs inscrits, Événements actifs
+- [x] **Alertes Urgentes**: Événements en attente de validation, Demandes de retrait, Litiges/Remboursements
+- [x] **Actions rapides** vers toutes les sections
 
-### 16 Février 2026 - Mise à jour précédente
-- [x] **Logos de paiement intégrés** - Waafi, D-Money, CAC Bank sur toutes les pages de paiement
-- [x] **PDF ticket redesigné** - Style similaire à Ethio-Djibouti Railway
+#### Gestion des Événements
+- [x] Liste de TOUS les événements créés
+- [x] **Approuver/Bloquer** un événement
+- [x] **Mettre "À la une"** sur la page d'accueil
+- [x] Filtres par statut (Approuvés, En attente, Bloqués, À la une)
+- [x] Affichage des revenus et billets vendus par événement
 
-### 27 Février 2026 - Dernière mise à jour (Dashboard Organisateur Amélioré)
-- [x] **Dashboard Organisateur amélioré** avec :
-  - KPIs clairs : Billets Vendus, Chiffre d'Affaires, Billets Restants, Solde Net
-  - Graphique des ventes en courbe SVG (7/30 derniers jours)
-  - Progression des ventes par événement
-- [x] **Page Participants (Guestlist)** avec :
-  - Liste complète des acheteurs
-  - Barre de recherche (nom, email, téléphone)
-  - Filtre par événement
-  - Export CSV
-  - Indicateur de statut (Valide/Utilisé)
-- [x] **Page Finances & Retraits** avec :
-  - KPIs financiers : Revenus Totaux, Commission 8%, Déjà Retiré, Solde Disponible
-  - Historique des retraits
-  - Modal de demande de retrait (D-Money, Waafi, Virement Bancaire)
-  - Validation montant minimum (1000 DJF)
-- [x] **Navigation sidebar mise à jour** avec 5 entrées : Dashboard, Événements, Participants, Codes Promo, Finances
+#### Gestion des Utilisateurs
+- [x] Liste **Organisateurs** : création compte, historique, contact direct
+- [x] Liste **Clients** : historique des achats
+- [x] **Commission personnalisée** par organisateur (négociation grands comptes)
+- [x] Filtres par rôle (Tous, Organisateurs, Clients)
+- [x] Recherche par nom, email, téléphone
 
-#### Pages Frontend Organisateur
-- /organizer - Dashboard avec KPIs et graphique
-- /organizer/events - Gestion des événements
-- /organizer/participants - Liste des participants (Guestlist)
-- /organizer/promo-codes - Codes promo
-- /organizer/finances - Finances et retraits
+#### Finances & Comptabilité
+- [x] **Historique des transactions** (tous les paiements Waafi/D-Money/CAC Bank)
+- [x] Filtres par méthode de paiement et période
+- [x] **Export CSV** des transactions
+- [x] Totaux par méthode de paiement
 
-#### Nouveaux Endpoints API
-- GET /api/organizer/sales-chart?days=7|30 - Données graphique ventes
-- GET /api/organizer/participants - Liste participants
-- GET /api/organizer/participants?search=... - Recherche participants
-- GET /api/organizer/participants/export - Export CSV
-- GET /api/organizer/finances - Résumé financier
-- POST /api/organizer/withdrawals - Demande de retrait
-- GET /api/organizer/withdrawals - Historique retraits
+#### Gestion des Payouts (Retraits)
+- [x] Liste des demandes de retrait
+- [x] **Valider** un paiement (confirmer le virement effectué)
+- [x] **Rejeter** une demande avec raison
+- [x] Notes admin sur chaque traitement
+- [x] Stats: En attente, Complétés, Rejetés
+
+#### Configuration (Paramètres)
+- [x] **Commission globale** modifiable (défaut 8%)
+- [x] **Retrait minimum** modifiable (défaut 1000 DJF)
+- [x] **Catégories d'événements** : Ajouter/Supprimer (Concerts, Cinéma, Football, Théâtre...)
+- [x] **Conditions Générales de Vente** (éditeur texte)
+- [x] **Mentions Légales** (éditeur texte)
+- [x] **Bannière d'annonce** (texte + activation)
+
+#### Transport Train & Ferry (Exclusif Admin)
+- [x] **Train** : Activation service, Heure de départ, Tarifs par trajet
+- [x] **Ferry** : Activation service, Horaires aller/retour, Planning hebdomadaire
+- [x] Affichage des règles de circulation (jours pairs/impairs pour train)
+- [x] Prix modifiables par trajet
+
+---
+
+### Fonctionnalités Existantes (sessions précédentes)
+
+#### Dashboard Organisateur
+- [x] KPIs : Billets vendus, CA, Billets restants, Solde net
+- [x] Graphique des ventes en courbe (7/30 jours)
+- [x] Liste des participants avec export CSV
+- [x] Page Finances & Retraits
+
+#### Fonctionnalités Client
+- [x] Authentification (email + OTP téléphone simulé)
+- [x] Réservation événements avec types de billets multiples
+- [x] Réservation Train et Ferry
+- [x] Panier et Checkout avec logos Waafi/D-Money/CAC Bank
+- [x] Billets PDF redesignés avec QR Code
+- [x] Partage WhatsApp
+
+---
+
+## API Endpoints Admin
+
+### Dashboard
+- `GET /api/admin/stats` - KPIs de la plateforme
+- `GET /api/admin/alerts` - Alertes urgentes
+
+### Événements
+- `GET /api/admin/events` - Liste tous les événements
+- `PUT /api/admin/events/{id}/status?status=approved|blocked|pending` - Modifier statut
+- `PUT /api/admin/events/{id}/featured?featured=true|false` - À la une
+
+### Utilisateurs
+- `GET /api/admin/users` - Liste utilisateurs (filtres: role, search)
+- `GET /api/admin/users/{id}` - Détail utilisateur avec historique
+- `PUT /api/admin/users/{id}/commission?commission_rate=X` - Commission personnalisée
+
+### Transactions
+- `GET /api/admin/transactions` - Historique paiements (filtres: payment_method, days)
+
+### Payouts
+- `GET /api/admin/payouts` - Demandes de retrait (filtre: status)
+- `PUT /api/admin/payouts/{id}/status?status=completed|rejected` - Valider/Rejeter
+
+### Configuration
+- `GET /api/admin/settings` - Paramètres plateforme
+- `PUT /api/admin/settings` - Modifier (commission_rate, min_withdrawal, terms, banner)
+- `POST /api/admin/settings/categories` - Ajouter catégorie
+- `DELETE /api/admin/settings/categories/{id}` - Supprimer catégorie
+
+### Transport
+- `GET /api/admin/transport/settings` - Paramètres Train & Ferry
+- `PUT /api/admin/transport/train` - Modifier Train (active, departure_time)
+- `PUT /api/admin/transport/ferry` - Modifier Ferry (active, departure_time, return_time)
+
+---
+
+## Pages Frontend Admin
+
+| Route | Description |
+|-------|-------------|
+| `/admin` | Dashboard avec KPIs et alertes |
+| `/admin/events` | Gestion événements (approuver, bloquer, à la une) |
+| `/admin/users` | Gestion utilisateurs (organisateurs, clients) |
+| `/admin/transactions` | Historique des transactions |
+| `/admin/payouts` | Validation des retraits |
+| `/admin/settings` | Configuration plateforme |
+| `/admin/transport` | Paramètres Train & Ferry |
+| `/admin/scanner` | Scanner de billets |
 
 ---
 
 ## Backlog Prioritisé
 
-### P0 (Urgent) - COMPLÉTÉ
-- [x] Ajouter logos D-Money, Waafi et CAC Bank dans la section paiement
-- [x] Redesigner le PDF ticket selon l'exemple fourni
-- [x] Dashboard Organisateur amélioré avec graphique des ventes
-- [x] Page Participants avec export CSV
-- [x] Page Finances avec demandes de retrait
+### P0 (Urgent) - COMPLÉTÉ ✅
+- [x] Dashboard Admin avec alertes urgentes
+- [x] Gestion événements (approuver/bloquer/à la une)
+- [x] Gestion utilisateurs avec commission personnalisée
+- [x] Finances & Transactions
+- [x] Validation des Payouts
+- [x] Configuration plateforme
+- [x] Paramètres Transport exclusifs admin
 
 ### P1 (Haute priorité)
 - [ ] Intégration réelle Waafi/D-Money (si APIs disponibles)
-- [ ] Notifications SMS réelles pour OTP et confirmation
-- [ ] Validation des retraits par l'admin
+- [ ] Notifications email/SMS réelles
+- [ ] Export Excel (en plus de CSV)
 
 ### P2 (Moyenne priorité)
-- [ ] Email de confirmation de réservation
-- [ ] Système de tracking des codes promo (ventes par influenceur)
-- [ ] Export Excel en plus du CSV
-
-### P3 (Basse priorité)
-- [ ] Historique des transactions admin
 - [ ] Multi-langue (français/somali/arabe)
-- [ ] Mode brouillon pour événements
+- [ ] Historique complet des actions admin (audit log)
+- [ ] Dashboard analytics avancé
 
 ---
 
 ## Credentials de Test
 - **Admin**: admin@dbillet.dj / admin123
 - **Organisateur**: organizer@dbillet.dj / organizer123
-- **User (OTP)**: +25377123456 (OTP retourné dans la réponse API)
+- **User (OTP)**: +25377123456
 
 ## Notes
-- Les paiements sont **SIMULÉS** (pas d'intégration réelle)
-- Les OTP SMS sont **SIMULÉS** (code retourné dans la réponse API)
-- Les retraits sont **SIMULÉS** (statut reste 'pending')
-- Base de données: MongoDB (test_database)
-- Logos stockés dans: /app/frontend/public/images/
+- Paiements **SIMULÉS** (Waafi, D-Money, CAC Bank)
+- OTP SMS **SIMULÉ** (code retourné dans API)
+- Validation des payouts **SIMULÉE** (pas de virement réel)
 
 ## Architecture des fichiers
 ```
 /app/
 ├── backend/
-│   ├── server.py (API principale)
-│   └── tests/
+│   └── server.py (2500+ lignes - API complète)
 └── frontend/
-    ├── public/images/ (logos paiement)
     └── src/
         ├── pages/
-        │   ├── organizer/
-        │   │   ├── OrganizerDashboard.js (KPIs + Graphique)
-        │   │   ├── OrganizerEvents.js
-        │   │   ├── OrganizerParticipants.js (NEW - Guestlist)
-        │   │   ├── OrganizerPromoCodes.js
-        │   │   └── OrganizerFinances.js (NEW - Retraits)
-        │   └── ...
-        ├── layouts/
-        │   ├── MainLayout.js
-        │   ├── AdminLayout.js
-        │   └── OrganizerLayout.js (mis à jour)
-        ├── context/ (AuthContext, CartContext)
-        └── components/ui/ (Shadcn)
+        │   ├── admin/
+        │   │   ├── AdminDashboard.js (KPIs + alertes)
+        │   │   ├── AdminEvents.js (approuver, bloquer, à la une)
+        │   │   ├── AdminUsers.js (commission personnalisée)
+        │   │   ├── AdminTransactions.js (historique)
+        │   │   ├── AdminPayouts.js (valider/rejeter)
+        │   │   ├── AdminSettings.js (config)
+        │   │   └── AdminTransport.js (train/ferry)
+        │   └── organizer/ (dashboard organisateur)
+        └── layouts/
+            └── AdminLayout.js (navigation complète)
 ```
