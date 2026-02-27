@@ -2135,7 +2135,7 @@ async def get_transport_settings(admin: dict = Depends(get_admin_user)):
     settings = await db.settings.find_one({"type": "transport"}, {"_id": 0})
     
     if not settings:
-        settings = {
+        default_transport = {
             "type": "transport",
             "train": {
                 "active": True,
@@ -2174,7 +2174,8 @@ async def get_transport_settings(admin: dict = Depends(get_admin_user)):
                 "return_time": "12:00"
             }
         }
-        await db.settings.insert_one(settings)
+        await db.settings.insert_one(default_transport)
+        settings = await db.settings.find_one({"type": "transport"}, {"_id": 0})
     
     return settings
 
