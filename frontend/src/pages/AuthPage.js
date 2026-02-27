@@ -56,9 +56,16 @@ const AuthPage = () => {
     
     setLoading(true);
     try {
-      await verifyOtp(phone, otpCode);
+      const userData = await verifyOtp(phone, otpCode);
       toast.success('Connexion réussie!');
-      navigate('/');
+      // Redirect based on role
+      if (userData.role === 'admin') {
+        navigate('/admin');
+      } else if (userData.role === 'organizer') {
+        navigate('/organizer');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Code OTP invalide');
     } finally {
@@ -81,14 +88,22 @@ const AuthPage = () => {
     
     setLoading(true);
     try {
+      let userData;
       if (isLogin) {
-        await login(email, password);
+        userData = await login(email, password);
         toast.success('Connexion réussie!');
       } else {
-        await register(email, password, fullName);
+        userData = await register(email, password, fullName);
         toast.success('Compte créé avec succès!');
       }
-      navigate('/');
+      // Redirect based on role
+      if (userData.role === 'admin') {
+        navigate('/admin');
+      } else if (userData.role === 'organizer') {
+        navigate('/organizer');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erreur d\'authentification');
     } finally {
