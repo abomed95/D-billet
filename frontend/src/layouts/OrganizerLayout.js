@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Calendar, Tag, ArrowLeft, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, Tag, ArrowLeft, LogOut, Users, Wallet } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
 const OrganizerLayout = () => {
@@ -11,7 +11,9 @@ const OrganizerLayout = () => {
   const navItems = [
     { path: '/organizer', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/organizer/events', icon: Calendar, label: 'Événements' },
+    { path: '/organizer/participants', icon: Users, label: 'Participants' },
     { path: '/organizer/promo-codes', icon: Tag, label: 'Codes Promo' },
+    { path: '/organizer/finances', icon: Wallet, label: 'Finances' },
   ];
 
   const handleLogout = () => {
@@ -41,6 +43,7 @@ const OrganizerLayout = () => {
                   ${isActive 
                     ? 'bg-green-500 text-black' 
                     : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                data-testid={`nav-${item.label.toLowerCase().replace(' ', '-')}`}
               >
                 <item.icon size={20} />
                 <span className="font-medium">{item.label}</span>
@@ -95,11 +98,11 @@ const OrganizerLayout = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex flex-col items-center gap-1 p-2 min-w-[64px]
+                  className={`flex flex-col items-center gap-1 p-2 min-w-[56px]
                     ${isActive ? 'text-green-400' : 'text-gray-500'}`}
                 >
-                  <item.icon size={24} />
-                  <span className="text-xs">{item.label}</span>
+                  <item.icon size={22} />
+                  <span className="text-[10px]">{item.label}</span>
                 </Link>
               );
             })}
@@ -107,7 +110,7 @@ const OrganizerLayout = () => {
         </nav>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
+        <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8">
           <Outlet />
         </main>
       </div>
