@@ -2232,6 +2232,162 @@ async def update_ferry_settings(
     
     return await get_transport_settings(admin)
 
+# ============== TRAIN ROUTE MANAGEMENT ==============
+
+class RouteCreate(BaseModel):
+    from_station: str
+    to_station: str
+    price: int
+    duration: str
+
+@api_router.post("/admin/transport/train/routes")
+async def add_train_route(route: RouteCreate, admin: dict = Depends(get_admin_user)):
+    """Add a new train route"""
+    settings = await db.settings.find_one({"type": "transport"})
+    if not settings:
+        await get_transport_settings(admin)  # Initialize settings
+        settings = await db.settings.find_one({"type": "transport"})
+    
+    new_route = {
+        "from": route.from_station,
+        "to": route.to_station,
+        "price": route.price,
+        "duration": route.duration
+    }
+    
+    await db.settings.update_one(
+        {"type": "transport"},
+        {"$push": {"train.routes": new_route}}
+    )
+    
+    return {"message": "Trajet ajouté", "route": new_route}
+
+@api_router.delete("/admin/transport/train/routes/{route_index}")
+async def delete_train_route(route_index: int, admin: dict = Depends(get_admin_user)):
+    """Delete a train route by index"""
+    settings = await db.settings.find_one({"type": "transport"})
+    if not settings or "train" not in settings:
+        raise HTTPException(status_code=404, detail="Settings not found")
+    
+    routes = settings["train"].get("routes", [])
+    if route_index < 0 or route_index >= len(routes):
+        raise HTTPException(status_code=400, detail="Index de trajet invalide")
+    
+    deleted_route = routes[route_index]
+    routes.pop(route_index)
+    
+    await db.settings.update_one(
+        {"type": "transport"},
+        {"$set": {"train.routes": routes}}
+    )
+    
+    return {"message": "Trajet supprimé", "deleted": deleted_route}
+
+@api_router.put("/admin/transport/train/routes/{route_index}")
+async def update_train_route(
+    route_index: int, 
+    route: RouteCreate, 
+    admin: dict = Depends(get_admin_user)
+):
+    """Update a train route by index"""
+    settings = await db.settings.find_one({"type": "transport"})
+    if not settings or "train" not in settings:
+        raise HTTPException(status_code=404, detail="Settings not found")
+    
+    routes = settings["train"].get("routes", [])
+    if route_index < 0 or route_index >= len(routes):
+        raise HTTPException(status_code=400, detail="Index de trajet invalide")
+    
+    updated_route = {
+        "from": route.from_station,
+        "to": route.to_station,
+        "price": route.price,
+        "duration": route.duration
+    }
+    routes[route_index] = updated_route
+    
+    await db.settings.update_one(
+        {"type": "transport"},
+        {"$set": {"train.routes": routes}}
+    )
+    
+    return {"message": "Trajet modifié", "route": updated_route}
+
+# ============== FERRY ROUTE MANAGEMENT ==============
+
+@api_router.post("/admin/transport/ferry/routes")
+async def add_ferry_route(route: RouteCreate, admin: dict = Depends(get_admin_user)):
+    """Add a new ferry route"""
+    settings = await db.settings.find_one({"type": "transport"})
+    if not settings:
+        await get_transport_settings(admin)
+        settings = await db.settings.find_one({"type": "transport"})
+    
+    new_route = {
+        "from": route.from_station,
+        "to": route.to_station,
+        "price": route.price,
+        "duration": route.duration
+    }
+    
+    await db.settings.update_one(
+        {"type": "transport"},
+        {"$push": {"ferry.routes": new_route}}
+    )
+    
+    return {"message": "Trajet ajouté", "route": new_route}
+
+@api_router.delete("/admin/transport/ferry/routes/{route_index}")
+async def delete_ferry_route(route_index: int, admin: dict = Depends(get_admin_user)):
+    """Delete a ferry route by index"""
+    settings = await db.settings.find_one({"type": "transport"})
+    if not settings or "ferry" not in settings:
+        raise HTTPException(status_code=404, detail="Settings not found")
+    
+    routes = settings["ferry"].get("routes", [])
+    if route_index < 0 or route_index >= len(routes):
+        raise HTTPException(status_code=400, detail="Index de trajet invalide")
+    
+    deleted_route = routes[route_index]
+    routes.pop(route_index)
+    
+    await db.settings.update_one(
+        {"type": "transport"},
+        {"$set": {"ferry.routes": routes}}
+    )
+    
+    return {"message": "Trajet supprimé", "deleted": deleted_route}
+
+@api_router.put("/admin/transport/ferry/routes/{route_index}")
+async def update_ferry_route(
+    route_index: int, 
+    route: RouteCreate, 
+    admin: dict = Depends(get_admin_user)
+):
+    """Update a ferry route by index"""
+    settings = await db.settings.find_one({"type": "transport"})
+    if not settings or "ferry" not in settings:
+        raise HTTPException(status_code=404, detail="Settings not found")
+    
+    routes = settings["ferry"].get("routes", [])
+    if route_index < 0 or route_index >= len(routes):
+        raise HTTPException(status_code=400, detail="Index de trajet invalide")
+    
+    updated_route = {
+        "from": route.from_station,
+        "to": route.to_station,
+        "price": route.price,
+        "duration": route.duration
+    }
+    routes[route_index] = updated_route
+    
+    await db.settings.update_one(
+        {"type": "transport"},
+        {"$set": {"ferry.routes": routes}}
+    )
+    
+    return {"message": "Trajet modifié", "route": updated_route}
+
 # ============== TESTIMONIALS & NEWS ==============
 
 @api_router.get("/testimonials")
