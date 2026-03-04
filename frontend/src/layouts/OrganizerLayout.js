@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Calendar, Tag, ArrowLeft, LogOut, Users, Wallet } from 'lucide-react';
+import { LayoutDashboard, Calendar, Tag, ArrowLeft, LogOut, Users, Wallet, Shield } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
 const OrganizerLayout = () => {
@@ -12,6 +12,7 @@ const OrganizerLayout = () => {
     { path: '/organizer', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/organizer/events', icon: Calendar, label: 'Événements' },
     { path: '/organizer/participants', icon: Users, label: 'Participants' },
+    { path: '/organizer/staff', icon: Shield, label: 'Mon Staff' },
     { path: '/organizer/promo-codes', icon: Tag, label: 'Codes Promo' },
     { path: '/organizer/finances', icon: Wallet, label: 'Finances' },
   ];

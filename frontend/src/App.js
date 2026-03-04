@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "./components/ui/sonner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { StaffAuthProvider } from "./context/StaffAuthContext";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -29,6 +30,9 @@ import OrganizerEvents from "./pages/organizer/OrganizerEvents";
 import OrganizerPromoCodes from "./pages/organizer/OrganizerPromoCodes";
 import OrganizerParticipants from "./pages/organizer/OrganizerParticipants";
 import OrganizerFinances from "./pages/organizer/OrganizerFinances";
+import OrganizerStaff from "./pages/organizer/OrganizerStaff";
+import StaffLoginPage from "./pages/staff/StaffLoginPage";
+import StaffScannerPage from "./pages/staff/StaffScannerPage";
 
 // Layout
 import MainLayout from "./layouts/MainLayout";
@@ -96,7 +100,12 @@ function AppRoutes() {
         <Route path="participants" element={<OrganizerParticipants />} />
         <Route path="promo-codes" element={<OrganizerPromoCodes />} />
         <Route path="finances" element={<OrganizerFinances />} />
+        <Route path="staff" element={<OrganizerStaff />} />
       </Route>
+      
+      {/* Staff Routes - Separate Auth Context */}
+      <Route path="/staff/login" element={<StaffAuthProvider><StaffLoginPage /></StaffAuthProvider>} />
+      <Route path="/staff/scanner" element={<StaffAuthProvider><StaffScannerPage /></StaffAuthProvider>} />
       
       {/* Admin Routes */}
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>

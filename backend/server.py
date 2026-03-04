@@ -233,6 +233,56 @@ class NewsCreate(BaseModel):
     content: str
     image_url: Optional[str] = None
 
+# ============== STAFF MODELS ==============
+
+class StaffCreate(BaseModel):
+    username: str
+    full_name: str
+    assigned_events: List[str] = []
+
+class StaffUpdate(BaseModel):
+    full_name: Optional[str] = None
+    assigned_events: Optional[List[str]] = None
+    active: Optional[bool] = None
+
+class StaffLogin(BaseModel):
+    username: str
+    password: str
+
+class StaffResponse(BaseModel):
+    id: str
+    organizer_id: str
+    username: str
+    full_name: str
+    assigned_events: List[str] = []
+    active: bool = True
+    created_at: str
+
+class StaffTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    staff: StaffResponse
+
+class ScanRequest(BaseModel):
+    qr_code: str
+    event_id: str
+
+class ScanLogEntry(BaseModel):
+    id: str
+    staff_id: str
+    staff_name: str
+    ticket_id: str
+    event_id: str
+    event_title: str
+    client_name: str
+    ticket_type: str
+    status: str  # valid, invalid, already_scanned
+    scanned_at: str
+    message: str
+
+# Staff token expiration (24 hours for security)
+STAFF_TOKEN_EXPIRE_HOURS = 24
+
 # ============== AUTH HELPERS ==============
 
 def verify_password(plain_password, hashed_password):
@@ -272,6 +322,34 @@ async def get_organizer_user(user: dict = Depends(get_current_user)):
     if user.get("role") not in ["organizer", "admin"]:
         raise HTTPException(status_code=403, detail="Accès organisateur requis")
     return user
+
+def create_staff_token(data: dict):
+    """Create JWT token for staff with 24h expiration"""
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(hours=STAFF_TOKEN_EXPIRE_HOURS)
+    to_encode.update({"exp": expire, "type": "staff"})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+async def get_current_staff(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Authenticate staff member from JWT token"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        staff_id = payload.get("sub")
+        token_type = payload.get("type")
+        
+        if staff_id is None or token_type != "staff":
+            raise HTTPException(status_code=401, detail="Token staff invalide")
+        
+        staff = await db.staff_accounts.find_one({"id": staff_id}, {"_id": 0})
+        if staff is None:
+            raise HTTPException(status_code=401, detail="Compte staff non trouvé")
+        
+        if not staff.get("active", True):
+            raise HTTPException(status_code=403, detail="Compte staff désactivé")
+        
+        return staff
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token invalide ou expiré")
 
 # ============== AUTH ROUTES ==============
 
@@ -413,6 +491,354 @@ async def get_me(user: dict = Depends(get_current_user)):
         full_name=user["full_name"],
         role=user.get("role", "user")
     )
+
+# ============== STAFF ROUTES ==============
+
+def generate_staff_password():
+    """Generate a random 8-character password"""
+    import string
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choice(chars) for _ in range(8))
+
+@api_router.post("/staff/login", response_model=StaffTokenResponse)
+async def staff_login(data: StaffLogin):
+    """Staff member login - returns JWT token with 24h expiration"""
+    staff = await db.staff_accounts.find_one({"username": data.username}, {"_id": 0})
+    
+    if not staff:
+        raise HTTPException(status_code=401, detail="Identifiant incorrect")
+    
+    if not verify_password(data.password, staff["password_hash"]):
+        raise HTTPException(status_code=401, detail="Mot de passe incorrect")
+    
+    if not staff.get("active", True):
+        raise HTTPException(status_code=403, detail="Compte désactivé par l'organisateur")
+    
+    token = create_staff_token({"sub": staff["id"]})
+    
+    return StaffTokenResponse(
+        access_token=token,
+        staff=StaffResponse(
+            id=staff["id"],
+            organizer_id=staff["organizer_id"],
+            username=staff["username"],
+            full_name=staff["full_name"],
+            assigned_events=staff.get("assigned_events", []),
+            active=staff.get("active", True),
+            created_at=staff["created_at"]
+        )
+    )
+
+@api_router.get("/staff/me")
+async def get_staff_me(staff: dict = Depends(get_current_staff)):
+    """Get current staff member info"""
+    return StaffResponse(
+        id=staff["id"],
+        organizer_id=staff["organizer_id"],
+        username=staff["username"],
+        full_name=staff["full_name"],
+        assigned_events=staff.get("assigned_events", []),
+        active=staff.get("active", True),
+        created_at=staff["created_at"]
+    )
+
+@api_router.get("/staff/events")
+async def get_staff_events(staff: dict = Depends(get_current_staff)):
+    """Get events assigned to staff member"""
+    assigned_ids = staff.get("assigned_events", [])
+    
+    if not assigned_ids:
+        return []
+    
+    events = await db.events.find(
+        {"id": {"$in": assigned_ids}},
+        {"_id": 0, "id": 1, "title": 1, "date": 1, "time": 1, "venue": 1, "image_url": 1}
+    ).to_list(100)
+    
+    # Add ticket stats for each event
+    for event in events:
+        total_tickets = await db.tickets.count_documents({"event_id": event["id"]})
+        scanned_tickets = await db.tickets.count_documents({
+            "event_id": event["id"],
+            "status": "used"
+        })
+        event["total_tickets"] = total_tickets
+        event["scanned_tickets"] = scanned_tickets
+    
+    return events
+
+@api_router.post("/staff/scan")
+async def staff_scan_ticket(data: ScanRequest, staff: dict = Depends(get_current_staff)):
+    """Scan a ticket QR code - returns validation result"""
+    # Check if staff has access to this event
+    if data.event_id not in staff.get("assigned_events", []):
+        raise HTTPException(status_code=403, detail="Vous n'êtes pas assigné à cet événement")
+    
+    # Find ticket by QR code
+    ticket = await db.tickets.find_one({"qr_code_data": data.qr_code}, {"_id": 0})
+    
+    scan_log = {
+        "id": str(uuid.uuid4()),
+        "staff_id": staff["id"],
+        "staff_name": staff["full_name"],
+        "event_id": data.event_id,
+        "qr_code": data.qr_code,
+        "scanned_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Case 1: Ticket not found (invalid QR)
+    if not ticket:
+        scan_log.update({
+            "ticket_id": None,
+            "event_title": "",
+            "client_name": "",
+            "ticket_type": "",
+            "status": "invalid",
+            "message": "QR code invalide - Billet non trouvé"
+        })
+        await db.scan_logs.insert_one(scan_log)
+        return {
+            "status": "invalid",
+            "message": "QR code invalide",
+            "details": "Ce billet n'existe pas dans le système",
+            "vibration": "error"
+        }
+    
+    # Case 2: Ticket belongs to different event
+    if ticket.get("event_id") != data.event_id:
+        scan_log.update({
+            "ticket_id": ticket["id"],
+            "event_title": ticket.get("event_title", ""),
+            "client_name": ticket.get("passenger_name") or "",
+            "ticket_type": ticket.get("ticket_type", ""),
+            "status": "invalid",
+            "message": "Billet pour un autre événement"
+        })
+        await db.scan_logs.insert_one(scan_log)
+        return {
+            "status": "invalid",
+            "message": "Mauvais événement",
+            "details": f"Ce billet est pour: {ticket.get('event_title', 'Autre événement')}",
+            "vibration": "error"
+        }
+    
+    # Case 3: Ticket already scanned
+    if ticket.get("status") == "used":
+        first_scan_time = ticket.get("scanned_at", "Heure inconnue")
+        first_scanner = ticket.get("scanned_by_name", "Agent inconnu")
+        
+        scan_log.update({
+            "ticket_id": ticket["id"],
+            "event_title": ticket.get("event_title", ""),
+            "client_name": ticket.get("passenger_name") or ticket.get("user_name", ""),
+            "ticket_type": ticket.get("ticket_type", ""),
+            "status": "already_scanned",
+            "message": f"Déjà scanné à {first_scan_time} par {first_scanner}"
+        })
+        await db.scan_logs.insert_one(scan_log)
+        return {
+            "status": "already_scanned",
+            "message": "ALERTE: Billet déjà utilisé!",
+            "details": f"Scanné le {first_scan_time}",
+            "scanned_by": first_scanner,
+            "client_name": ticket.get("passenger_name") or ticket.get("user_name", "Client"),
+            "ticket_type": ticket.get("ticket_type", "Standard"),
+            "vibration": "warning"
+        }
+    
+    # Case 4: Valid ticket - Mark as used
+    await db.tickets.update_one(
+        {"id": ticket["id"]},
+        {"$set": {
+            "status": "used",
+            "scanned_at": datetime.now(timezone.utc).isoformat(),
+            "scanned_by": staff["id"],
+            "scanned_by_name": staff["full_name"]
+        }}
+    )
+    
+    # Get client name
+    client_name = ticket.get("passenger_name")  # For transport tickets
+    if not client_name:
+        user = await db.users.find_one({"id": ticket.get("user_id")}, {"full_name": 1})
+        client_name = user.get("full_name", "Client") if user else "Client"
+    
+    scan_log.update({
+        "ticket_id": ticket["id"],
+        "event_title": ticket.get("event_title", ""),
+        "client_name": client_name,
+        "ticket_type": ticket.get("ticket_type", "Standard"),
+        "status": "valid",
+        "message": "Billet validé avec succès"
+    })
+    await db.scan_logs.insert_one(scan_log)
+    
+    return {
+        "status": "valid",
+        "message": "Billet Validé ✓",
+        "client_name": client_name,
+        "ticket_type": ticket.get("ticket_type", "Standard"),
+        "event_title": ticket.get("event_title", ""),
+        "vibration": "success"
+    }
+
+# ============== ORGANIZER STAFF MANAGEMENT ==============
+
+@api_router.get("/organizer/staff")
+async def get_organizer_staff(organizer: dict = Depends(get_organizer_user)):
+    """Get all staff accounts for organizer"""
+    staff_list = await db.staff_accounts.find(
+        {"organizer_id": organizer["id"]},
+        {"_id": 0, "password_hash": 0}
+    ).to_list(100)
+    
+    return staff_list
+
+@api_router.post("/organizer/staff")
+async def create_staff_account(data: StaffCreate, organizer: dict = Depends(get_organizer_user)):
+    """Create a new staff account for organizer"""
+    # Check if username already exists
+    existing = await db.staff_accounts.find_one({"username": data.username})
+    if existing:
+        raise HTTPException(status_code=400, detail="Ce nom d'utilisateur est déjà pris")
+    
+    # Validate assigned events belong to organizer
+    for event_id in data.assigned_events:
+        event = await db.events.find_one({"id": event_id, "organizer_id": organizer["id"]})
+        if not event:
+            raise HTTPException(status_code=400, detail=f"Événement {event_id} non trouvé ou non autorisé")
+    
+    # Generate password
+    password = generate_staff_password()
+    
+    staff_id = str(uuid.uuid4())
+    staff_doc = {
+        "id": staff_id,
+        "organizer_id": organizer["id"],
+        "username": data.username,
+        "password_hash": hash_password(password),
+        "full_name": data.full_name,
+        "assigned_events": data.assigned_events,
+        "active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.staff_accounts.insert_one(staff_doc)
+    
+    # Return with generated password (only shown once!)
+    return {
+        "id": staff_id,
+        "username": data.username,
+        "password": password,  # Only returned on creation!
+        "full_name": data.full_name,
+        "assigned_events": data.assigned_events,
+        "active": True,
+        "message": "Compte créé! Notez bien le mot de passe, il ne sera plus affiché."
+    }
+
+@api_router.put("/organizer/staff/{staff_id}")
+async def update_staff_account(staff_id: str, data: StaffUpdate, organizer: dict = Depends(get_organizer_user)):
+    """Update staff account (assign events, activate/deactivate)"""
+    staff = await db.staff_accounts.find_one({"id": staff_id, "organizer_id": organizer["id"]})
+    if not staff:
+        raise HTTPException(status_code=404, detail="Compte staff non trouvé")
+    
+    update_data = {}
+    
+    if data.full_name is not None:
+        update_data["full_name"] = data.full_name
+    
+    if data.assigned_events is not None:
+        # Validate events belong to organizer
+        for event_id in data.assigned_events:
+            event = await db.events.find_one({"id": event_id, "organizer_id": organizer["id"]})
+            if not event:
+                raise HTTPException(status_code=400, detail=f"Événement {event_id} non autorisé")
+        update_data["assigned_events"] = data.assigned_events
+    
+    if data.active is not None:
+        update_data["active"] = data.active
+    
+    if update_data:
+        await db.staff_accounts.update_one({"id": staff_id}, {"$set": update_data})
+    
+    updated = await db.staff_accounts.find_one({"id": staff_id}, {"_id": 0, "password_hash": 0})
+    return updated
+
+@api_router.delete("/organizer/staff/{staff_id}")
+async def delete_staff_account(staff_id: str, organizer: dict = Depends(get_organizer_user)):
+    """Delete a staff account"""
+    result = await db.staff_accounts.delete_one({"id": staff_id, "organizer_id": organizer["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Compte staff non trouvé")
+    return {"message": "Compte staff supprimé"}
+
+@api_router.post("/organizer/staff/{staff_id}/reset-password")
+async def reset_staff_password(staff_id: str, organizer: dict = Depends(get_organizer_user)):
+    """Reset staff password - generates new password"""
+    staff = await db.staff_accounts.find_one({"id": staff_id, "organizer_id": organizer["id"]})
+    if not staff:
+        raise HTTPException(status_code=404, detail="Compte staff non trouvé")
+    
+    new_password = generate_staff_password()
+    await db.staff_accounts.update_one(
+        {"id": staff_id},
+        {"$set": {"password_hash": hash_password(new_password)}}
+    )
+    
+    return {
+        "message": "Mot de passe réinitialisé",
+        "new_password": new_password,
+        "username": staff["username"]
+    }
+
+@api_router.get("/organizer/staff/scan-logs")
+async def get_scan_logs(
+    organizer: dict = Depends(get_organizer_user),
+    event_id: Optional[str] = None,
+    limit: int = 100
+):
+    """Get scan logs for organizer's events"""
+    # Get organizer's event IDs
+    events = await db.events.find(
+        {"organizer_id": organizer["id"]},
+        {"id": 1}
+    ).to_list(1000)
+    event_ids = [e["id"] for e in events]
+    
+    query = {"event_id": {"$in": event_ids}}
+    if event_id:
+        query["event_id"] = event_id
+    
+    logs = await db.scan_logs.find(query, {"_id": 0}).sort("scanned_at", -1).to_list(limit)
+    return logs
+
+@api_router.get("/organizer/events/{event_id}/entry-stats")
+async def get_event_entry_stats(event_id: str, organizer: dict = Depends(get_organizer_user)):
+    """Get real-time entry statistics for an event"""
+    event = await db.events.find_one({"id": event_id, "organizer_id": organizer["id"]})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    total_tickets = await db.tickets.count_documents({"event_id": event_id})
+    used_tickets = await db.tickets.count_documents({"event_id": event_id, "status": "used"})
+    valid_tickets = await db.tickets.count_documents({"event_id": event_id, "status": "valid"})
+    
+    # Get recent scans
+    recent_scans = await db.scan_logs.find(
+        {"event_id": event_id, "status": "valid"},
+        {"_id": 0}
+    ).sort("scanned_at", -1).to_list(10)
+    
+    return {
+        "event_id": event_id,
+        "event_title": event["title"],
+        "total_tickets": total_tickets,
+        "entries": used_tickets,
+        "remaining": valid_tickets,
+        "entry_rate": round((used_tickets / total_tickets * 100) if total_tickets > 0 else 0, 1),
+        "recent_entries": recent_scans
+    }
 
 # ============== ORGANIZER ROUTES (Admin only) ==============
 
