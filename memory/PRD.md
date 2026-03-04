@@ -65,6 +65,11 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
 - [x] **Ferry** : Activation service, Horaires aller/retour, Planning hebdomadaire
 - [x] Affichage des règles de circulation (jours pairs/impairs pour train)
 - [x] Prix modifiables par trajet
+- [x] **NEW (4 Mars 2026)**: Gestion complète du planning hebdomadaire Ferry
+  - [x] Toggle actif/inactif par jour
+  - [x] Sélecteur destination (Tadjoura/Obock) par jour
+  - [x] Heures de départ et retour personnalisables par jour
+  - [x] Sauvegarde avec confirmation toast
 
 ---
 
@@ -119,6 +124,8 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
 - `GET /api/admin/transport/settings` - Paramètres Train & Ferry
 - `PUT /api/admin/transport/train` - Modifier Train (active, departure_time)
 - `PUT /api/admin/transport/ferry` - Modifier Ferry (active, departure_time, return_time)
+- `GET /api/admin/transport/ferry/schedule` - Planning hebdomadaire Ferry (7 jours)
+- `PUT /api/admin/transport/ferry/schedule` - Modifier planning hebdomadaire (jour, actif, destination, heures)
 
 ---
 
@@ -147,6 +154,7 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
 - [x] Validation des Payouts
 - [x] Configuration plateforme
 - [x] Paramètres Transport exclusifs admin
+- [x] **Gestion planning hebdomadaire Ferry** (jours, destinations, horaires)
 
 ### P1 (Haute priorité)
 - [ ] Intégration réelle Waafi/D-Money (si APIs disponibles)
