@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Train, Ship, Clock, DollarSign, MapPin, Save, Loader2, 
-  Plus, Trash2, Edit2, X, Check
+  Plus, Trash2, Edit2, X, Check, Calendar
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -43,6 +43,10 @@ const AdminTransport = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('train');
   
+  // Ferry schedule state
+  const [ferrySchedule, setFerrySchedule] = useState([]);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  
   // Modal states
   const [routeModal, setRouteModal] = useState({ open: false, type: null, mode: 'add', index: null });
   const [deleteModal, setDeleteModal] = useState({ open: false, type: null, index: null, route: null });
@@ -57,6 +61,7 @@ const AdminTransport = () => {
 
   useEffect(() => {
     fetchSettings();
+    fetchFerrySchedule();
   }, []);
 
   const fetchSettings = async () => {
@@ -69,6 +74,43 @@ const AdminTransport = () => {
       console.error('Failed to fetch settings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFerrySchedule = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/transport/ferry/schedule`, {
+        headers: getAuthHeaders()
+      });
+      setFerrySchedule(response.data.schedule || []);
+    } catch (error) {
+      console.error('Failed to fetch ferry schedule:', error);
+    }
+  };
+
+  const handleScheduleChange = (dayIndex, field, value) => {
+    setFerrySchedule(prev => {
+      const updated = [...prev];
+      updated[dayIndex] = { ...updated[dayIndex], [field]: value };
+      return updated;
+    });
+  };
+
+  const saveFerrySchedule = async () => {
+    setSavingSchedule(true);
+    try {
+      await axios.put(
+        `${API}/admin/transport/ferry/schedule`,
+        { schedule: ferrySchedule },
+        { headers: getAuthHeaders() }
+      );
+      toast.success('Planning hebdomadaire mis à jour!');
+      fetchSettings(); // Refresh main settings to sync
+    } catch (error) {
+      toast.error('Erreur lors de la sauvegarde du planning');
+      console.error('Save schedule error:', error);
+    } finally {
+      setSavingSchedule(false);
     }
   };
 
@@ -438,41 +480,109 @@ const AdminTransport = () => {
             </div>
           </div>
 
-          {/* Ferry Schedule by Day */}
+          {/* Ferry Weekly Schedule - Editable */}
           <div className="glass p-6 rounded-xl">
-            <h3 className="font-semibold text-lg text-white mb-4">Planning Hebdomadaire</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg text-white flex items-center gap-2">
+                <Calendar className="text-blue-400" size={20} />
+                Planning Hebdomadaire
+              </h3>
+              <Button 
+                onClick={saveFerrySchedule}
+                disabled={savingSchedule}
+                className="bg-blue-500 hover:bg-blue-600 text-black gap-2"
+                data-testid="save-ferry-schedule-btn"
+              >
+                {savingSchedule ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                Sauvegarder le planning
+              </Button>
+            </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              {[
-                { day: 'Lundi', key: 'monday' },
-                { day: 'Mardi', key: 'tuesday' },
-                { day: 'Mercredi', key: 'wednesday' },
-                { day: 'Jeudi', key: 'thursday' },
-                { day: 'Vendredi', key: 'friday' },
-                { day: 'Samedi', key: 'saturday' },
-                { day: 'Dimanche', key: 'sunday' },
-              ].map(({ day, key }) => {
-                const destination = settings.ferry.schedule?.[key];
-                const isClosed = destination === 'closed';
-                
-                return (
-                  <div 
-                    key={key}
-                    className={`p-4 rounded-xl text-center ${
-                      isClosed 
-                        ? 'bg-red-500/10 border border-red-500/30' 
-                        : 'bg-white/5 border border-white/10'
-                    }`}
-                  >
-                    <p className="text-gray-400 text-xs mb-2">{day}</p>
-                    {isClosed ? (
-                      <p className="text-red-400 text-sm font-medium">Fermé</p>
+            <div className="space-y-3">
+              {ferrySchedule.map((day, index) => (
+                <div 
+                  key={day.day}
+                  data-testid={`ferry-day-${day.day}`}
+                  className={`p-4 rounded-xl transition-all ${
+                    day.active 
+                      ? 'bg-white/5 border border-white/10' 
+                      : 'bg-red-500/10 border border-red-500/30'
+                  }`}
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                    {/* Day name + Toggle */}
+                    <div className="flex items-center gap-3 min-w-[140px]">
+                      <Switch
+                        checked={day.active}
+                        onCheckedChange={(checked) => handleScheduleChange(index, 'active', checked)}
+                        data-testid={`ferry-toggle-${day.day}`}
+                      />
+                      <span className={`font-medium ${day.active ? 'text-white' : 'text-red-400'}`}>
+                        {day.day_label}
+                      </span>
+                    </div>
+                    
+                    {day.active ? (
+                      <div className="flex flex-wrap items-center gap-4 flex-1">
+                        {/* Destination */}
+                        <div className="flex items-center gap-2">
+                          <Label className="text-gray-400 text-sm whitespace-nowrap">Destination:</Label>
+                          <select
+                            value={day.destination || ''}
+                            onChange={(e) => handleScheduleChange(index, 'destination', e.target.value)}
+                            className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            data-testid={`ferry-destination-${day.day}`}
+                          >
+                            <option value="">Sélectionner</option>
+                            <option value="Tadjoura">Tadjoura</option>
+                            <option value="Obock">Obock</option>
+                          </select>
+                        </div>
+                        
+                        {/* Departure Time */}
+                        <div className="flex items-center gap-2">
+                          <Label className="text-gray-400 text-sm whitespace-nowrap">Départ:</Label>
+                          <Input
+                            type="time"
+                            value={day.departure_time || '08:00'}
+                            onChange={(e) => handleScheduleChange(index, 'departure_time', e.target.value)}
+                            className="bg-white/10 border-white/20 w-32 text-sm"
+                            data-testid={`ferry-departure-${day.day}`}
+                          />
+                        </div>
+                        
+                        {/* Return Time */}
+                        <div className="flex items-center gap-2">
+                          <Label className="text-gray-400 text-sm whitespace-nowrap">Retour:</Label>
+                          <Input
+                            type="time"
+                            value={day.return_time || '12:00'}
+                            onChange={(e) => handleScheduleChange(index, 'return_time', e.target.value)}
+                            className="bg-white/10 border-white/20 w-32 text-sm"
+                            data-testid={`ferry-return-${day.day}`}
+                          />
+                        </div>
+                      </div>
                     ) : (
-                      <p className="text-blue-400 text-sm font-medium">{destination}</p>
+                      <span className="text-red-400 text-sm italic">Service fermé ce jour</span>
                     )}
                   </div>
-                );
-              })}
+                </div>
+              ))}
+              
+              {ferrySchedule.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Loader2 className="animate-spin mx-auto mb-2" size={24} />
+                  Chargement du planning...
+                </div>
+              )}
+            </div>
+            
+            {/* Legend */}
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <p className="text-gray-500 text-xs">
+                💡 Activez/désactivez chaque jour, choisissez la destination et définissez les heures de départ et de retour.
+              </p>
             </div>
           </div>
 

@@ -2232,6 +2232,98 @@ async def update_ferry_settings(
     
     return await get_transport_settings(admin)
 
+
+# ============== FERRY WEEKLY SCHEDULE MANAGEMENT ==============
+
+class FerryDaySchedule(BaseModel):
+    day: str  # monday, tuesday, etc.
+    active: bool
+    destination: Optional[str] = None  # Tadjoura, Obock, or None if closed
+    departure_time: Optional[str] = None  # e.g., "08:00"
+    return_time: Optional[str] = None  # e.g., "12:00"
+
+class FerryWeeklyScheduleUpdate(BaseModel):
+    schedule: List[FerryDaySchedule]
+
+@api_router.get("/admin/transport/ferry/schedule")
+async def get_ferry_schedule(admin: dict = Depends(get_admin_user)):
+    """Get the detailed weekly ferry schedule"""
+    settings = await db.settings.find_one({"type": "transport"}, {"_id": 0})
+    if not settings:
+        await get_transport_settings(admin)
+        settings = await db.settings.find_one({"type": "transport"}, {"_id": 0})
+    
+    ferry = settings.get("ferry", {})
+    old_schedule = ferry.get("schedule", {})
+    default_departure = ferry.get("departure_time", "08:00")
+    default_return = ferry.get("return_time", "12:00")
+    
+    # Check if we have the new detailed schedule format
+    detailed_schedule = ferry.get("detailed_schedule", None)
+    
+    if detailed_schedule:
+        return {"schedule": detailed_schedule}
+    
+    # Convert old format to new detailed format
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    day_labels = {
+        "monday": "Lundi", "tuesday": "Mardi", "wednesday": "Mercredi",
+        "thursday": "Jeudi", "friday": "Vendredi", "saturday": "Samedi", "sunday": "Dimanche"
+    }
+    
+    converted_schedule = []
+    for day in days:
+        dest = old_schedule.get(day, "closed")
+        is_closed = dest == "closed"
+        converted_schedule.append({
+            "day": day,
+            "day_label": day_labels[day],
+            "active": not is_closed,
+            "destination": None if is_closed else dest,
+            "departure_time": None if is_closed else default_departure,
+            "return_time": None if is_closed else default_return
+        })
+    
+    return {"schedule": converted_schedule}
+
+@api_router.put("/admin/transport/ferry/schedule")
+async def update_ferry_schedule(
+    data: FerryWeeklyScheduleUpdate,
+    admin: dict = Depends(get_admin_user)
+):
+    """Update the detailed weekly ferry schedule"""
+    day_labels = {
+        "monday": "Lundi", "tuesday": "Mardi", "wednesday": "Mercredi",
+        "thursday": "Jeudi", "friday": "Vendredi", "saturday": "Samedi", "sunday": "Dimanche"
+    }
+    
+    # Build the detailed schedule with labels
+    detailed_schedule = []
+    old_format_schedule = {}
+    
+    for item in data.schedule:
+        detailed_schedule.append({
+            "day": item.day,
+            "day_label": day_labels.get(item.day, item.day),
+            "active": item.active,
+            "destination": item.destination if item.active else None,
+            "departure_time": item.departure_time if item.active else None,
+            "return_time": item.return_time if item.active else None
+        })
+        # Also update old format for backward compatibility
+        old_format_schedule[item.day] = item.destination if item.active and item.destination else "closed"
+    
+    await db.settings.update_one(
+        {"type": "transport"},
+        {"$set": {
+            "ferry.detailed_schedule": detailed_schedule,
+            "ferry.schedule": old_format_schedule
+        }},
+        upsert=True
+    )
+    
+    return {"message": "Planning Ferry mis à jour", "schedule": detailed_schedule}
+
 # ============== TRAIN ROUTE MANAGEMENT ==============
 
 class RouteCreate(BaseModel):
