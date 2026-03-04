@@ -70,6 +70,10 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
   - [x] Sélecteur destination (Tadjoura/Obock) par jour
   - [x] Heures de départ et retour personnalisables par jour
   - [x] Sauvegarde avec confirmation toast
+- [x] **NEW (4 Mars 2026)**: Aperçu visuel du planning Ferry côté client
+  - [x] API publique `GET /api/ferry/schedule`
+  - [x] Affichage dynamique des 7 jours sur la page de réservation
+  - [x] Horaires dynamiques utilisés dans `/api/ferry/trips`
 
 ---
 
@@ -124,8 +128,10 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
 - `GET /api/admin/transport/settings` - Paramètres Train & Ferry
 - `PUT /api/admin/transport/train` - Modifier Train (active, departure_time)
 - `PUT /api/admin/transport/ferry` - Modifier Ferry (active, departure_time, return_time)
-- `GET /api/admin/transport/ferry/schedule` - Planning hebdomadaire Ferry (7 jours)
-- `PUT /api/admin/transport/ferry/schedule` - Modifier planning hebdomadaire (jour, actif, destination, heures)
+- `GET /api/admin/transport/ferry/schedule` - Planning hebdomadaire Ferry (7 jours) [Admin]
+- `PUT /api/admin/transport/ferry/schedule` - Modifier planning hebdomadaire [Admin]
+- `GET /api/ferry/schedule` - Planning hebdomadaire Ferry (7 jours) [Public]
+- `GET /api/ferry/trips?date=YYYY-MM-DD` - Trajets disponibles pour une date [Public, dynamique]
 
 ---
 

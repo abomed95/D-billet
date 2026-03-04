@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Ship, Calendar, Users, Plus, Minus, AlertCircle, CheckCircle, ArrowRight, User, Phone, CreditCard, Anchor } from 'lucide-react';
+import { Ship, Calendar, Users, Plus, Minus, AlertCircle, CheckCircle, ArrowRight, User, Phone, CreditCard, Anchor, Clock, MapPin, X as XIcon, Check as CheckIcon } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -20,12 +20,32 @@ const FerryBookingPage = () => {
   const [loading, setLoading] = useState(false);
   const [tripInfo, setTripInfo] = useState(null);
   
+  // Weekly schedule state
+  const [weeklySchedule, setWeeklySchedule] = useState([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
+  
   const [passengers, setPassengers] = useState([
     { full_name: '', phone: '', passport_or_cni: '' }
   ]);
   
   const [paymentMethod, setPaymentMethod] = useState('waafi');
   const [booking, setBooking] = useState(false);
+
+  // Fetch weekly schedule on mount
+  useEffect(() => {
+    fetchWeeklySchedule();
+  }, []);
+
+  const fetchWeeklySchedule = async () => {
+    try {
+      const response = await axios.get(`${API}/ferry/schedule`);
+      setWeeklySchedule(response.data.schedule || []);
+    } catch (error) {
+      console.error('Failed to fetch schedule:', error);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  };
 
   // Get min date (today)
   const getMinDate = () => {
@@ -181,7 +201,11 @@ const FerryBookingPage = () => {
                 <div>
                   <p className="text-ferry font-semibold">Route: {tripInfo.route}</p>
                   <p className="text-cyan-200 text-sm">
-                    Aller: 8h00 • Retour: 12h00
+                    {tripInfo.trips && tripInfo.trips.length > 0 ? (
+                      <>Aller: {tripInfo.trips[0]?.departure_time} • Retour: {tripInfo.trips[1]?.departure_time}</>
+                    ) : (
+                      'Horaires disponibles'
+                    )}
                   </p>
                 </div>
               </div>
@@ -374,16 +398,91 @@ const FerryBookingPage = () => {
           </div>
         )}
 
-        {/* Info Box */}
-        <div className="mt-8 glass p-5 rounded-xl border border-ferry/30">
-          <h3 className="text-ferry font-semibold mb-3">Horaires et destinations</h3>
-          <ul className="text-gray-400 text-sm space-y-2">
-            <li>• <strong className="text-white">Mardi, Jeudi, Vendredi, Samedi:</strong> Djibouti ↔ Tadjoura (700 DJF)</li>
-            <li>• <strong className="text-white">Dimanche, Mercredi:</strong> Djibouti ↔ Obock (700 DJF)</li>
-            <li>• <strong className="text-white">Lundi:</strong> Pas de service</li>
-            <li>• <strong className="text-white">Horaires:</strong> Aller 8h00 • Retour 12h00</li>
-            <li>• Présentez votre billet avec QR code et votre pièce d'identité à l'embarquement</li>
-          </ul>
+        {/* Weekly Schedule Display */}
+        <div className="mt-8 glass p-6 rounded-2xl border border-ferry/30" data-testid="ferry-schedule-preview">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-ferry/20 flex items-center justify-center">
+              <Calendar className="text-ferry" size={20} />
+            </div>
+            <div>
+              <h3 className="text-ferry font-semibold text-lg">Planning Hebdomadaire</h3>
+              <p className="text-gray-500 text-sm">Horaires et destinations du ferry</p>
+            </div>
+          </div>
+          
+          {loadingSchedule ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin w-6 h-6 border-2 border-ferry border-t-transparent rounded-full"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+              {weeklySchedule.map((day) => (
+                <div 
+                  key={day.day}
+                  data-testid={`schedule-day-${day.day}`}
+                  className={`p-3 rounded-xl text-center transition-all ${
+                    day.active 
+                      ? 'bg-ferry/10 border border-ferry/30 hover:border-ferry/60' 
+                      : 'bg-red-500/10 border border-red-500/20'
+                  }`}
+                >
+                  <p className={`font-medium text-sm mb-1 ${day.active ? 'text-white' : 'text-red-400'}`}>
+                    {day.day_label}
+                  </p>
+                  
+                  {day.active ? (
+                    <>
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <MapPin size={12} className="text-ferry" />
+                        <span className="text-ferry text-xs font-medium">{day.destination}</span>
+                      </div>
+                      <div className="text-gray-400 text-[10px] space-y-0.5">
+                        <div className="flex items-center justify-center gap-1">
+                          <ArrowRight size={10} />
+                          <span>{day.departure_time}</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-1">
+                          <ArrowRight size={10} className="rotate-180" />
+                          <span>{day.return_time}</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center gap-1 mt-2">
+                      <XIcon size={14} className="text-red-400" />
+                      <span className="text-red-400 text-xs">Fermé</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Legend and info */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-ferry/30 border border-ferry/50"></div>
+                <span>Service disponible</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30"></div>
+                <span>Pas de service</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <ArrowRight size={12} />
+                <span>Départ</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <ArrowRight size={12} className="rotate-180" />
+                <span>Retour</span>
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs mt-3">
+              Prix: <span className="text-ferry font-semibold">700 DJF</span> par personne • 
+              Présentez votre billet QR code et pièce d'identité à l'embarquement
+            </p>
+          </div>
         </div>
       </div>
     </div>

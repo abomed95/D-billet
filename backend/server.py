@@ -1588,7 +1588,8 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
 
 # ============== FERRY BOOKING ==============
 
-FERRY_SCHEDULE = {
+# Default ferry schedule (used as fallback)
+DEFAULT_FERRY_SCHEDULE = {
     1: {"route": "Djibouti-Tadjoura", "destinations": ["Djibouti", "Tadjoura"]},
     3: {"route": "Djibouti-Tadjoura", "destinations": ["Djibouti", "Tadjoura"]},
     4: {"route": "Djibouti-Tadjoura", "destinations": ["Djibouti", "Tadjoura"]},
@@ -1599,6 +1600,69 @@ FERRY_SCHEDULE = {
 
 FERRY_PRICE = 700
 
+# Day name to weekday number mapping
+DAY_TO_WEEKDAY = {
+    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+    "friday": 4, "saturday": 5, "sunday": 6
+}
+
+async def get_dynamic_ferry_schedule():
+    """Get ferry schedule from database or return default"""
+    settings = await db.settings.find_one({"type": "transport"}, {"_id": 0})
+    if not settings or "ferry" not in settings:
+        return None, None
+    
+    ferry = settings.get("ferry", {})
+    detailed_schedule = ferry.get("detailed_schedule")
+    default_departure = ferry.get("departure_time", "08:00")
+    default_return = ferry.get("return_time", "12:00")
+    
+    if not detailed_schedule:
+        return None, None
+    
+    # Convert detailed schedule to a lookup by weekday number
+    schedule_by_weekday = {}
+    for day_info in detailed_schedule:
+        day_key = day_info.get("day", "").lower()
+        weekday_num = DAY_TO_WEEKDAY.get(day_key)
+        if weekday_num is not None:
+            schedule_by_weekday[weekday_num] = {
+                "active": day_info.get("active", False),
+                "destination": day_info.get("destination"),
+                "departure_time": day_info.get("departure_time") or default_departure,
+                "return_time": day_info.get("return_time") or default_return
+            }
+    
+    return detailed_schedule, schedule_by_weekday
+
+
+@api_router.get("/ferry/schedule")
+async def get_public_ferry_schedule():
+    """Public endpoint to get ferry weekly schedule for customers"""
+    detailed_schedule, _ = await get_dynamic_ferry_schedule()
+    
+    if detailed_schedule:
+        return {"schedule": detailed_schedule, "source": "database"}
+    
+    # Fallback to default schedule
+    day_labels = {
+        "monday": "Lundi", "tuesday": "Mardi", "wednesday": "Mercredi",
+        "thursday": "Jeudi", "friday": "Vendredi", "saturday": "Samedi", "sunday": "Dimanche"
+    }
+    
+    fallback_schedule = [
+        {"day": "monday", "day_label": "Lundi", "active": False, "destination": None, "departure_time": None, "return_time": None},
+        {"day": "tuesday", "day_label": "Mardi", "active": True, "destination": "Tadjoura", "departure_time": "08:00", "return_time": "12:00"},
+        {"day": "wednesday", "day_label": "Mercredi", "active": True, "destination": "Obock", "departure_time": "08:00", "return_time": "12:00"},
+        {"day": "thursday", "day_label": "Jeudi", "active": True, "destination": "Tadjoura", "departure_time": "08:00", "return_time": "12:00"},
+        {"day": "friday", "day_label": "Vendredi", "active": True, "destination": "Tadjoura", "departure_time": "08:00", "return_time": "12:00"},
+        {"day": "saturday", "day_label": "Samedi", "active": True, "destination": "Tadjoura", "departure_time": "08:00", "return_time": "12:00"},
+        {"day": "sunday", "day_label": "Dimanche", "active": True, "destination": "Obock", "departure_time": "08:00", "return_time": "12:00"},
+    ]
+    
+    return {"schedule": fallback_schedule, "source": "default"}
+
+
 @api_router.get("/ferry/trips")
 async def get_ferry_trips(date: str):
     try:
@@ -1607,11 +1671,34 @@ async def get_ferry_trips(date: str):
         raise HTTPException(status_code=400, detail="Format de date invalide")
     
     weekday = trip_date.weekday()
+    _, schedule_by_weekday = await get_dynamic_ferry_schedule()
     
+    # Use dynamic schedule if available
+    if schedule_by_weekday and weekday in schedule_by_weekday:
+        day_schedule = schedule_by_weekday[weekday]
+        
+        if not day_schedule.get("active"):
+            return {"date": date, "has_service": False, "message": "Pas de service ce jour", "trips": []}
+        
+        destination = day_schedule.get("destination")
+        if not destination:
+            return {"date": date, "has_service": False, "message": "Destination non configurée", "trips": []}
+        
+        departure_time = day_schedule.get("departure_time", "08:00")
+        return_time = day_schedule.get("return_time", "12:00")
+        
+        trips = [
+            {"departure": "Djibouti", "arrival": destination, "trip_type": "aller", "departure_time": departure_time, "price": FERRY_PRICE},
+            {"departure": destination, "arrival": "Djibouti", "trip_type": "retour", "departure_time": return_time, "price": FERRY_PRICE}
+        ]
+        
+        return {"date": date, "has_service": True, "route": f"Djibouti-{destination}", "trips": trips}
+    
+    # Fallback to hardcoded schedule
     if weekday == 0:
         return {"date": date, "has_service": False, "message": "Pas de service le lundi", "trips": []}
     
-    schedule = FERRY_SCHEDULE.get(weekday)
+    schedule = DEFAULT_FERRY_SCHEDULE.get(weekday)
     if not schedule:
         return {"date": date, "has_service": False, "message": "Pas de service", "trips": []}
     
@@ -1631,11 +1718,21 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
         raise HTTPException(status_code=400, detail="Format de date invalide")
     
     weekday = trip_date.weekday()
-    if weekday == 0 or weekday not in FERRY_SCHEDULE:
-        raise HTTPException(status_code=400, detail="Pas de service ce jour")
+    _, schedule_by_weekday = await get_dynamic_ferry_schedule()
+    
+    # Check if day has service using dynamic schedule
+    if schedule_by_weekday and weekday in schedule_by_weekday:
+        day_schedule = schedule_by_weekday[weekday]
+        if not day_schedule.get("active"):
+            raise HTTPException(status_code=400, detail="Pas de service ce jour")
+        departure_time = day_schedule.get("departure_time", "08:00") if booking.trip_type == "aller" else day_schedule.get("return_time", "12:00")
+    else:
+        # Fallback
+        if weekday == 0 or weekday not in DEFAULT_FERRY_SCHEDULE:
+            raise HTTPException(status_code=400, detail="Pas de service ce jour")
+        departure_time = "08:00" if booking.trip_type == "aller" else "12:00"
     
     total_price = FERRY_PRICE * len(booking.passengers)
-    departure_time = "08:00" if booking.trip_type == "aller" else "12:00"
     
     tickets_created = []
     for passenger in booking.passengers:
