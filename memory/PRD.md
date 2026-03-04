@@ -184,13 +184,53 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
 - OTP SMS **SIMULÉ** (code retourné dans API)
 - Validation des payouts **SIMULÉE** (pas de virement réel)
 
+---
+
+## Module Staff (Sécurité & Contrôle d'Accès) - NEW (4 Mars 2026)
+
+### Architecture Données
+- **Collection `staff_accounts`**: id, organizer_id, username, password_hash, full_name, assigned_events, active, created_at
+- **Collection `scan_logs`**: id, staff_id, staff_name, ticket_id, event_id, status, scanned_at, message
+- **Modification `tickets`**: scanned_by, scanned_by_name, scanned_at
+
+### Routes API Staff
+- `POST /api/staff/login` - Connexion (JWT 24h, type='staff')
+- `GET /api/staff/me` - Info staff authentifié
+- `GET /api/staff/events` - Événements assignés avec stats
+- `POST /api/staff/scan` - Scanner un billet QR
+
+### Routes API Organisateur
+- `GET /api/organizer/staff` - Liste des comptes staff
+- `POST /api/organizer/staff` - Créer compte (génère mot de passe)
+- `PUT /api/organizer/staff/{id}` - Modifier (events, active)
+- `DELETE /api/organizer/staff/{id}` - Supprimer
+- `POST /api/organizer/staff/{id}/reset-password` - Réinitialiser
+- `GET /api/organizer/staff/scan-logs` - Journal des scans
+
+### Pages Frontend
+- `/staff/login` - Login mobile-first
+- `/staff/scanner` - Scanner avec caméra/manuel
+- `/organizer/staff` - Gestion des comptes staff
+
+### Feedback Visuel Scanner
+- 🟩 VERT: Billet valide + nom + type
+- 🟥 ROUGE: Billet invalide
+- 🟧 ORANGE: Déjà scanné (heure du premier scan)
+- Vibrations: succès (1 courte), échec (3 longues)
+
+---
+
 ## Architecture des fichiers
 ```
 /app/
 ├── backend/
-│   └── server.py (2500+ lignes - API complète)
+│   └── server.py (2900+ lignes - API complète)
 └── frontend/
     └── src/
+        ├── context/
+        │   ├── AuthContext.js
+        │   ├── CartContext.js
+        │   └── StaffAuthContext.js (NEW)
         ├── pages/
         │   ├── admin/
         │   │   ├── AdminDashboard.js (KPIs + alertes)
@@ -200,7 +240,18 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
         │   │   ├── AdminPayouts.js (valider/rejeter)
         │   │   ├── AdminSettings.js (config)
         │   │   └── AdminTransport.js (train/ferry)
-        │   └── organizer/ (dashboard organisateur)
+        │   ├── organizer/
+        │   │   ├── OrganizerDashboard.js
+        │   │   ├── OrganizerEvents.js
+        │   │   ├── OrganizerParticipants.js
+        │   │   ├── OrganizerPromoCodes.js
+        │   │   ├── OrganizerFinances.js
+        │   │   └── OrganizerStaff.js (NEW)
+        │   └── staff/ (NEW)
+        │       ├── StaffLoginPage.js
+        │       └── StaffScannerPage.js
         └── layouts/
-            └── AdminLayout.js (navigation complète)
+            ├── AdminLayout.js
+            ├── OrganizerLayout.js
+            └── MainLayout.js
 ```
