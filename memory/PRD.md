@@ -220,6 +220,26 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
 
 ---
 
+## Dashboard Temps Réel - NEW (4 Mars 2026)
+
+### Route API
+- `GET /api/organizer/events/{event_id}/live-dashboard` - Données complètes temps réel
+
+### Données retournées
+- **Stats principales**: Entrées, Restants, Taux d'entrée %, Entrées/min
+- **Breakdown par type de billet**: Total/Scannés par catégorie
+- **Affluence horaire**: Graphique des 12 dernières heures
+- **Entrées récentes**: 20 dernières validations avec nom, type, heure, agent
+- **Alertes doublons**: Tentatives de billets déjà scannés
+- **Performance staff**: Classement des agents par nombre de scans
+
+### Page Frontend
+- `/organizer/live/:eventId` - Dashboard plein écran
+- Rafraîchissement automatique toutes les 5 secondes
+- Accès via bouton "Dashboard Live" sur chaque événement
+
+---
+
 ## Architecture des fichiers
 ```
 /app/

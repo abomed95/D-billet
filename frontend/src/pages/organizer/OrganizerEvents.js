@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit, Trash2, Loader2, Search, Ticket } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Search, Ticket, Activity } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -33,6 +34,7 @@ const CATEGORIES = [
 
 const OrganizerEvents = () => {
   const { getAuthHeaders } = useAuth();
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -187,6 +189,17 @@ const OrganizerEvents = () => {
                     {tt.name}: {tt.sold || 0}/{tt.quantity} • {formatPrice(tt.price)}
                   </span>
                 ))}
+              </div>
+              {/* Live Dashboard Button */}
+              <div className="mt-4 pt-4 border-t border-white/10 flex justify-end">
+                <Button
+                  onClick={() => navigate(`/organizer/live/${event.id}`)}
+                  className="bg-green-500 hover:bg-green-600 text-black gap-2"
+                  data-testid={`live-dashboard-btn-${event.id}`}
+                >
+                  <Activity size={18} />
+                  Dashboard Live
+                </Button>
               </div>
             </div>
           ))

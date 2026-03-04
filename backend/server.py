@@ -840,6 +840,120 @@ async def get_event_entry_stats(event_id: str, organizer: dict = Depends(get_org
         "recent_entries": recent_scans
     }
 
+
+@api_router.get("/organizer/events/{event_id}/live-dashboard")
+async def get_live_event_dashboard(event_id: str, organizer: dict = Depends(get_organizer_user)):
+    """Get comprehensive real-time dashboard data for an event"""
+    event = await db.events.find_one({"id": event_id, "organizer_id": organizer["id"]})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    # Basic stats
+    total_tickets = await db.tickets.count_documents({"event_id": event_id})
+    used_tickets = await db.tickets.count_documents({"event_id": event_id, "status": "used"})
+    valid_tickets = await db.tickets.count_documents({"event_id": event_id, "status": "valid"})
+    
+    # Ticket type breakdown
+    ticket_types = await db.tickets.aggregate([
+        {"$match": {"event_id": event_id}},
+        {"$group": {
+            "_id": "$ticket_type",
+            "total": {"$sum": 1},
+            "scanned": {"$sum": {"$cond": [{"$eq": ["$status", "used"]}, 1, 0]}}
+        }}
+    ]).to_list(100)
+    
+    type_breakdown = [
+        {
+            "type": t["_id"] or "Standard",
+            "total": t["total"],
+            "scanned": t["scanned"],
+            "remaining": t["total"] - t["scanned"]
+        }
+        for t in ticket_types
+    ]
+    
+    # Hourly entries (last 12 hours)
+    now = datetime.now(timezone.utc)
+    hourly_data = []
+    for i in range(12):
+        hour_start = now - timedelta(hours=11-i)
+        hour_end = hour_start + timedelta(hours=1)
+        
+        count = await db.scan_logs.count_documents({
+            "event_id": event_id,
+            "status": "valid",
+            "scanned_at": {
+                "$gte": hour_start.isoformat(),
+                "$lt": hour_end.isoformat()
+            }
+        })
+        
+        hourly_data.append({
+            "hour": hour_start.strftime("%H:00"),
+            "entries": count
+        })
+    
+    # Recent entries (last 20)
+    recent_entries = await db.scan_logs.find(
+        {"event_id": event_id, "status": "valid"},
+        {"_id": 0, "staff_name": 1, "client_name": 1, "ticket_type": 1, "scanned_at": 1}
+    ).sort("scanned_at", -1).to_list(20)
+    
+    # Duplicate alerts (already_scanned attempts)
+    duplicate_alerts = await db.scan_logs.find(
+        {"event_id": event_id, "status": "already_scanned"},
+        {"_id": 0}
+    ).sort("scanned_at", -1).to_list(10)
+    
+    # Staff performance
+    staff_stats = await db.scan_logs.aggregate([
+        {"$match": {"event_id": event_id, "status": "valid"}},
+        {"$group": {
+            "_id": {"staff_id": "$staff_id", "staff_name": "$staff_name"},
+            "scan_count": {"$sum": 1}
+        }},
+        {"$sort": {"scan_count": -1}}
+    ]).to_list(20)
+    
+    staff_performance = [
+        {"staff_name": s["_id"]["staff_name"], "scans": s["scan_count"]}
+        for s in staff_stats
+    ]
+    
+    # Entry rate per minute (last 10 minutes)
+    entries_last_10min = await db.scan_logs.count_documents({
+        "event_id": event_id,
+        "status": "valid",
+        "scanned_at": {"$gte": (now - timedelta(minutes=10)).isoformat()}
+    })
+    entry_rate_per_min = round(entries_last_10min / 10, 1)
+    
+    return {
+        "event": {
+            "id": event_id,
+            "title": event["title"],
+            "date": event.get("date"),
+            "time": event.get("time"),
+            "venue": event.get("venue")
+        },
+        "stats": {
+            "total_tickets": total_tickets,
+            "entries": used_tickets,
+            "remaining": valid_tickets,
+            "entry_rate_percent": round((used_tickets / total_tickets * 100) if total_tickets > 0 else 0, 1),
+            "entry_rate_per_min": entry_rate_per_min
+        },
+        "type_breakdown": type_breakdown,
+        "hourly_entries": hourly_data,
+        "recent_entries": recent_entries,
+        "duplicate_alerts": duplicate_alerts,
+        "alert_count": len(duplicate_alerts),
+        "staff_performance": staff_performance,
+        "last_updated": now.isoformat()
+    }
+
+
 # ============== ORGANIZER ROUTES (Admin only) ==============
 
 @api_router.post("/admin/organizers", response_model=OrganizerResponse)

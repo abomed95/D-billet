@@ -31,6 +31,7 @@ import OrganizerPromoCodes from "./pages/organizer/OrganizerPromoCodes";
 import OrganizerParticipants from "./pages/organizer/OrganizerParticipants";
 import OrganizerFinances from "./pages/organizer/OrganizerFinances";
 import OrganizerStaff from "./pages/organizer/OrganizerStaff";
+import OrganizerLiveDashboard from "./pages/organizer/OrganizerLiveDashboard";
 import StaffLoginPage from "./pages/staff/StaffLoginPage";
 import StaffScannerPage from "./pages/staff/StaffScannerPage";
 
@@ -102,6 +103,9 @@ function AppRoutes() {
         <Route path="finances" element={<OrganizerFinances />} />
         <Route path="staff" element={<OrganizerStaff />} />
       </Route>
+      
+      {/* Organizer Live Dashboard (Full Screen) */}
+      <Route path="/organizer/live/:eventId" element={<ProtectedRoute organizerOnly><OrganizerLiveDashboard /></ProtectedRoute>} />
       
       {/* Staff Routes - Separate Auth Context */}
       <Route path="/staff/login" element={<StaffAuthProvider><StaffLoginPage /></StaffAuthProvider>} />
