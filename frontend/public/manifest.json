@@ -1,0 +1,33 @@
+{
+  "name": "D-BILLEH - Billetterie Djibouti",
+  "short_name": "D-BILLEH",
+  "description": "Un clic, et vous y êtes - Billetterie officielle de Djibouti pour événements, train et ferry",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#D4AF37",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/dbilleh-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/dbilleh-icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/dbilleh-icon.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["entertainment", "travel", "lifestyle"],
+  "lang": "fr",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false
+}

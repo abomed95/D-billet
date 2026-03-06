@@ -240,6 +240,45 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
 
 ---
 
+## PWA & Rebranding D-BILLEH - NEW (6 Mars 2026)
+
+### PWA Configuration
+- `manifest.json` avec theme_color or (#D4AF37)
+- `service-worker.js` pour cache et mode offline
+- Meta tags iOS (apple-mobile-web-app-capable)
+- Icône et logo D-BILLEH or
+
+### Nouveau Design Premium Or
+- Couleur principale: or (#D4AF37) remplace le vert
+- Tailwind config: gold-50 à gold-900
+- Logo D-BILLEH avec icône géométrique or
+- Barre de navigation avec bordure or et icônes or actives
+
+### Homepage Améliorée
+- Hero avec logo D-BILLEH grand format
+- Bouton connexion or en haut à droite
+- Section "Pourquoi choisir D-BILLEH?" (desktop uniquement)
+  - Billetterie 100% Numérique
+  - Paiement Sécurisé
+  - Accès Instantané
+  - Disponible 24/7
+- FAQ accordéon (6 questions)
+- Footer double (desktop):
+  - Upper: Logo, Navigation, Services, Contact, réseaux sociaux
+  - Lower: Copyright, Conditions, Confidentialité, Mentions légales
+- Footer simple (mobile)
+
+### Fichiers créés/modifiés
+- `/app/frontend/public/manifest.json`
+- `/app/frontend/public/service-worker.js`
+- `/app/frontend/public/images/dbilleh-logo.png`
+- `/app/frontend/public/images/dbilleh-icon.png`
+- `/app/frontend/src/pages/HomePage.js` (réécrit)
+- `/app/frontend/tailwind.config.js` (couleurs gold)
+- `/app/frontend/public/index.html` (PWA meta tags)
+
+---
+
 ## Architecture des fichiers
 ```
 /app/
