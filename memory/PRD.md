@@ -255,8 +255,10 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
 - Barre de navigation avec bordure or et icônes or actives
 
 ### Homepage Améliorée
-- Hero avec logo D-BILLEH grand format
-- Bouton connexion or en haut à droite
+- Hero avec titre D-BILLEH en grand dégradé or (sans logo image, sans bouton connexion)
+- Statistiques: 500+ Événements | 10K+ Utilisateurs | 100% Sécurisé
+- Nouvelle photo de fond (confettis/célébration)
+- Flèche de scroll animée
 - Section "Pourquoi choisir D-BILLEH?" (desktop uniquement)
   - Billetterie 100% Numérique
   - Paiement Sécurisé
@@ -267,6 +269,12 @@ Développer une application web moderne et responsive appelée "D-Billet" (Ticke
   - Upper: Logo, Navigation, Services, Contact, réseaux sociaux
   - Lower: Copyright, Conditions, Confidentialité, Mentions légales
 - Footer simple (mobile)
+
+### Menu Utilisateur avec Déconnexion
+- Popup menu au clic sur profil dans la navbar
+- Affiche: Avatar, Nom, Email/Téléphone
+- Options: Mes Billets, Espace Organisateur/Admin, Déconnexion
+- Déconnexion fonctionnelle avec redirection vers accueil
 
 ### Fichiers créés/modifiés
 - `/app/frontend/public/manifest.json`

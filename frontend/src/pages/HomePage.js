@@ -127,85 +127,84 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-[#050505]">
-      {/* Hero Section */}
-      <section className="relative h-[55vh] md:h-[60vh] overflow-hidden">
+      {/* Hero Section - Modern Presentation */}
+      <section className="relative h-[70vh] md:h-[75vh] overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ 
-            backgroundImage: 'url(https://images.unsplash.com/photo-1639323252699-23cd48cccea6?crop=entropy&cs=srgb&fm=jpg&q=85)',
+            backgroundImage: 'url(https://images.unsplash.com/photo-1492684223066-81342ee5ff30?crop=entropy&cs=srgb&fm=jpg&q=85)',
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-[#050505]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-[#050505]" />
         </div>
         
-        {/* User Menu - Top Right */}
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
-          {isAuthenticated ? (
-            <div className="flex items-center gap-3">
-              <Link 
-                to="/my-tickets"
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-gold/20 border border-gold/30 text-gold hover:bg-gold/30 transition-all"
-              >
-                <Ticket size={18} />
-                <span className="hidden sm:inline">Mes Billets</span>
-              </Link>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/10 border border-white/20">
-                <div className="w-8 h-8 rounded-full bg-gold/30 flex items-center justify-center">
-                  <User className="text-gold" size={18} />
-                </div>
-                <span className="text-white text-sm hidden sm:inline">{user?.full_name?.split(' ')[0]}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                data-testid="logout-btn"
-              >
-                <LogOut size={18} />
-              </Button>
-            </div>
-          ) : (
-            <Link 
-              to="/auth"
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-gold text-black font-semibold hover:bg-gold-light transition-all"
-              data-testid="login-btn"
-            >
-              <User size={18} />
-              Connexion
-            </Link>
-          )}
+        {/* Floating particles effect */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-2 h-2 bg-gold rounded-full animate-pulse opacity-60"></div>
+          <div className="absolute top-40 right-20 w-3 h-3 bg-gold rounded-full animate-pulse opacity-40"></div>
+          <div className="absolute bottom-40 left-1/4 w-2 h-2 bg-gold rounded-full animate-pulse opacity-50"></div>
+          <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-gold rounded-full animate-pulse opacity-70"></div>
         </div>
         
         <div className="relative z-10 h-full flex flex-col items-center justify-center px-4 text-center">
-          {/* Logo */}
-          <img 
-            src="/images/dbilleh-logo.png" 
-            alt="D-BILLEH" 
-            className="h-32 md:h-40 mb-4 drop-shadow-2xl"
-          />
+          {/* Main Title with gradient */}
+          <div className="mb-6">
+            <h1 className="font-unbounded text-5xl md:text-7xl lg:text-8xl font-bold text-white mb-4 tracking-tight">
+              <span className="bg-gradient-to-r from-gold via-yellow-300 to-gold bg-clip-text text-transparent drop-shadow-2xl">
+                D-BILLEH
+              </span>
+            </h1>
+            <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gold to-transparent mx-auto mb-4"></div>
+          </div>
           
-          <p className="text-gray-300 text-lg max-w-xl mb-6">
-            Un clic, et vous y êtes - Billetterie officielle de Djibouti
+          {/* Tagline */}
+          <p className="text-xl md:text-2xl text-white/90 font-light max-w-2xl mb-2">
+            Un clic, et vous y êtes
+          </p>
+          <p className="text-gray-400 text-base md:text-lg max-w-xl mb-8">
+            La billetterie officielle de Djibouti pour vos événements, train et ferry
           </p>
           
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="w-full max-w-lg">
-            <div className="relative glass rounded-full p-2 border border-gold/30">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gold" size={20} />
+          <form onSubmit={handleSearch} className="w-full max-w-xl mb-8">
+            <div className="relative glass rounded-2xl p-2 border border-gold/30 backdrop-blur-xl">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gold" size={22} />
               <Input
                 type="text"
-                placeholder="Rechercher un événement..."
+                placeholder="Rechercher un événement, concert, match..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 bg-transparent border-0 text-white placeholder:text-gray-500 rounded-full"
+                className="pl-14 h-14 bg-transparent border-0 text-white placeholder:text-gray-500 rounded-xl text-base"
                 data-testid="search-input"
               />
-              <Button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-gold hover:bg-gold-light text-black font-semibold">
+              <Button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-gold hover:bg-gold-light text-black font-semibold px-6 h-10">
                 Rechercher
               </Button>
             </div>
           </form>
+          
+          {/* Quick Stats */}
+          <div className="flex items-center gap-8 text-center">
+            <div>
+              <p className="text-3xl md:text-4xl font-bold text-gold">500+</p>
+              <p className="text-gray-400 text-sm">Événements</p>
+            </div>
+            <div className="w-px h-12 bg-white/20"></div>
+            <div>
+              <p className="text-3xl md:text-4xl font-bold text-gold">10K+</p>
+              <p className="text-gray-400 text-sm">Utilisateurs</p>
+            </div>
+            <div className="w-px h-12 bg-white/20"></div>
+            <div>
+              <p className="text-3xl md:text-4xl font-bold text-gold">100%</p>
+              <p className="text-gray-400 text-sm">Sécurisé</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce">
+          <ChevronDown className="text-gold" size={28} />
         </div>
       </section>
 

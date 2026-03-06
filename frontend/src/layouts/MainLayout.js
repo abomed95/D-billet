@@ -1,12 +1,15 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { Home, Ticket, ShoppingCart, User, Train, Ship } from 'lucide-react';
+import { Home, Ticket, ShoppingCart, User, Train, Ship, LogOut, X } from 'lucide-react';
 
 const MainLayout = () => {
-  const { user, isAdmin, isOrganizer } = useAuth();
+  const { user, isAdmin, isOrganizer, logout } = useAuth();
   const { cartCount } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const navItems = [
     { path: '/', icon: Home, label: 'Accueil' },
@@ -16,12 +19,75 @@ const MainLayout = () => {
     { path: '/cart', icon: ShoppingCart, label: 'Panier', auth: true, badge: cartCount },
   ];
 
+  const handleLogout = () => {
+    logout();
+    setShowUserMenu(false);
+    navigate('/');
+  };
+
   return (
     <div className="min-h-screen bg-[#050505]">
       {/* Main Content */}
       <main className="pb-24">
         <Outlet />
       </main>
+
+      {/* User Menu Popup */}
+      {showUserMenu && user && (
+        <div className="fixed inset-0 z-[60]" onClick={() => setShowUserMenu(false)}>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div 
+            className="absolute bottom-24 left-1/2 -translate-x-1/2 w-72 glass rounded-2xl border border-gold/30 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* User Info */}
+            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold to-gold-dark flex items-center justify-center text-black font-bold text-lg">
+                {user.full_name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div>
+                <p className="text-white font-semibold">{user.full_name}</p>
+                <p className="text-gray-400 text-sm">{user.email || user.phone}</p>
+              </div>
+            </div>
+            
+            {/* Menu Options */}
+            <div className="py-2 space-y-1">
+              <Link
+                to="/my-tickets"
+                onClick={() => setShowUserMenu(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-all"
+              >
+                <Ticket size={20} />
+                <span>Mes Billets</span>
+              </Link>
+              
+              {(isAdmin || isOrganizer) && (
+                <Link
+                  to={isAdmin ? '/admin' : '/organizer'}
+                  onClick={() => setShowUserMenu(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-all"
+                >
+                  <User size={20} />
+                  <span>{isAdmin ? 'Tableau de bord Admin' : 'Espace Organisateur'}</span>
+                </Link>
+              )}
+            </div>
+            
+            {/* Logout Button */}
+            <div className="pt-2 border-t border-white/10">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-all"
+                data-testid="logout-btn"
+              >
+                <LogOut size={20} />
+                <span>Déconnexion</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-4 left-4 right-4 h-16 bg-black/80 backdrop-blur-lg border border-gold/20 rounded-full flex items-center justify-around z-50 shadow-2xl">
@@ -51,10 +117,10 @@ const MainLayout = () => {
         
         {/* Auth/Profile */}
         {user ? (
-          <Link
-            to={isAdmin ? '/admin' : isOrganizer ? '/organizer' : '/my-tickets'}
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
             className={`flex flex-col items-center justify-center w-14 h-full transition-all
-              ${location.pathname === '/profile' || location.pathname.includes('/admin') || location.pathname.includes('/organizer') 
+              ${showUserMenu || location.pathname.includes('/admin') || location.pathname.includes('/organizer') 
                 ? 'text-gold' : 'text-gray-500 hover:text-white'}`}
             data-testid="nav-profile"
           >
@@ -64,7 +130,7 @@ const MainLayout = () => {
             <span className="text-[10px] mt-1">
               {isAdmin ? 'Admin' : isOrganizer ? 'Espace' : 'Profil'}
             </span>
-          </Link>
+          </button>
         ) : (
           <Link
             to="/auth"

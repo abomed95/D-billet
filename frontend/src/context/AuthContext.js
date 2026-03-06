@@ -91,6 +91,7 @@ export const AuthProvider = ({ children }) => {
 
   const isAdmin = user?.role === 'admin';
   const isOrganizer = user?.role === 'organizer' || user?.role === 'admin';
+  const isAuthenticated = !!user && !!token;
 
   return (
     <AuthContext.Provider value={{ 
@@ -98,7 +99,7 @@ export const AuthProvider = ({ children }) => {
       register, login, logout, 
       sendOtp, verifyOtp,
       getAuthHeaders,
-      isAdmin, isOrganizer
+      isAdmin, isOrganizer, isAuthenticated
     }}>
       {children}
     </AuthContext.Provider>
