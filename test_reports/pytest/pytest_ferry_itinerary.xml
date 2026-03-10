@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="24" time="4.902" timestamp="2026-03-10T22:57:27.261349+00:00" hostname="agent-env-a996cdfc-30af-404b-b34a-56baa963296f"><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerrySchedule" name="test_get_ferry_schedule_returns_7_days" time="0.304" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerrySchedule" name="test_thursday_service_obock_9h_14h" time="0.139" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerrySchedule" name="test_saturday_service_obock_8h_13h" time="0.137" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerrySchedule" name="test_monday_no_service" time="0.132" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerrySchedule" name="test_wednesday_no_service" time="0.152" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerrySchedule" name="test_sunday_no_service" time="0.143" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerrySchedule" name="test_tuesday_no_service" time="0.123" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerrySchedule" name="test_friday_no_service" time="0.128" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerryTrips" name="test_ferry_trips_thursday" time="0.133" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerryTrips" name="test_ferry_trips_saturday" time="0.121" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerryTrips" name="test_ferry_trips_monday_no_service" time="0.185" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerryTrips" name="test_ferry_trips_wednesday_no_service" time="0.162" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerryTrips" name="test_ferry_trips_sunday_no_service" time="0.130" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestFerryTrips" name="test_ferry_trips_invalid_date_format" time="0.157" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestAuthEndpoints" name="test_auth_login_admin" time="0.420" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestAuthEndpoints" name="test_auth_login_organizer" time="0.357" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestAuthEndpoints" name="test_auth_login_invalid_credentials" time="0.129" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestEventsEndpoint" name="test_get_events_public" time="0.126" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestAdminStats" name="test_admin_stats_requires_auth" time="0.136"><failure message="AssertionError: Expected 401 without auth, got 403&#10;assert 403 == 401&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_ferry_itinerary_and_api.py:315: in test_admin_stats_requires_auth
+    assert response.status_code == 401, f"Expected 401 without auth, got {response.status_code}"
+E   AssertionError: Expected 401 without auth, got 403
+E   assert 403 == 401
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestAdminStats" name="test_admin_stats_with_admin_token" time="0.493" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestOrganizerEvents" name="test_organizer_events_requires_auth" time="0.135"><failure message="AssertionError: Expected 401 without auth, got 403&#10;assert 403 == 401&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_ferry_itinerary_and_api.py:353: in test_organizer_events_requires_auth
+    assert response.status_code == 401, f"Expected 401 without auth, got {response.status_code}"
+E   AssertionError: Expected 401 without auth, got 403
+E   assert 403 == 401
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestOrganizerEvents" name="test_organizer_events_with_token" time="0.478" /><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestHealthCheck" name="test_health_endpoint" time="0.135"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_ferry_itinerary_and_api.py:391: in test_health_endpoint
+    data = response.json()
+           ^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_ferry_itinerary_and_api.TestHealthCheck" name="test_root_endpoint" time="0.137"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_ferry_itinerary_and_api.py:402: in test_root_endpoint
+    data = response.json()
+           ^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase></testsuite></testsuites>

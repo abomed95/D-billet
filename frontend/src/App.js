@@ -42,13 +42,13 @@ import OrganizerLayout from "./layouts/OrganizerLayout";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false, organizerOnly = false }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin, isOrganizer } = useAuth();
   
   if (loading) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
         <div className="text-center">
-          <div className="font-unbounded font-bold text-3xl text-green-400 mb-2">D-BILLET</div>
+          <div className="font-unbounded font-bold text-3xl bg-gradient-to-r from-gold to-yellow-300 bg-clip-text text-transparent mb-2">D-BILLEH</div>
           <div className="animate-pulse text-gray-400">Chargement...</div>
         </div>
       </div>
@@ -59,11 +59,13 @@ const ProtectedRoute = ({ children, adminOnly = false, organizerOnly = false }) 
     return <Navigate to="/auth" replace />;
   }
   
-  if (adminOnly && user.role !== 'admin') {
+  // Admin only routes - STRICT: only admin role
+  if (adminOnly && !isAdmin) {
     return <Navigate to="/" replace />;
   }
   
-  if (organizerOnly && user.role !== 'organizer' && user.role !== 'admin') {
+  // Organizer only routes - organizer OR admin can access
+  if (organizerOnly && !isOrganizer) {
     return <Navigate to="/" replace />;
   }
   

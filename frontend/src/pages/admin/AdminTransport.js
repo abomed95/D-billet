@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Train, Ship, Clock, DollarSign, MapPin, Save, Loader2, 
-  Plus, Trash2, Edit2, X, Check, Calendar
+  Plus, Trash2, Edit2, X, Check, Calendar, Shield, User, Eye, EyeOff, Copy, RefreshCw
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '../../components/ui/dialog';
 import {
   Tabs,
@@ -33,6 +34,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -46,6 +54,15 @@ const AdminTransport = () => {
   // Ferry schedule state
   const [ferrySchedule, setFerrySchedule] = useState([]);
   const [savingSchedule, setSavingSchedule] = useState(false);
+  
+  // Transport Staff state
+  const [transportStaff, setTransportStaff] = useState([]);
+  const [staffModal, setStaffModal] = useState({ open: false, mode: 'add' });
+  const [staffForm, setStaffForm] = useState({ username: '', full_name: '', transport_type: 'both' });
+  const [credentialsModal, setCredentialsModal] = useState({ open: false, username: '', password: '' });
+  const [deleteStaffModal, setDeleteStaffModal] = useState({ open: false, staff: null });
+  const [showPassword, setShowPassword] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
   
   // Modal states
   const [routeModal, setRouteModal] = useState({ open: false, type: null, mode: 'add', index: null });
@@ -62,6 +79,7 @@ const AdminTransport = () => {
   useEffect(() => {
     fetchSettings();
     fetchFerrySchedule();
+    fetchTransportStaff();
   }, []);
 
   const fetchSettings = async () => {
@@ -86,6 +104,82 @@ const AdminTransport = () => {
     } catch (error) {
       console.error('Failed to fetch ferry schedule:', error);
     }
+  };
+
+  const fetchTransportStaff = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/transport/staff`, {
+        headers: getAuthHeaders()
+      });
+      setTransportStaff(response.data);
+    } catch (error) {
+      console.error('Failed to fetch transport staff:', error);
+    }
+  };
+
+  const handleCreateStaff = async () => {
+    if (!staffForm.username || !staffForm.full_name) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await axios.post(`${API}/admin/transport/staff`, staffForm, {
+        headers: getAuthHeaders()
+      });
+      toast.success('Compte staff transport créé!');
+      setCredentialsModal({ open: true, username: response.data.username, password: response.data.password });
+      setStaffModal({ open: false, mode: 'add' });
+      setStaffForm({ username: '', full_name: '', transport_type: 'both' });
+      fetchTransportStaff();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la création');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleStaffActive = async (staffId, currentActive) => {
+    try {
+      await axios.put(`${API}/admin/transport/staff/${staffId}?active=${!currentActive}`, {}, {
+        headers: getAuthHeaders()
+      });
+      toast.success(currentActive ? 'Compte désactivé' : 'Compte activé');
+      fetchTransportStaff();
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleResetStaffPassword = async (staffId) => {
+    try {
+      const response = await axios.post(`${API}/admin/transport/staff/${staffId}/reset-password`, {}, {
+        headers: getAuthHeaders()
+      });
+      setCredentialsModal({ open: true, username: response.data.username, password: response.data.new_password });
+    } catch (error) {
+      toast.error('Erreur lors de la réinitialisation');
+    }
+  };
+
+  const handleDeleteStaff = async () => {
+    if (!deleteStaffModal.staff) return;
+    try {
+      await axios.delete(`${API}/admin/transport/staff/${deleteStaffModal.staff.id}`, {
+        headers: getAuthHeaders()
+      });
+      toast.success('Compte supprimé');
+      setDeleteStaffModal({ open: false, staff: null });
+      fetchTransportStaff();
+    } catch (error) {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const copyToClipboard = (text, field) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   const handleScheduleChange = (dayIndex, field, value) => {
@@ -266,6 +360,10 @@ const AdminTransport = () => {
           <TabsTrigger value="ferry" className="data-[state=active]:bg-blue-500 data-[state=active]:text-black gap-2">
             <Ship size={18} />
             Ferry
+          </TabsTrigger>
+          <TabsTrigger value="staff" className="data-[state=active]:bg-orange-500 data-[state=active]:text-black gap-2">
+            <Shield size={18} />
+            Staff Transport
           </TabsTrigger>
         </TabsList>
 
@@ -649,6 +747,111 @@ const AdminTransport = () => {
             </div>
           </div>
         </TabsContent>
+
+        {/* Staff Transport Tab */}
+        <TabsContent value="staff" className="space-y-6 mt-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <Shield className="text-orange-400" size={24} />
+                Staff Contrôle d'Accès Transport
+              </h2>
+              <p className="text-gray-400 text-sm">Agents de sécurité pour le train et ferry</p>
+            </div>
+            <Button
+              onClick={() => setStaffModal({ open: true, mode: 'add' })}
+              className="bg-orange-500 hover:bg-orange-600 text-black gap-2"
+            >
+              <Plus size={18} />
+              Créer un compte
+            </Button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="glass p-4 rounded-xl text-center">
+              <p className="text-3xl font-bold text-white">{transportStaff.length}</p>
+              <p className="text-gray-400 text-sm">Total Agents</p>
+            </div>
+            <div className="glass p-4 rounded-xl text-center">
+              <p className="text-3xl font-bold text-green-400">{transportStaff.filter(s => s.active).length}</p>
+              <p className="text-gray-400 text-sm">Actifs</p>
+            </div>
+            <div className="glass p-4 rounded-xl text-center">
+              <p className="text-3xl font-bold text-red-400">{transportStaff.filter(s => !s.active).length}</p>
+              <p className="text-gray-400 text-sm">Inactifs</p>
+            </div>
+          </div>
+
+          {/* Staff List */}
+          <div className="glass rounded-xl overflow-hidden">
+            <div className="p-4 border-b border-white/10">
+              <h3 className="font-semibold text-white">Liste des agents</h3>
+            </div>
+            
+            {transportStaff.length === 0 ? (
+              <div className="p-12 text-center">
+                <Shield className="text-gray-600 mx-auto mb-4" size={48} />
+                <p className="text-gray-400 mb-4">Aucun agent créé</p>
+                <Button onClick={() => setStaffModal({ open: true, mode: 'add' })} className="bg-orange-500 hover:bg-orange-600 text-black">
+                  Créer le premier agent
+                </Button>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/10">
+                {transportStaff.map(staff => (
+                  <div key={staff.id} className="p-4 hover:bg-white/5 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                          staff.active ? 'bg-green-500/20' : 'bg-red-500/20'
+                        }`}>
+                          <Shield className={staff.active ? 'text-green-400' : 'text-red-400'} size={24} />
+                        </div>
+                        <div>
+                          <p className="text-white font-semibold">{staff.full_name}</p>
+                          <p className="text-gray-400 text-sm">@{staff.username}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        {/* Transport Type Badge */}
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          staff.transport_type === 'both' ? 'bg-purple-500/20 text-purple-400' :
+                          staff.transport_type === 'train' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-blue-500/20 text-blue-400'
+                        }`}>
+                          {staff.transport_type === 'both' ? 'Train & Ferry' :
+                           staff.transport_type === 'train' ? 'Train' : 'Ferry'}
+                        </div>
+                        
+                        {/* Active Toggle */}
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm ${staff.active ? 'text-green-400' : 'text-red-400'}`}>
+                            {staff.active ? 'Actif' : 'Inactif'}
+                          </span>
+                          <Switch
+                            checked={staff.active}
+                            onCheckedChange={() => handleToggleStaffActive(staff.id, staff.active)}
+                          />
+                        </div>
+                        
+                        {/* Actions */}
+                        <Button variant="ghost" size="sm" onClick={() => handleResetStaffPassword(staff.id)} className="text-cyan-400">
+                          <RefreshCw size={16} />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteStaffModal({ open: true, staff })} className="text-red-400">
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Add/Edit Route Modal */}
@@ -753,6 +956,149 @@ const AdminTransport = () => {
               className="bg-red-500 text-white hover:bg-red-600"
             >
               {saving ? <Loader2 className="animate-spin" size={16} /> : 'Supprimer'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Create Staff Modal */}
+      <Dialog open={staffModal.open} onOpenChange={(open) => !open && setStaffModal({ ...staffModal, open: false })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-unbounded flex items-center gap-2">
+              <Shield className="text-orange-400" size={24} />
+              Créer un agent transport
+            </DialogTitle>
+            <DialogDescription>
+              Cet agent pourra scanner les billets train et/ou ferry
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label>Nom complet</Label>
+              <Input
+                value={staffForm.full_name}
+                onChange={(e) => setStaffForm({ ...staffForm, full_name: e.target.value })}
+                placeholder="Ex: Mohamed Ali"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label>Identifiant de connexion</Label>
+              <Input
+                value={staffForm.username}
+                onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value.toLowerCase().replace(/\s/g, '_') })}
+                placeholder="Ex: mohamed_transport"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label>Type de transport autorisé</Label>
+              <Select value={staffForm.transport_type} onValueChange={(v) => setStaffForm({ ...staffForm, transport_type: v })}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="both">Train & Ferry</SelectItem>
+                  <SelectItem value="train">Train uniquement</SelectItem>
+                  <SelectItem value="ferry">Ferry uniquement</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setStaffModal({ open: false, mode: 'add' })}>
+                Annuler
+              </Button>
+              <Button 
+                onClick={handleCreateStaff}
+                disabled={saving}
+                className="bg-orange-500 hover:bg-orange-600 text-black"
+              >
+                {saving ? <Loader2 className="animate-spin" size={16} /> : 'Créer le compte'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Staff Credentials Modal */}
+      <Dialog open={credentialsModal.open} onOpenChange={(open) => !open && setCredentialsModal({ ...credentialsModal, open: false })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-unbounded text-green-400 flex items-center gap-2">
+              <Check size={24} />
+              Identifiants du compte
+            </DialogTitle>
+            <DialogDescription>
+              Notez ces informations, le mot de passe ne sera plus affiché!
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-gray-400 text-sm">Identifiant</p>
+                  <p className="text-white font-mono text-lg">{credentialsModal.username}</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(credentialsModal.username, 'username')}>
+                  {copiedField === 'username' ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Mot de passe</p>
+                  <p className="text-white font-mono text-lg">
+                    {showPassword ? credentialsModal.password : '••••••••'}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(credentialsModal.password, 'password')}>
+                    {copiedField === 'password' ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-gray-500 text-sm text-center">
+              Connexion sur <span className="text-orange-400">/staff/login</span>
+            </p>
+
+            <Button 
+              onClick={() => setCredentialsModal({ open: false, username: '', password: '' })}
+              className="w-full bg-green-500 hover:bg-green-600 text-black"
+            >
+              J'ai noté les identifiants
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Staff Confirmation */}
+      <AlertDialog open={deleteStaffModal.open} onOpenChange={(open) => !open && setDeleteStaffModal({ ...deleteStaffModal, open: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-400 flex items-center gap-2">
+              <Trash2 size={20} />
+              Supprimer l'agent
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Supprimer le compte de <strong className="text-white">{deleteStaffModal.staff?.full_name}</strong>?
+              <br />Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteStaff} className="bg-red-500 text-white hover:bg-red-600">
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Edit, Trash2, Loader2, Search, Ticket, Activity } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Search, Ticket, Activity, Upload, Image, X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -39,6 +39,8 @@ const OrganizerEvents = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -67,6 +69,47 @@ const OrganizerEvents = () => {
       console.error('Failed to fetch events:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Type de fichier non supporté. Utilisez JPG, PNG, WebP ou GIF.');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Fichier trop volumineux. Maximum 5MB.');
+      return;
+    }
+
+    setUploading(true);
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+
+    try {
+      const response = await axios.post(`${API}/organizer/upload-image`, formDataUpload, {
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Use the backend URL + image path
+      const fullUrl = `${process.env.REACT_APP_BACKEND_URL}${response.data.image_url}`;
+      setFormData({ ...formData, image_url: fullUrl });
+      toast.success('Image téléchargée!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors du téléchargement');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -269,12 +312,59 @@ const OrganizerEvents = () => {
               </div>
 
               <div className="md:col-span-2">
-                <Label>URL Image</Label>
-                <Input
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  placeholder="https://..."
-                />
+                <Label>Image de l'événement</Label>
+                <div className="mt-2 space-y-3">
+                  {/* Preview */}
+                  {formData.image_url && (
+                    <div className="relative w-full h-40 rounded-xl overflow-hidden bg-white/5">
+                      <img 
+                        src={formData.image_url} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, image_url: '' })}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600"
+                      >
+                        <X size={16} className="text-white" />
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Upload Button */}
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="flex-1 gap-2"
+                    >
+                      {uploading ? (
+                        <Loader2 className="animate-spin" size={18} />
+                      ) : (
+                        <Upload size={18} />
+                      )}
+                      {uploading ? 'Téléchargement...' : 'Choisir une image'}
+                    </Button>
+                    <span className="text-gray-500 text-sm self-center">ou</span>
+                    <Input
+                      value={formData.image_url}
+                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                      placeholder="URL de l'image"
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-gray-500 text-xs">JPG, PNG, WebP ou GIF. Max 5MB.</p>
+                </div>
               </div>
 
               <div className="md:col-span-2">
