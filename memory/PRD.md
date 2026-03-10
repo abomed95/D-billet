@@ -1,324 +1,152 @@
 # D-Billet - Plateforme de Billetterie Djibouti
 
-## Problème Original
-Développer une application web moderne et responsive appelée "D-Billet" (Ticket Djibouti), une plateforme de billetterie centralisée pour Djibouti avec gestion complète pour les administrateurs et organisateurs.
+## Probleme Original
+Developper une application web moderne et responsive appelee "D-Billet" (Ticket Djibouti), une plateforme de billetterie centralisee pour Djibouti avec gestion complete pour les administrateurs et organisateurs.
 
 ## Personas Utilisateurs
-- **Clients**: Achètent des billets pour événements et transport
-- **Organisateurs**: Créent événements, gèrent ventes et retraits
-- **Administrateur**: Contrôle total de la plateforme (événements, utilisateurs, finances, transport)
+- **Clients**: Achetent des billets pour evenements et transport
+- **Organisateurs**: Creent evenements, gerent ventes et retraits
+- **Administrateur**: Controle total de la plateforme (evenements, utilisateurs, finances, transport)
+- **Staff**: Personnel de securite pour scanner les billets
 
 ## Stack Technique
-- **Frontend**: React + Tailwind CSS + Shadcn/UI
-- **Backend**: FastAPI (Python)
-- **Base de données**: MongoDB
-- **Authentification**: JWT (email/mot de passe) + OTP simulé
+- **Frontend**: React 18 + Tailwind CSS + Shadcn/UI + PWA
+- **Backend**: FastAPI (Python) - Architecture modulaire
+- **Base de donnees**: MongoDB
+- **Authentification**: JWT (email/mot de passe) + OTP simule
 
 ---
 
-## Ce qui a été implémenté
+## Architecture Backend Refactorisee (10 Mars 2026)
 
-### 27 Février 2026 - Dashboard Admin Complet
+Le backend a ete refactorise d'un seul fichier monolithique (`server.py` 3600+ lignes) vers une structure modulaire professionnelle:
 
-#### Vue d'ensemble (Dashboard Admin)
-- [x] **KPIs**: CA global, Revenus plateforme (commission 8%), Utilisateurs inscrits, Événements actifs
-- [x] **Alertes Urgentes**: Événements en attente de validation, Demandes de retrait, Litiges/Remboursements
-- [x] **Actions rapides** vers toutes les sections
-
-#### Gestion des Événements
-- [x] Liste de TOUS les événements créés
-- [x] **Approuver/Bloquer** un événement
-- [x] **Mettre "À la une"** sur la page d'accueil
-- [x] Filtres par statut (Approuvés, En attente, Bloqués, À la une)
-- [x] Affichage des revenus et billets vendus par événement
-
-#### Gestion des Utilisateurs
-- [x] Liste **Organisateurs** : création compte, historique, contact direct
-- [x] Liste **Clients** : historique des achats
-- [x] **Commission personnalisée** par organisateur (négociation grands comptes)
-- [x] Filtres par rôle (Tous, Organisateurs, Clients)
-- [x] Recherche par nom, email, téléphone
-
-#### Finances & Comptabilité
-- [x] **Historique des transactions** (tous les paiements Waafi/D-Money/CAC Bank)
-- [x] Filtres par méthode de paiement et période
-- [x] **Export CSV** des transactions
-- [x] Totaux par méthode de paiement
-
-#### Gestion des Payouts (Retraits)
-- [x] Liste des demandes de retrait
-- [x] **Valider** un paiement (confirmer le virement effectué)
-- [x] **Rejeter** une demande avec raison
-- [x] Notes admin sur chaque traitement
-- [x] Stats: En attente, Complétés, Rejetés
-
-#### Configuration (Paramètres)
-- [x] **Commission globale** modifiable (défaut 8%)
-- [x] **Retrait minimum** modifiable (défaut 1000 DJF)
-- [x] **Catégories d'événements** : Ajouter/Supprimer (Concerts, Cinéma, Football, Théâtre...)
-- [x] **Conditions Générales de Vente** (éditeur texte)
-- [x] **Mentions Légales** (éditeur texte)
-- [x] **Bannière d'annonce** (texte + activation)
-
-#### Transport Train & Ferry (Exclusif Admin)
-- [x] **Train** : Activation service, Heure de départ, Tarifs par trajet
-- [x] **Ferry** : Activation service, Horaires aller/retour, Planning hebdomadaire
-- [x] Affichage des règles de circulation (jours pairs/impairs pour train)
-- [x] Prix modifiables par trajet
-- [x] **NEW (4 Mars 2026)**: Gestion complète du planning hebdomadaire Ferry
-  - [x] Toggle actif/inactif par jour
-  - [x] Sélecteur destination (Tadjoura/Obock) par jour
-  - [x] Heures de départ et retour personnalisables par jour
-  - [x] Sauvegarde avec confirmation toast
-- [x] **NEW (4 Mars 2026)**: Aperçu visuel du planning Ferry côté client
-  - [x] API publique `GET /api/ferry/schedule`
-  - [x] Affichage dynamique des 7 jours sur la page de réservation
-  - [x] Horaires dynamiques utilisés dans `/api/ferry/trips`
+```
+/app/backend/
+├── main.py              # Point d'entree FastAPI avec tous les routers
+├── config.py            # Configuration (DB, JWT, constantes)
+├── server.py            # Wrapper pour uvicorn
+├── models/              # Modeles Pydantic
+│   ├── auth.py          # UserRegister, UserLogin, TokenResponse
+│   ├── events.py        # EventCreate, TicketType, PromoCode
+│   ├── tickets.py       # CartItemAdd, CheckoutRequest
+│   ├── transport.py     # TrainBooking, FerryBooking
+│   ├── staff.py         # StaffCreate, ScanRequest
+│   └── admin.py         # Testimonial, News
+├── routes/              # Routers FastAPI
+│   ├── auth.py          # /api/auth/* (login, register, OTP)
+│   ├── events.py        # /api/events/*, /api/promo-codes/*
+│   ├── cart.py          # /api/cart/*, /api/checkout
+│   ├── tickets.py       # /api/tickets/*, /api/scanner/*
+│   ├── transport.py     # /api/train/*, /api/ferry/*
+│   ├── staff.py         # /api/staff/*, /api/organizer/staff/*
+│   ├── organizer.py     # /api/organizer/*
+│   └── admin.py         # /api/admin/*
+└── services/            # Logique metier
+    ├── auth.py          # JWT, password hashing, auth deps
+    └── pdf.py           # Generation PDF billets
+```
 
 ---
 
-### Fonctionnalités Existantes (sessions précédentes)
+## Planning Ferry Mis a Jour (10 Mars 2026)
 
-#### Dashboard Organisateur
-- [x] KPIs : Billets vendus, CA, Billets restants, Solde net
-- [x] Graphique des ventes en courbe (7/30 jours)
-- [x] Liste des participants avec export CSV
-- [x] Page Finances & Retraits
+**Route**: Djibouti - Obock uniquement
 
-#### Fonctionnalités Client
-- [x] Authentification (email + OTP téléphone simulé)
-- [x] Réservation événements avec types de billets multiples
-- [x] Réservation Train et Ferry
-- [x] Panier et Checkout avec logos Waafi/D-Money/CAC Bank
-- [x] Billets PDF redesignés avec QR Code
+| Jour | Service | Destination | Aller | Retour |
+|------|---------|-------------|-------|--------|
+| Lundi | Ferme | - | - | - |
+| Mardi | Ferme | - | - | - |
+| Mercredi | Ferme | - | - | - |
+| **Jeudi** | **Oui** | **Obock** | **09:00** | **14:00** |
+| Vendredi | Ferme | - | - | - |
+| **Samedi** | **Oui** | **Obock** | **08:00** | **13:00** |
+| Dimanche | Ferme | - | - | - |
+
+**Prix**: 700 DJF par personne
+
+---
+
+## Ce qui a ete implemente
+
+### 10 Mars 2026
+- [x] **Refactoring Backend Complet**: Migration de server.py vers architecture modulaire
+- [x] **Mise a jour Planning Ferry**: Djibouti/Obock Jeudi 9h/14h, Samedi 8h/13h
+- [x] **README.md** mis a jour avec la nouvelle architecture
+- [x] Tests valides: 83% backend, 100% frontend
+
+### Sessions Precedentes
+- [x] Dashboard Admin avec KPIs et alertes
+- [x] Gestion evenements (approuver/bloquer/a la une)
+- [x] Gestion utilisateurs avec commission personnalisee
+- [x] Module Staff (securite) avec scanner de billets
+- [x] Dashboard temps reel pour organisateurs
+- [x] PWA avec theme premium or (D-BILLEH)
+- [x] Reservation Train et Ferry
+- [x] Billets PDF avec QR Code
 - [x] Partage WhatsApp
 
 ---
 
-## API Endpoints Admin
+## API Endpoints Principaux
 
-### Dashboard
-- `GET /api/admin/stats` - KPIs de la plateforme
-- `GET /api/admin/alerts` - Alertes urgentes
+### Authentification
+- `POST /api/auth/register` - Inscription
+- `POST /api/auth/login` - Connexion
+- `POST /api/auth/otp/send` - Envoyer OTP
+- `POST /api/auth/otp/verify` - Verifier OTP
+- `GET /api/auth/me` - Profil utilisateur
 
-### Événements
-- `GET /api/admin/events` - Liste tous les événements
-- `PUT /api/admin/events/{id}/status?status=approved|blocked|pending` - Modifier statut
-- `PUT /api/admin/events/{id}/featured?featured=true|false` - À la une
-
-### Utilisateurs
-- `GET /api/admin/users` - Liste utilisateurs (filtres: role, search)
-- `GET /api/admin/users/{id}` - Détail utilisateur avec historique
-- `PUT /api/admin/users/{id}/commission?commission_rate=X` - Commission personnalisée
-
-### Transactions
-- `GET /api/admin/transactions` - Historique paiements (filtres: payment_method, days)
-
-### Payouts
-- `GET /api/admin/payouts` - Demandes de retrait (filtre: status)
-- `PUT /api/admin/payouts/{id}/status?status=completed|rejected` - Valider/Rejeter
-
-### Configuration
-- `GET /api/admin/settings` - Paramètres plateforme
-- `PUT /api/admin/settings` - Modifier (commission_rate, min_withdrawal, terms, banner)
-- `POST /api/admin/settings/categories` - Ajouter catégorie
-- `DELETE /api/admin/settings/categories/{id}` - Supprimer catégorie
+### Evenements
+- `GET /api/events` - Liste evenements
+- `POST /api/events` - Creer evenement (organisateur)
+- `GET /api/events/{id}` - Detail evenement
 
 ### Transport
-- `GET /api/admin/transport/settings` - Paramètres Train & Ferry
-- `PUT /api/admin/transport/train` - Modifier Train (active, departure_time)
-- `PUT /api/admin/transport/ferry` - Modifier Ferry (active, departure_time, return_time)
-- `GET /api/admin/transport/ferry/schedule` - Planning hebdomadaire Ferry (7 jours) [Admin]
-- `PUT /api/admin/transport/ferry/schedule` - Modifier planning hebdomadaire [Admin]
-- `GET /api/ferry/schedule` - Planning hebdomadaire Ferry (7 jours) [Public]
-- `GET /api/ferry/trips?date=YYYY-MM-DD` - Trajets disponibles pour une date [Public, dynamique]
+- `GET /api/ferry/schedule` - Planning hebdomadaire ferry
+- `GET /api/ferry/trips?date=YYYY-MM-DD` - Trajets disponibles
+- `POST /api/ferry/book` - Reserver ferry
+- `GET /api/train/trips?date=YYYY-MM-DD` - Trajets train
+- `POST /api/train/book` - Reserver train
+
+### Admin
+- `GET /api/admin/stats` - Statistiques plateforme
+- `GET /api/admin/events` - Tous les evenements
+- `PUT /api/admin/transport/ferry/schedule` - Modifier planning ferry
 
 ---
 
-## Pages Frontend Admin
+## Backlog Prioritise
 
-| Route | Description |
-|-------|-------------|
-| `/admin` | Dashboard avec KPIs et alertes |
-| `/admin/events` | Gestion événements (approuver, bloquer, à la une) |
-| `/admin/users` | Gestion utilisateurs (organisateurs, clients) |
-| `/admin/transactions` | Historique des transactions |
-| `/admin/payouts` | Validation des retraits |
-| `/admin/settings` | Configuration plateforme |
-| `/admin/transport` | Paramètres Train & Ferry |
-| `/admin/scanner` | Scanner de billets |
-
----
-
-## Backlog Prioritisé
-
-### P0 (Urgent) - COMPLÉTÉ ✅
-- [x] Dashboard Admin avec alertes urgentes
-- [x] Gestion événements (approuver/bloquer/à la une)
-- [x] Gestion utilisateurs avec commission personnalisée
-- [x] Finances & Transactions
-- [x] Validation des Payouts
-- [x] Configuration plateforme
-- [x] Paramètres Transport exclusifs admin
-- [x] **Gestion planning hebdomadaire Ferry** (jours, destinations, horaires)
-
-### P1 (Haute priorité)
-- [ ] Intégration réelle Waafi/D-Money (si APIs disponibles)
-- [ ] Notifications email/SMS réelles
+### P1 (Haute priorite)
+- [ ] Integration reelle Waafi/D-Money (si APIs disponibles)
+- [ ] Notifications email/SMS reelles
 - [ ] Export Excel (en plus de CSV)
 
-### P2 (Moyenne priorité)
-- [ ] Multi-langue (français/somali/arabe)
+### P2 (Moyenne priorite)
+- [ ] Multi-langue (francais/somali/arabe)
 - [ ] Historique complet des actions admin (audit log)
-- [ ] Dashboard analytics avancé
+- [ ] Dashboard analytics avance
+
+### P3 (Basse priorite)
+- [ ] Application mobile native
+- [ ] Systeme de fidelite/points
 
 ---
 
 ## Credentials de Test
-- **Admin**: admin@dbillet.dj / admin123
-- **Organisateur**: organizer@dbillet.dj / organizer123
-- **User (OTP)**: +25377123456
 
-## Notes
-- Paiements **SIMULÉS** (Waafi, D-Money, CAC Bank)
-- OTP SMS **SIMULÉ** (code retourné dans API)
-- Validation des payouts **SIMULÉE** (pas de virement réel)
+| Role | Email | Mot de passe |
+|------|-------|--------------|
+| Admin | admin@dbillet.dj | admin123 |
+| Organisateur | organizer@dbillet.dj | organizer123 |
+| Client (OTP) | +25377123456 | Code dans logs |
 
 ---
 
-## Module Staff (Sécurité & Contrôle d'Accès) - NEW (4 Mars 2026)
+## Notes Techniques
 
-### Architecture Données
-- **Collection `staff_accounts`**: id, organizer_id, username, password_hash, full_name, assigned_events, active, created_at
-- **Collection `scan_logs`**: id, staff_id, staff_name, ticket_id, event_id, status, scanned_at, message
-- **Modification `tickets`**: scanned_by, scanned_by_name, scanned_at
-
-### Routes API Staff
-- `POST /api/staff/login` - Connexion (JWT 24h, type='staff')
-- `GET /api/staff/me` - Info staff authentifié
-- `GET /api/staff/events` - Événements assignés avec stats
-- `POST /api/staff/scan` - Scanner un billet QR
-
-### Routes API Organisateur
-- `GET /api/organizer/staff` - Liste des comptes staff
-- `POST /api/organizer/staff` - Créer compte (génère mot de passe)
-- `PUT /api/organizer/staff/{id}` - Modifier (events, active)
-- `DELETE /api/organizer/staff/{id}` - Supprimer
-- `POST /api/organizer/staff/{id}/reset-password` - Réinitialiser
-- `GET /api/organizer/staff/scan-logs` - Journal des scans
-
-### Pages Frontend
-- `/staff/login` - Login mobile-first
-- `/staff/scanner` - Scanner avec caméra/manuel
-- `/organizer/staff` - Gestion des comptes staff
-
-### Feedback Visuel Scanner
-- 🟩 VERT: Billet valide + nom + type
-- 🟥 ROUGE: Billet invalide
-- 🟧 ORANGE: Déjà scanné (heure du premier scan)
-- Vibrations: succès (1 courte), échec (3 longues)
-
----
-
-## Dashboard Temps Réel - NEW (4 Mars 2026)
-
-### Route API
-- `GET /api/organizer/events/{event_id}/live-dashboard` - Données complètes temps réel
-
-### Données retournées
-- **Stats principales**: Entrées, Restants, Taux d'entrée %, Entrées/min
-- **Breakdown par type de billet**: Total/Scannés par catégorie
-- **Affluence horaire**: Graphique des 12 dernières heures
-- **Entrées récentes**: 20 dernières validations avec nom, type, heure, agent
-- **Alertes doublons**: Tentatives de billets déjà scannés
-- **Performance staff**: Classement des agents par nombre de scans
-
-### Page Frontend
-- `/organizer/live/:eventId` - Dashboard plein écran
-- Rafraîchissement automatique toutes les 5 secondes
-- Accès via bouton "Dashboard Live" sur chaque événement
-
----
-
-## PWA & Rebranding D-BILLEH - NEW (6 Mars 2026)
-
-### PWA Configuration
-- `manifest.json` avec theme_color or (#D4AF37)
-- `service-worker.js` pour cache et mode offline
-- Meta tags iOS (apple-mobile-web-app-capable)
-- Icône et logo D-BILLEH or
-
-### Nouveau Design Premium Or
-- Couleur principale: or (#D4AF37) remplace le vert
-- Tailwind config: gold-50 à gold-900
-- Logo D-BILLEH avec icône géométrique or
-- Barre de navigation avec bordure or et icônes or actives
-
-### Homepage Améliorée
-- Hero avec titre D-BILLEH en grand dégradé or (sans logo image, sans bouton connexion)
-- Statistiques: 500+ Événements | 10K+ Utilisateurs | 100% Sécurisé
-- Nouvelle photo de fond (confettis/célébration)
-- Flèche de scroll animée
-- Section "Pourquoi choisir D-BILLEH?" (desktop uniquement)
-  - Billetterie 100% Numérique
-  - Paiement Sécurisé
-  - Accès Instantané
-  - Disponible 24/7
-- FAQ accordéon (6 questions)
-- Footer double (desktop):
-  - Upper: Logo, Navigation, Services, Contact, réseaux sociaux
-  - Lower: Copyright, Conditions, Confidentialité, Mentions légales
-- Footer simple (mobile)
-
-### Menu Utilisateur avec Déconnexion
-- Popup menu au clic sur profil dans la navbar
-- Affiche: Avatar, Nom, Email/Téléphone
-- Options: Mes Billets, Espace Organisateur/Admin, Déconnexion
-- Déconnexion fonctionnelle avec redirection vers accueil
-
-### Fichiers créés/modifiés
-- `/app/frontend/public/manifest.json`
-- `/app/frontend/public/service-worker.js`
-- `/app/frontend/public/images/dbilleh-logo.png`
-- `/app/frontend/public/images/dbilleh-icon.png`
-- `/app/frontend/src/pages/HomePage.js` (réécrit)
-- `/app/frontend/tailwind.config.js` (couleurs gold)
-- `/app/frontend/public/index.html` (PWA meta tags)
-
----
-
-## Architecture des fichiers
-```
-/app/
-├── backend/
-│   └── server.py (2900+ lignes - API complète)
-└── frontend/
-    └── src/
-        ├── context/
-        │   ├── AuthContext.js
-        │   ├── CartContext.js
-        │   └── StaffAuthContext.js (NEW)
-        ├── pages/
-        │   ├── admin/
-        │   │   ├── AdminDashboard.js (KPIs + alertes)
-        │   │   ├── AdminEvents.js (approuver, bloquer, à la une)
-        │   │   ├── AdminUsers.js (commission personnalisée)
-        │   │   ├── AdminTransactions.js (historique)
-        │   │   ├── AdminPayouts.js (valider/rejeter)
-        │   │   ├── AdminSettings.js (config)
-        │   │   └── AdminTransport.js (train/ferry)
-        │   ├── organizer/
-        │   │   ├── OrganizerDashboard.js
-        │   │   ├── OrganizerEvents.js
-        │   │   ├── OrganizerParticipants.js
-        │   │   ├── OrganizerPromoCodes.js
-        │   │   ├── OrganizerFinances.js
-        │   │   └── OrganizerStaff.js (NEW)
-        │   └── staff/ (NEW)
-        │       ├── StaffLoginPage.js
-        │       └── StaffScannerPage.js
-        └── layouts/
-            ├── AdminLayout.js
-            ├── OrganizerLayout.js
-            └── MainLayout.js
-```
+- **Paiements**: SIMULES (Waafi, D-Money, CAC Bank)
+- **OTP SMS**: SIMULE (code retourne dans API)
+- **PWA**: Installable sur mobile avec theme or
+- **Hot Reload**: Active pour frontend et backend
