@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Ship, Calendar, Users, Plus, Minus, AlertCircle, CheckCircle, ArrowRight, User, Phone, CreditCard, Anchor, Clock, MapPin, X as XIcon, Check as CheckIcon } from 'lucide-react';
+import { Ship, Calendar, Users, Plus, Minus, AlertCircle, CheckCircle, ArrowRight, User, Phone, CreditCard, Anchor, MapPin, X as XIcon, Car, Info, Baby } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -11,27 +11,40 @@ import { toast } from 'sonner';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const FerryBookingPage = () => {
-  const { user, token } = useAuth();
+  const { user, token, createGuestSession } = useAuth();
   const navigate = useNavigate();
   
   const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDestination, setSelectedDestination] = useState('');
   const [trips, setTrips] = useState([]);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [loading, setLoading] = useState(false);
   const [tripInfo, setTripInfo] = useState(null);
   
-  // Weekly schedule state
+  // Schedule and pricing
   const [weeklySchedule, setWeeklySchedule] = useState([]);
+  const [passengerPrice, setPassengerPrice] = useState(1100);
+  const [childFreeAge, setChildFreeAge] = useState(10);
+  const [vehicleTypes, setVehicleTypes] = useState([]);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   
+  // Passengers
   const [passengers, setPassengers] = useState([
-    { full_name: '', phone: '', passport_or_cni: '' }
+    { full_name: '', phone: '', passport_or_cni: '', age: null }
   ]);
+  
+  // Vehicles
+  const [vehicles, setVehicles] = useState([]);
+  const [showVehicleForm, setShowVehicleForm] = useState(false);
+  
+  // Guest checkout
+  const [isGuestCheckout, setIsGuestCheckout] = useState(false);
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestName, setGuestName] = useState('');
   
   const [paymentMethod, setPaymentMethod] = useState('waafi');
   const [booking, setBooking] = useState(false);
 
-  // Fetch weekly schedule on mount
   useEffect(() => {
     fetchWeeklySchedule();
   }, []);
@@ -40,6 +53,9 @@ const FerryBookingPage = () => {
     try {
       const response = await axios.get(`${API}/ferry/schedule`);
       setWeeklySchedule(response.data.schedule || []);
+      setPassengerPrice(response.data.passenger_price || 1100);
+      setChildFreeAge(response.data.child_free_age || 10);
+      setVehicleTypes(response.data.vehicle_types || []);
     } catch (error) {
       console.error('Failed to fetch schedule:', error);
     } finally {
@@ -47,20 +63,24 @@ const FerryBookingPage = () => {
     }
   };
 
-  // Get min date (today)
   const getMinDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   };
 
-  const fetchTrips = async (date) => {
+  const fetchTrips = async (date, destination = '') => {
     if (!date) return;
     setLoading(true);
     try {
-      const response = await axios.get(`${API}/ferry/trips?date=${date}`);
+      let url = `${API}/ferry/trips?date=${date}`;
+      if (destination) url += `&destination=${destination}`;
+      const response = await axios.get(url);
       setTripInfo(response.data);
       setTrips(response.data.trips || []);
       setSelectedTrip(null);
+      if (response.data.vehicle_types) {
+        setVehicleTypes(response.data.vehicle_types);
+      }
     } catch (error) {
       console.error('Failed to fetch trips:', error);
       toast.error('Erreur lors du chargement des trajets');
@@ -71,13 +91,14 @@ const FerryBookingPage = () => {
 
   useEffect(() => {
     if (selectedDate) {
-      fetchTrips(selectedDate);
+      fetchTrips(selectedDate, selectedDestination);
     }
-  }, [selectedDate]);
+  }, [selectedDate, selectedDestination]);
 
+  // Passenger management
   const addPassenger = () => {
     if (passengers.length < 10) {
-      setPassengers([...passengers, { full_name: '', phone: '', passport_or_cni: '' }]);
+      setPassengers([...passengers, { full_name: '', phone: '', passport_or_cni: '', age: null }]);
     }
   };
 
@@ -89,19 +110,64 @@ const FerryBookingPage = () => {
 
   const updatePassenger = (index, field, value) => {
     const updated = [...passengers];
-    updated[index][field] = value;
+    updated[index][field] = field === 'age' ? (value ? parseInt(value) : null) : value;
     setPassengers(updated);
   };
 
-  const calculateTotal = () => {
+  // Vehicle management
+  const addVehicle = () => {
+    setVehicles([...vehicles, { vehicle_type: '', plate_number: '', passenger_names: [] }]);
+    setShowVehicleForm(true);
+  };
+
+  const removeVehicle = (index) => {
+    setVehicles(vehicles.filter((_, i) => i !== index));
+  };
+
+  const updateVehicle = (index, field, value) => {
+    const updated = [...vehicles];
+    updated[index][field] = value;
+    setVehicles(updated);
+  };
+
+  // Calculate totals
+  const calculatePassengerTotal = () => {
     if (!selectedTrip) return 0;
-    return selectedTrip.price * passengers.length;
+    return passengers.reduce((total, p) => {
+      if (p.age && p.age < childFreeAge) return total; // Free for children
+      return total + passengerPrice;
+    }, 0);
+  };
+
+  const calculateVehicleTotal = () => {
+    return vehicles.reduce((total, v) => {
+      const vt = vehicleTypes.find(t => t.type === v.vehicle_type);
+      return total + (vt?.price || 0);
+    }, 0);
+  };
+
+  const calculateTotal = () => {
+    return calculatePassengerTotal() + calculateVehicleTotal();
   };
 
   const handleBooking = async () => {
-    if (!user) {
-      toast.error('Veuillez vous connecter pour réserver');
-      navigate('/auth');
+    let authToken = token;
+    
+    // Handle guest checkout
+    if (!user && isGuestCheckout) {
+      if (!guestPhone || !guestName) {
+        toast.error('Veuillez entrer votre nom et numero de telephone');
+        return;
+      }
+      try {
+        const guestData = await createGuestSession(guestPhone, guestName);
+        authToken = guestData.token;
+      } catch (error) {
+        toast.error('Erreur lors de la creation de session');
+        return;
+      }
+    } else if (!user) {
+      toast.error('Veuillez vous connecter ou continuer en tant qu\'invite');
       return;
     }
 
@@ -114,24 +180,32 @@ const FerryBookingPage = () => {
       }
     }
 
+    // Validate vehicles
+    for (let i = 0; i < vehicles.length; i++) {
+      const v = vehicles[i];
+      if (!v.vehicle_type || !v.plate_number) {
+        toast.error(`Veuillez remplir les informations du vehicule ${i + 1}`);
+        return;
+      }
+    }
+
     setBooking(true);
     try {
       const response = await axios.post(
         `${API}/ferry/book`,
         {
           date: selectedDate,
-          departure: selectedTrip.departure,
-          arrival: selectedTrip.arrival,
+          destination: selectedTrip.destination || selectedTrip.arrival,
           trip_type: selectedTrip.trip_type,
           passengers: passengers,
+          vehicles: vehicles,
           payment_method: paymentMethod
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${authToken}` } }
       );
 
-      toast.success('Réservation confirmée!');
+      toast.success('Reservation confirmee!');
       
-      // Navigate to first ticket
       if (response.data.tickets && response.data.tickets.length > 0) {
         navigate(`/ticket/${response.data.tickets[0].id}`);
       } else {
@@ -139,7 +213,7 @@ const FerryBookingPage = () => {
       }
     } catch (error) {
       console.error('Booking failed:', error);
-      toast.error(error.response?.data?.detail || 'Erreur lors de la réservation');
+      toast.error(error.response?.data?.detail || 'Erreur lors de la reservation');
     } finally {
       setBooking(false);
     }
@@ -151,6 +225,16 @@ const FerryBookingPage = () => {
     return days[date.getDay()];
   };
 
+  // Get unique destinations for the selected date
+  const getAvailableDestinations = () => {
+    const destinations = new Set();
+    trips.forEach(trip => {
+      if (trip.destination) destinations.add(trip.destination);
+      else if (trip.arrival && trip.arrival !== 'Djibouti') destinations.add(trip.arrival);
+    });
+    return Array.from(destinations);
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -160,14 +244,28 @@ const FerryBookingPage = () => {
             <Ship className="text-ferry" size={32} />
           </div>
           <h1 className="font-unbounded text-3xl font-bold text-white mb-2">
-            Réservation Ferry
+            Reservation Ferry
           </h1>
           <p className="text-gray-400">Djibouti - Tadjoura - Obock</p>
         </div>
 
+        {/* Price Info Banner */}
+        <div className="glass p-4 rounded-xl mb-6 border border-ferry/30">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <User size={16} className="text-ferry" />
+              <span className="text-white">Adulte: <strong className="text-ferry">{passengerPrice} FDJ</strong></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Baby size={16} className="text-green-400" />
+              <span className="text-white">Enfant &lt;{childFreeAge} ans: <strong className="text-green-400">Gratuit</strong></span>
+            </div>
+          </div>
+        </div>
+
         {/* Date Selection */}
         <div className="glass p-6 rounded-2xl mb-6">
-          <Label className="text-white mb-2 block">Sélectionnez une date</Label>
+          <Label className="text-white mb-2 block">Selectionnez une date</Label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <Input
@@ -184,7 +282,7 @@ const FerryBookingPage = () => {
           )}
         </div>
 
-        {/* Trip Info */}
+        {/* Trip Info with Capacity */}
         {tripInfo && (
           <div className={`p-4 rounded-xl mb-6 ${!tripInfo.has_service ? 'bg-red-500/20 border border-red-500/50' : 'bg-ferry/20 border border-ferry/50'}`}>
             {!tripInfo.has_service ? (
@@ -196,18 +294,25 @@ const FerryBookingPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3">
-                <CheckCircle className="text-ferry" size={24} />
-                <div>
-                  <p className="text-ferry font-semibold">Route: {tripInfo.route}</p>
-                  <p className="text-cyan-200 text-sm">
-                    {tripInfo.trips && tripInfo.trips.length > 0 ? (
-                      <>Aller: {tripInfo.trips[0]?.departure_time} • Retour: {tripInfo.trips[1]?.departure_time}</>
-                    ) : (
-                      'Horaires disponibles'
-                    )}
-                  </p>
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <CheckCircle className="text-ferry" size={24} />
+                  <div>
+                    <p className="text-ferry font-semibold">{tripInfo.day} - Service disponible</p>
+                  </div>
                 </div>
+                {tripInfo.capacity && (
+                  <div className="flex flex-wrap gap-4 mt-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Users size={16} className="text-white" />
+                      <span className="text-gray-300">Places passagers: <strong className="text-white">{tripInfo.capacity.passengers_remaining}</strong>/{tripInfo.capacity.max_passengers}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Car size={16} className="text-white" />
+                      <span className="text-gray-300">Places vehicules: <strong className="text-white">{tripInfo.capacity.vehicles_remaining}</strong>/{tripInfo.capacity.max_vehicles}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -245,11 +350,12 @@ const FerryBookingPage = () => {
                     </div>
                     <div className="text-center">
                       <p className="text-white font-bold">{trip.arrival}</p>
+                      {trip.destination && <p className="text-ferry text-xs">{trip.destination}</p>}
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-ferry font-mono font-bold text-xl">{trip.price} DJF</p>
-                    <p className="text-gray-400 text-sm">par personne</p>
+                    <p className="text-ferry font-mono font-bold text-xl">{trip.price} FDJ</p>
+                    <p className="text-gray-400 text-sm">par adulte</p>
                   </div>
                 </div>
               </div>
@@ -261,9 +367,65 @@ const FerryBookingPage = () => {
           </div>
         ) : null}
 
-        {/* Passenger Form */}
+        {/* Booking Form */}
         {selectedTrip && (
           <div className="space-y-6">
+            {/* Guest Checkout Option */}
+            {!user && (
+              <div className="glass p-5 rounded-xl border border-yellow-500/30 bg-yellow-500/10">
+                <div className="flex items-start gap-3">
+                  <Info className="text-yellow-400 mt-1" size={20} />
+                  <div className="flex-1">
+                    <p className="text-white font-semibold mb-2">Acheter sans compte</p>
+                    <p className="text-gray-400 text-sm mb-4">Entrez vos coordonnees pour recevoir votre billet</p>
+                    
+                    <div className="flex items-center gap-3 mb-4">
+                      <Button
+                        variant={isGuestCheckout ? "default" : "outline"}
+                        onClick={() => setIsGuestCheckout(true)}
+                        className={isGuestCheckout ? "bg-ferry text-black" : "border-white/20 text-white"}
+                        size="sm"
+                      >
+                        Continuer en invite
+                      </Button>
+                      <Button
+                        variant={!isGuestCheckout ? "default" : "outline"}
+                        onClick={() => navigate('/auth')}
+                        className={!isGuestCheckout ? "bg-green-500 text-black" : "border-white/20 text-white"}
+                        size="sm"
+                      >
+                        Se connecter
+                      </Button>
+                    </div>
+
+                    {isGuestCheckout && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-gray-400 mb-1 block">Votre nom</Label>
+                          <Input
+                            value={guestName}
+                            onChange={(e) => setGuestName(e.target.value)}
+                            placeholder="Mohamed Ali"
+                            className="bg-white/5 border-white/10 text-white"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-gray-400 mb-1 block">Votre telephone</Label>
+                          <Input
+                            value={guestPhone}
+                            onChange={(e) => setGuestPhone(e.target.value)}
+                            placeholder="+253 77 XX XX XX"
+                            className="bg-white/5 border-white/10 text-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Passengers */}
             <div className="flex items-center justify-between">
               <h2 className="font-unbounded text-xl text-white flex items-center gap-2">
                 <Users size={24} />
@@ -296,7 +458,7 @@ const FerryBookingPage = () => {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <Label className="text-gray-400 mb-1 block">
                       <User size={14} className="inline mr-1" />
@@ -307,20 +469,18 @@ const FerryBookingPage = () => {
                       onChange={(e) => updatePassenger(index, 'full_name', e.target.value)}
                       placeholder="Mohamed Ali"
                       className="bg-white/5 border-white/10 text-white"
-                      data-testid={`ferry-passenger-${index}-name`}
                     />
                   </div>
                   <div>
                     <Label className="text-gray-400 mb-1 block">
                       <Phone size={14} className="inline mr-1" />
-                      Téléphone
+                      Telephone
                     </Label>
                     <Input
                       value={passenger.phone}
                       onChange={(e) => updatePassenger(index, 'phone', e.target.value)}
                       placeholder="+253 77 XX XX XX"
                       className="bg-white/5 border-white/10 text-white"
-                      data-testid={`ferry-passenger-${index}-phone`}
                     />
                   </div>
                   <div>
@@ -331,14 +491,98 @@ const FerryBookingPage = () => {
                     <Input
                       value={passenger.passport_or_cni}
                       onChange={(e) => updatePassenger(index, 'passport_or_cni', e.target.value)}
-                      placeholder="Numéro de document"
+                      placeholder="Numero de document"
                       className="bg-white/5 border-white/10 text-white"
-                      data-testid={`ferry-passenger-${index}-id`}
                     />
+                  </div>
+                  <div>
+                    <Label className="text-gray-400 mb-1 block">
+                      <Baby size={14} className="inline mr-1" />
+                      Age (optionnel)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={passenger.age || ''}
+                      onChange={(e) => updatePassenger(index, 'age', e.target.value)}
+                      placeholder="Age"
+                      min="0"
+                      max="120"
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                    {passenger.age && passenger.age < childFreeAge && (
+                      <p className="text-green-400 text-xs mt-1">Gratuit (enfant)</p>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
+
+            {/* Vehicles Section */}
+            <div className="flex items-center justify-between">
+              <h2 className="font-unbounded text-xl text-white flex items-center gap-2">
+                <Car size={24} />
+                Vehicules ({vehicles.length})
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addVehicle}
+                className="border-ferry text-ferry hover:bg-ferry/20"
+              >
+                <Plus size={16} className="mr-1" /> Ajouter un vehicule
+              </Button>
+            </div>
+
+            {vehicles.length === 0 ? (
+              <div className="glass p-4 rounded-xl text-center text-gray-400">
+                <Car size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Pas de vehicule ajoute</p>
+                <p className="text-xs text-gray-500">Cliquez sur "Ajouter un vehicule" si vous voyagez avec un vehicule</p>
+              </div>
+            ) : (
+              vehicles.map((vehicle, index) => (
+                <div key={index} className="glass p-5 rounded-xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-white font-semibold">Vehicule {index + 1}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeVehicle(index)}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                    >
+                      <Minus size={16} />
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-gray-400 mb-1 block">Type de vehicule</Label>
+                      <select
+                        value={vehicle.vehicle_type}
+                        onChange={(e) => updateVehicle(index, 'vehicle_type', e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-md p-2"
+                      >
+                        <option value="">Selectionnez un type</option>
+                        {vehicleTypes.map((vt) => (
+                          <option key={vt.type} value={vt.type}>
+                            {vt.name} {vt.price > 0 ? `- ${vt.price} FDJ` : '(Prix a confirmer)'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-gray-400 mb-1 block">Immatriculation</Label>
+                      <Input
+                        value={vehicle.plate_number}
+                        onChange={(e) => updateVehicle(index, 'plate_number', e.target.value)}
+                        placeholder="XX 1234 DJ"
+                        className="bg-white/5 border-white/10 text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
 
             {/* Payment Method */}
             <div className="glass p-5 rounded-xl">
@@ -357,40 +601,55 @@ const FerryBookingPage = () => {
                         ? 'border-ferry bg-ferry/20'
                         : 'border-white/10 bg-white/5 hover:border-ferry/50'
                     }`}
-                    data-testid={`ferry-payment-${method.id}`}
                   >
                     <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center p-1.5 overflow-hidden">
                       <img src={method.logo} alt={method.name} className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-white font-semibold text-xs">
-                      {method.name}
-                    </span>
+                    <span className="text-white font-semibold text-xs">{method.name}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Total & Book Button */}
+            {/* Total & Book */}
             <div className="glass p-5 rounded-xl">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-gray-400">Total ({passengers.length} passager{passengers.length > 1 ? 's' : ''})</span>
-                <span className="text-ferry font-mono font-bold text-2xl">{calculateTotal()} DJF</span>
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-gray-400">
+                  <span>Passagers ({passengers.filter(p => !p.age || p.age >= childFreeAge).length} adultes)</span>
+                  <span>{calculatePassengerTotal()} FDJ</span>
+                </div>
+                {passengers.some(p => p.age && p.age < childFreeAge) && (
+                  <div className="flex justify-between text-green-400">
+                    <span>Enfants gratuits ({passengers.filter(p => p.age && p.age < childFreeAge).length})</span>
+                    <span>0 FDJ</span>
+                  </div>
+                )}
+                {vehicles.length > 0 && (
+                  <div className="flex justify-between text-gray-400">
+                    <span>Vehicules ({vehicles.length})</span>
+                    <span>{calculateVehicleTotal()} FDJ</span>
+                  </div>
+                )}
+                <div className="border-t border-white/10 pt-2 flex justify-between">
+                  <span className="text-white font-semibold">Total</span>
+                  <span className="text-ferry font-mono font-bold text-2xl">{calculateTotal()} FDJ</span>
+                </div>
               </div>
               <Button
                 onClick={handleBooking}
-                disabled={booking}
+                disabled={booking || (!user && !isGuestCheckout)}
                 className="w-full bg-ferry hover:bg-ferry/90 text-black font-bold py-6 text-lg"
                 data-testid="ferry-book-button"
               >
                 {booking ? (
                   <span className="flex items-center gap-2">
                     <div className="animate-spin w-5 h-5 border-2 border-black border-t-transparent rounded-full"></div>
-                    Réservation en cours...
+                    Reservation en cours...
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
                     <Anchor size={20} />
-                    Confirmer la réservation
+                    Confirmer la reservation
                   </span>
                 )}
               </Button>
@@ -398,8 +657,8 @@ const FerryBookingPage = () => {
           </div>
         )}
 
-        {/* Weekly Schedule Display */}
-        <div className="mt-8 glass p-6 rounded-2xl border border-ferry/30" data-testid="ferry-schedule-preview">
+        {/* Weekly Schedule */}
+        <div className="mt-8 glass p-6 rounded-2xl border border-ferry/30">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-ferry/20 flex items-center justify-center">
               <Calendar className="text-ferry" size={20} />
@@ -415,74 +674,73 @@ const FerryBookingPage = () => {
               <div className="animate-spin w-6 h-6 border-2 border-ferry border-t-transparent rounded-full"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
-              {weeklySchedule.map((day) => (
-                <div 
-                  key={day.day}
-                  data-testid={`schedule-day-${day.day}`}
-                  className={`p-3 rounded-xl text-center transition-all ${
-                    day.active 
-                      ? 'bg-ferry/10 border border-ferry/30 hover:border-ferry/60' 
-                      : 'bg-red-500/10 border border-red-500/20'
-                  }`}
-                >
-                  <p className={`font-medium text-sm mb-1 ${day.active ? 'text-white' : 'text-red-400'}`}>
-                    {day.day_label}
-                  </p>
-                  
-                  {day.active ? (
-                    <>
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <MapPin size={12} className="text-ferry" />
-                        <span className="text-ferry text-xs font-medium">{day.destination}</span>
-                      </div>
-                      <div className="text-gray-400 text-[10px] space-y-0.5">
-                        <div className="flex items-center justify-center gap-1">
-                          <ArrowRight size={10} />
-                          <span>{day.departure_time}</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-1">
-                          <ArrowRight size={10} className="rotate-180" />
-                          <span>{day.return_time}</span>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-center gap-1 mt-2">
-                      <XIcon size={14} className="text-red-400" />
-                      <span className="text-red-400 text-xs">Fermé</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left py-2 text-gray-400">Jour</th>
+                    <th className="text-left py-2 text-gray-400">Destination</th>
+                    <th className="text-center py-2 text-gray-400">Depart</th>
+                    <th className="text-center py-2 text-gray-400">Retour</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weeklySchedule.map((day) => (
+                    day.routes && day.routes.length > 0 ? (
+                      // Multiple routes for this day
+                      day.routes.map((route, idx) => (
+                        <tr key={`${day.day}-${idx}`} className="border-b border-white/5">
+                          <td className={`py-3 font-medium text-white ${idx > 0 ? 'pt-0' : ''}`}>
+                            {idx === 0 ? day.day_label : ''}
+                          </td>
+                          <td className="py-3">
+                            <span className="text-ferry">{route.destination}</span>
+                          </td>
+                          <td className="py-3 text-center text-gray-300">{route.departure_time}</td>
+                          <td className="py-3 text-center text-gray-300">{route.return_time}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      // Single route or closed day
+                      <tr key={day.day} className="border-b border-white/5">
+                        <td className={`py-3 font-medium ${day.active ? 'text-white' : 'text-gray-500'}`}>
+                          {day.day_label}
+                        </td>
+                        <td className="py-3">
+                          {day.active ? (
+                            <span className="text-ferry">{day.destination}</span>
+                          ) : (
+                            <span className="text-red-400 flex items-center gap-1">
+                              <XIcon size={14} /> Ferme
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 text-center text-gray-300">
+                          {day.active ? day.departure_time : '-'}
+                        </td>
+                        <td className="py-3 text-center text-gray-300">
+                          {day.active ? day.return_time : '-'}
+                        </td>
+                      </tr>
+                    )
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
           
-          {/* Legend and info */}
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-ferry/30 border border-ferry/50"></div>
-                <span>Service disponible</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30"></div>
-                <span>Pas de service</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <ArrowRight size={12} />
-                <span>Départ</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <ArrowRight size={12} className="rotate-180" />
-                <span>Retour</span>
-              </div>
-            </div>
-            <p className="text-gray-500 text-xs mt-3">
-              Prix: <span className="text-ferry font-semibold">700 DJF</span> par personne • 
-              Présentez votre billet QR code et pièce d'identité à l'embarquement
-            </p>
+          {/* Rules */}
+          <div className="mt-4 pt-4 border-t border-white/10 text-xs text-gray-500 space-y-1">
+            <p>- Presentez-vous <strong>1 heure avant le depart</strong> a l'escale</p>
+            <p>- Les tickets ne sont <strong>ni remboursables ni echangeables</strong></p>
+            <p>- Enfants de moins de {childFreeAge} ans: <strong className="text-green-400">Gratuit</strong> (accompagnes d'un adulte)</p>
           </div>
+        </div>
+
+        {/* Contact Info */}
+        <div className="mt-6 text-center text-gray-500 text-sm">
+          <p>Besoin d'aide? Contactez-nous:</p>
+          <p className="text-ferry font-medium">+253 77 69 48 12 | contact@d-billet.com</p>
         </div>
       </div>
     </div>

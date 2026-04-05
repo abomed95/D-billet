@@ -67,7 +67,7 @@ const FAQ_DATA = [
   },
   {
     question: 'Comment contacter le support?',
-    answer: 'Contactez-nous par email à support@dbilleh.dj ou par téléphone au +253 77 XX XX XX. Notre équipe répond sous 24h.'
+    answer: 'Contactez-nous par email à contact@d-billet.com ou par téléphone au +253 77 69 48 12. Notre équipe répond sous 24h.'
   },
 ];
 
@@ -240,7 +240,7 @@ const HomePage = () => {
               <div className="flex-1">
                 <h3 className="font-unbounded text-lg text-white mb-1">Ferry</h3>
                 <p className="text-gray-400 text-sm">Djibouti - Tadjoura - Obock</p>
-                <p className="text-ferry text-sm mt-1">700 DJF</p>
+                <p className="text-ferry text-sm mt-1">1100 FDJ</p>
               </div>
               <ChevronRight className="text-gray-500 group-hover:text-ferry transition-colors" size={24} />
             </Link>
@@ -431,113 +431,6 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-
-      {/* Footer - Mobile */}
-      <footer className="lg:hidden py-8 px-4 border-t border-white/10">
-        <div className="max-w-6xl mx-auto text-center">
-          <img src="/images/dbilleh-logo.png" alt="D-BILLEH" className="h-16 mx-auto mb-4" />
-          <p className="text-gray-400 text-sm mb-4">Un clic, et vous y êtes</p>
-          <div className="flex justify-center gap-4 mb-6">
-            <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-gold/20 transition-colors">
-              <Facebook className="text-gray-400 hover:text-gold" size={20} />
-            </a>
-            <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-gold/20 transition-colors">
-              <Instagram className="text-gray-400 hover:text-gold" size={20} />
-            </a>
-            <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-gold/20 transition-colors">
-              <Twitter className="text-gray-400 hover:text-gold" size={20} />
-            </a>
-          </div>
-          <div className="text-gray-500 text-xs">
-            © 2025 D-BILLEH. Djibouti. Tous droits réservés.
-          </div>
-        </div>
-      </footer>
-
-      {/* Footer - Desktop (Two sections) */}
-      <footer className="hidden lg:block border-t border-white/10">
-        {/* Upper Footer */}
-        <div className="py-12 px-4 bg-gradient-to-b from-transparent to-gold/5">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-4 gap-8">
-              {/* Brand */}
-              <div className="col-span-1">
-                <img src="/images/dbilleh-logo.png" alt="D-BILLEH" className="h-20 mb-4" />
-                <p className="text-gray-400 text-sm mb-4">
-                  La billetterie officielle de Djibouti pour tous vos événements, transports en train et ferry.
-                </p>
-                <div className="flex gap-3">
-                  <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-gold/30 transition-colors">
-                    <Facebook className="text-gray-400 hover:text-gold" size={18} />
-                  </a>
-                  <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-gold/30 transition-colors">
-                    <Instagram className="text-gray-400 hover:text-gold" size={18} />
-                  </a>
-                  <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-gold/30 transition-colors">
-                    <Twitter className="text-gray-400 hover:text-gold" size={18} />
-                  </a>
-                </div>
-              </div>
-              
-              {/* Navigation */}
-              <div>
-                <h4 className="font-unbounded text-gold mb-4">Navigation</h4>
-                <ul className="space-y-2 text-gray-400 text-sm">
-                  <li><Link to="/" className="hover:text-gold transition-colors">Accueil</Link></li>
-                  <li><Link to="/train" className="hover:text-gold transition-colors">Train</Link></li>
-                  <li><Link to="/ferry" className="hover:text-gold transition-colors">Ferry</Link></li>
-                  <li><Link to="/my-tickets" className="hover:text-gold transition-colors">Mes Billets</Link></li>
-                </ul>
-              </div>
-              
-              {/* Services */}
-              <div>
-                <h4 className="font-unbounded text-gold mb-4">Services</h4>
-                <ul className="space-y-2 text-gray-400 text-sm">
-                  <li><span className="hover:text-gold cursor-pointer transition-colors">Événements</span></li>
-                  <li><span className="hover:text-gold cursor-pointer transition-colors">Organisateurs</span></li>
-                  <li><span className="hover:text-gold cursor-pointer transition-colors">API Partenaires</span></li>
-                </ul>
-              </div>
-              
-              {/* Contact */}
-              <div>
-                <h4 className="font-unbounded text-gold mb-4">Contact</h4>
-                <ul className="space-y-3 text-gray-400 text-sm">
-                  <li className="flex items-center gap-2">
-                    <Mail size={16} className="text-gold" />
-                    support@dbilleh.dj
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Phone size={16} className="text-gold" />
-                    +253 77 XX XX XX
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <MapPin size={16} className="text-gold" />
-                    Djibouti Ville
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Lower Footer */}
-        <div className="py-6 px-4 bg-black/50">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="text-gray-500 text-sm">
-              © 2025 D-BILLEH. Tous droits réservés. République de Djibouti.
-            </div>
-            <div className="flex items-center gap-6 text-gray-500 text-sm">
-              <Link to="/terms" className="hover:text-gold transition-colors">Conditions d'utilisation</Link>
-              <span className="text-gray-700">|</span>
-              <span className="hover:text-gold cursor-pointer transition-colors">Politique de confidentialité</span>
-              <span className="text-gray-700">|</span>
-              <span className="hover:text-gold cursor-pointer transition-colors">Mentions légales</span>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

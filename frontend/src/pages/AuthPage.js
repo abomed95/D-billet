@@ -1,73 +1,97 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff, ArrowLeft, Phone, KeyRound } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Mail, Lock, User, Eye, EyeOff, ArrowLeft, Phone, Chrome } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
+// REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+
 const AuthPage = () => {
-  const [authMethod, setAuthMethod] = useState('phone'); // phone, email
+  const [authMethod, setAuthMethod] = useState('phone'); // phone, email, google
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [simulatedOtp, setSimulatedOtp] = useState('');
   
   const [phone, setPhone] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   
-  const { login, register, sendOtp, verifyOtp } = useAuth();
+  const { login, register, phoneLogin, googleLogin, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const hasProcessed = useRef(false);
 
-  const handleSendOtp = async () => {
-    if (!phone || phone.length < 8) {
-      toast.error('Veuillez entrer un numéro de téléphone valide');
-      return;
-    }
+  // Handle Google OAuth callback
+  useEffect(() => {
+    if (hasProcessed.current) return;
     
+    const hash = window.location.hash;
+    if (hash && hash.includes('session_id=')) {
+      hasProcessed.current = true;
+      const sessionId = hash.split('session_id=')[1]?.split('&')[0];
+      if (sessionId) {
+        handleGoogleCallback(sessionId);
+      }
+    }
+  }, []);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      redirectByRole(user);
+    }
+  }, [user]);
+
+  const redirectByRole = (userData) => {
+    if (userData.role === 'admin') {
+      navigate('/admin');
+    } else if (['organizer', 'ferry_organizer', 'train_organizer'].includes(userData.role)) {
+      navigate('/organizer');
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handleGoogleCallback = async (sessionId) => {
     setLoading(true);
     try {
-      const result = await sendOtp(phone);
-      setOtpSent(true);
-      // Show simulated OTP (remove in production)
-      if (result.otp_simulation) {
-        setSimulatedOtp(result.otp_simulation);
-        toast.success(`Code OTP envoyé! (Simulation: ${result.otp_simulation})`);
-      } else {
-        toast.success('Code OTP envoyé par SMS');
-      }
+      const userData = await googleLogin(sessionId);
+      toast.success('Connexion Google reussie!');
+      // Clear the hash from URL
+      window.history.replaceState(null, '', window.location.pathname);
+      redirectByRole(userData);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erreur lors de l\'envoi du code');
+      console.error('Google login error:', error);
+      toast.error('Erreur de connexion Google');
+      window.history.replaceState(null, '', window.location.pathname);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (!otpCode || otpCode.length !== 6) {
-      toast.error('Veuillez entrer le code à 6 chiffres');
+  const handleGoogleLogin = () => {
+    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+    const redirectUrl = window.location.origin + '/auth';
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  };
+
+  const handlePhoneLogin = async () => {
+    if (!phone || phone.length < 8) {
+      toast.error('Veuillez entrer un numero de telephone valide');
       return;
     }
     
     setLoading(true);
     try {
-      const userData = await verifyOtp(phone, otpCode);
-      toast.success('Connexion réussie!');
-      // Redirect based on role
-      if (userData.role === 'admin') {
-        navigate('/admin');
-      } else if (userData.role === 'organizer') {
-        navigate('/organizer');
-      } else {
-        navigate('/');
-      }
+      const userData = await phoneLogin(phone, fullName || null);
+      toast.success('Connexion reussie!');
+      redirectByRole(userData);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Code OTP invalide');
+      toast.error(error.response?.data?.detail || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
@@ -91,19 +115,12 @@ const AuthPage = () => {
       let userData;
       if (isLogin) {
         userData = await login(email, password);
-        toast.success('Connexion réussie!');
+        toast.success('Connexion reussie!');
       } else {
         userData = await register(email, password, fullName);
-        toast.success('Compte créé avec succès!');
+        toast.success('Compte cree avec succes!');
       }
-      // Redirect based on role
-      if (userData.role === 'admin') {
-        navigate('/admin');
-      } else if (userData.role === 'organizer') {
-        navigate('/organizer');
-      } else {
-        navigate('/');
-      }
+      redirectByRole(userData);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erreur d\'authentification');
     } finally {
@@ -111,59 +128,95 @@ const AuthPage = () => {
     }
   };
 
+  // Loading state for Google callback
+  if (loading && window.location.hash?.includes('session_id=')) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="text-center">
+          <img src="/images/dbillet-icon.png" alt="D-Billet" className="w-20 h-20 mx-auto mb-4 rounded-full" />
+          <div className="animate-pulse text-gray-400">Connexion en cours...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         {/* Back Button */}
         <button
-          onClick={() => otpSent ? setOtpSent(false) : navigate('/')}
+          onClick={() => navigate('/')}
           className="flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
         >
           <ArrowLeft size={20} />
-          {otpSent ? 'Changer de numéro' : 'Retour'}
+          Retour
         </button>
 
-        {/* Header */}
+        {/* Header with Logo */}
         <div className="text-center mb-8">
-          <h1 className="font-unbounded text-3xl font-bold text-green-400 mb-2">D-BILLET</h1>
+          <img 
+            src="/images/dbillet-logo.png" 
+            alt="D-Billet" 
+            className="h-16 mx-auto mb-4 object-contain"
+          />
           <p className="text-gray-400">
-            {otpSent ? 'Entrez le code reçu' : 'Connectez-vous ou créez un compte'}
+            Connectez-vous ou creez un compte
           </p>
         </div>
 
-        {/* Auth Method Tabs */}
-        {!otpSent && (
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setAuthMethod('phone')}
-              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2
-                ${authMethod === 'phone' 
-                  ? 'bg-green-500 text-black' 
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-            >
-              <Phone size={18} />
-              Téléphone
-            </button>
-            <button
-              onClick={() => setAuthMethod('email')}
-              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2
-                ${authMethod === 'email' 
-                  ? 'bg-green-500 text-black' 
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-            >
-              <Mail size={18} />
-              Email
-            </button>
+        {/* Google Login Button */}
+        <Button
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          variant="outline"
+          className="w-full mb-6 py-6 bg-white hover:bg-gray-100 text-black border-0 font-medium"
+          data-testid="google-login-btn"
+        >
+          <Chrome className="mr-2" size={20} />
+          Continuer avec Google
+        </Button>
+
+        {/* Divider */}
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/10"></div>
           </div>
-        )}
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-[#050505] text-gray-500">ou</span>
+          </div>
+        </div>
+
+        {/* Auth Method Tabs */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setAuthMethod('phone')}
+            className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2
+              ${authMethod === 'phone' 
+                ? 'bg-green-500 text-black' 
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            <Phone size={18} />
+            Telephone
+          </button>
+          <button
+            onClick={() => setAuthMethod('email')}
+            className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2
+              ${authMethod === 'email' 
+                ? 'bg-green-500 text-black' 
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            <Mail size={18} />
+            Email
+          </button>
+        </div>
 
         {/* Form Card */}
         <div className="glass p-8 rounded-2xl">
-          {/* Phone OTP Flow */}
-          {authMethod === 'phone' && !otpSent && (
+          {/* Phone Login Flow (No OTP) */}
+          {authMethod === 'phone' && (
             <div className="space-y-6">
               <div>
-                <Label className="text-gray-300 mb-2 block">Numéro de téléphone</Label>
+                <Label className="text-gray-300 mb-2 block">Numero de telephone</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                   <Input
@@ -177,77 +230,36 @@ const AuthPage = () => {
                 </div>
               </div>
 
-              <Button
-                onClick={handleSendOtp}
-                disabled={loading}
-                className="w-full bg-green-500 hover:bg-green-600 text-black font-bold py-6"
-                data-testid="send-otp-btn"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <div className="animate-spin w-5 h-5 border-2 border-black border-t-transparent rounded-full"></div>
-                    Envoi en cours...
-                  </span>
-                ) : (
-                  'Recevoir le code OTP'
-                )}
-              </Button>
-            </div>
-          )}
-
-          {/* OTP Verification */}
-          {authMethod === 'phone' && otpSent && (
-            <div className="space-y-6">
-              {/* Simulated OTP Display */}
-              {simulatedOtp && (
-                <div className="p-4 rounded-xl bg-yellow-500/20 border border-yellow-500/50 text-center">
-                  <p className="text-yellow-400 text-sm mb-1">Code de simulation (dev)</p>
-                  <p className="text-yellow-300 font-mono text-2xl font-bold">{simulatedOtp}</p>
-                </div>
-              )}
-
               <div>
-                <Label className="text-gray-300 mb-2 block">Code de vérification</Label>
+                <Label className="text-gray-300 mb-2 block">Nom complet (optionnel)</Label>
                 <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                   <Input
                     type="text"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="000000"
-                    className="pl-10 bg-white/5 border-white/10 text-white text-center font-mono text-2xl tracking-widest"
-                    maxLength={6}
-                    data-testid="otp-input"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Mohamed Ali"
+                    className="pl-10 bg-white/5 border-white/10 text-white"
+                    data-testid="auth-fullname"
                   />
                 </div>
-                <p className="text-gray-500 text-sm mt-2 text-center">
-                  Code envoyé au {phone}
-                </p>
               </div>
 
               <Button
-                onClick={handleVerifyOtp}
-                disabled={loading || otpCode.length !== 6}
+                onClick={handlePhoneLogin}
+                disabled={loading}
                 className="w-full bg-green-500 hover:bg-green-600 text-black font-bold py-6"
-                data-testid="verify-otp-btn"
+                data-testid="phone-login-btn"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <div className="animate-spin w-5 h-5 border-2 border-black border-t-transparent rounded-full"></div>
-                    Vérification...
+                    Connexion...
                   </span>
                 ) : (
-                  'Vérifier et Continuer'
+                  'Continuer'
                 )}
               </Button>
-
-              <button
-                onClick={handleSendOtp}
-                disabled={loading}
-                className="w-full text-gray-400 hover:text-white text-sm"
-              >
-                Renvoyer le code
-              </button>
             </div>
           )}
 
@@ -294,7 +306,7 @@ const AuthPage = () => {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="********"
                     className="pl-10 pr-10 bg-white/5 border-white/10 text-white"
                     data-testid="auth-password"
                   />
@@ -317,10 +329,10 @@ const AuthPage = () => {
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <div className="animate-spin w-5 h-5 border-2 border-black border-t-transparent rounded-full"></div>
-                    {isLogin ? 'Connexion...' : 'Création...'}
+                    {isLogin ? 'Connexion...' : 'Creation...'}
                   </span>
                 ) : (
-                  isLogin ? 'Se connecter' : 'Créer un compte'
+                  isLogin ? 'Se connecter' : 'Creer un compte'
                 )}
               </Button>
 
@@ -333,7 +345,7 @@ const AuthPage = () => {
                   {isLogin ? (
                     <>Pas de compte? <span className="text-green-400">S'inscrire</span></>
                   ) : (
-                    <>Déjà un compte? <span className="text-green-400">Se connecter</span></>
+                    <>Deja un compte? <span className="text-green-400">Se connecter</span></>
                   )}
                 </button>
               </div>
@@ -345,23 +357,27 @@ const AuthPage = () => {
         {authMethod === 'email' && (
           <div className="mt-6 glass p-4 rounded-xl">
             <p className="text-gray-400 text-sm mb-2">Comptes demo:</p>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
                 <p className="text-gray-500">Admin:</p>
                 <p className="text-white font-mono">admin@dbillet.dj</p>
-                <p className="text-white font-mono">admin123</p>
               </div>
               <div>
                 <p className="text-gray-500">Organisateur:</p>
                 <p className="text-white font-mono">organizer@dbillet.dj</p>
-                <p className="text-white font-mono">organizer123</p>
               </div>
             </div>
           </div>
         )}
 
+        {/* Contact Info */}
+        <div className="mt-6 text-center text-gray-500 text-sm">
+          <p>Besoin d'aide? Contactez-nous:</p>
+          <p className="text-green-400">+253 77 69 48 12 | contact@d-billet.com</p>
+        </div>
+
         {/* Terms Link */}
-        <p className="text-center text-gray-500 text-xs mt-6">
+        <p className="text-center text-gray-500 text-xs mt-4">
           En continuant, vous acceptez nos{' '}
           <a href="/terms" className="text-green-400 hover:underline">
             Conditions d'utilisation

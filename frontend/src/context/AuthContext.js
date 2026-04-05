@@ -18,18 +18,11 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('dbillet_token'));
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
-
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true
       });
       setUser(response.data);
     } catch (error) {
@@ -38,7 +31,22 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    // CRITICAL: If returning from OAuth callback, skip the /me check
+    // AuthCallback will handle the session exchange
+    if (window.location.hash?.includes('session_id=')) {
+      setLoading(false);
+      return;
+    }
+
+    if (token) {
+      fetchUser();
+    } else {
+      setLoading(false);
+    }
+  }, [token, fetchUser]);
 
   const register = async (email, password, fullName) => {
     const response = await axios.post(`${API}/auth/register`, {
@@ -65,13 +73,11 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const sendOtp = async (phone) => {
-    const response = await axios.post(`${API}/auth/otp/send`, { phone });
-    return response.data;
-  };
-
-  const verifyOtp = async (phone, otp) => {
-    const response = await axios.post(`${API}/auth/otp/verify`, { phone, otp });
+  const phoneLogin = async (phone, fullName = null) => {
+    const response = await axios.post(`${API}/auth/phone-login`, { 
+      phone,
+      full_name: fullName 
+    });
     const { access_token, user: userData } = response.data;
     localStorage.setItem('dbillet_token', access_token);
     setToken(access_token);
@@ -79,7 +85,35 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const logout = () => {
+  const googleLogin = async (sessionId) => {
+    const response = await axios.post(`${API}/auth/google/session`, {
+      session_id: sessionId
+    }, { withCredentials: true });
+    const { token: accessToken, user: userData } = response.data;
+    localStorage.setItem('dbillet_token', accessToken);
+    setToken(accessToken);
+    setUser(userData);
+    return userData;
+  };
+
+  const createGuestSession = async (phone, fullName) => {
+    const response = await axios.post(`${API}/auth/guest-session`, {
+      phone,
+      full_name: fullName
+    });
+    const { token: accessToken, user_id, full_name } = response.data;
+    localStorage.setItem('dbillet_token', accessToken);
+    setToken(accessToken);
+    setUser({ id: user_id, phone, full_name, role: 'guest' });
+    return response.data;
+  };
+
+  const logout = async () => {
+    try {
+      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     localStorage.removeItem('dbillet_token');
     setToken(null);
     setUser(null);
@@ -90,16 +124,18 @@ export const AuthProvider = ({ children }) => {
   });
 
   const isAdmin = user?.role === 'admin';
-  const isOrganizer = user?.role === 'organizer' || user?.role === 'admin';
+  const isOrganizer = ['organizer', 'admin', 'ferry_organizer', 'train_organizer'].includes(user?.role);
+  const isFerryOrganizer = user?.role === 'ferry_organizer';
+  const isTrainOrganizer = user?.role === 'train_organizer';
   const isAuthenticated = !!user && !!token;
 
   return (
     <AuthContext.Provider value={{ 
       user, token, loading, 
       register, login, logout, 
-      sendOtp, verifyOtp,
+      phoneLogin, googleLogin, createGuestSession,
       getAuthHeaders,
-      isAdmin, isOrganizer, isAuthenticated
+      isAdmin, isOrganizer, isFerryOrganizer, isTrainOrganizer, isAuthenticated
     }}>
       {children}
     </AuthContext.Provider>
