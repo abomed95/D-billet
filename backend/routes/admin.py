@@ -22,7 +22,8 @@ async def get_admin_stats(admin: dict = Depends(get_admin_user)):
     total_organizers = await db.users.count_documents({"role": "organizer"})
     total_events = await db.events.count_documents({})
     
-    all_events = await db.events.find({}, {"_id": 0}).to_list(1000)
+    # Only fetch ticket_types field for revenue calculation (optimized projection)
+    all_events = await db.events.find({}, {"_id": 0, "ticket_types": 1}).to_list(1000)
     total_revenue = 0
     total_tickets_sold = 0
     
@@ -30,7 +31,7 @@ async def get_admin_stats(admin: dict = Depends(get_admin_user)):
         for tt in event.get("ticket_types", []):
             sold = tt.get("sold", 0)
             total_tickets_sold += sold
-            total_revenue += sold * tt["price"]
+            total_revenue += sold * tt.get("price", 0)
     
     commission_rate = 8
     settings = await db.settings.find_one({"type": "platform"}, {"_id": 0})
@@ -123,13 +124,21 @@ async def get_all_events(
     
     events = await db.events.find(query, {"_id": 0}).to_list(1000)
     
+    # Batch fetch all organizers to avoid N+1 query problem
+    organizer_ids = list(set(e.get("organizer_id") for e in events if e.get("organizer_id")))
+    organizers_list = await db.users.find(
+        {"id": {"$in": organizer_ids}}, 
+        {"_id": 0, "id": 1, "full_name": 1, "company_name": 1}
+    ).to_list(1000)
+    organizers = {o["id"]: o for o in organizers_list}
+    
     result = []
     for event in events:
         total = sum(tt["quantity"] for tt in event.get("ticket_types", []))
         sold = sum(tt.get("sold", 0) for tt in event.get("ticket_types", []))
         revenue = sum(tt.get("sold", 0) * tt["price"] for tt in event.get("ticket_types", []))
         
-        organizer = await db.users.find_one({"id": event.get("organizer_id")}, {"_id": 0, "full_name": 1, "company_name": 1})
+        organizer = organizers.get(event.get("organizer_id"))
         
         result.append({
             **event,

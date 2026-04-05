@@ -47,7 +47,10 @@ async def get_ticket_view(ticket_id: str):
     qr_img.save(buffer, format="PNG")
     qr_base64 = base64.b64encode(buffer.getvalue()).decode()
     
-    share_url = f"https://dbillet.dj/ticket/{ticket_id}"
+    # Use environment variable for share URL (auto-configured by deployment)
+    import os
+    app_url = os.environ.get('APP_URL', 'https://dbillet.dj')
+    share_url = f"{app_url}/ticket/{ticket_id}"
     whatsapp_text = f"Mon billet D-Billet - {ticket['event_title']} - {ticket['event_date']} a {ticket['event_time']} - {ticket['event_venue']} - {share_url}"
     encoded_text = whatsapp_text.replace(' ', '%20')
     whatsapp_url = f"https://wa.me/?text={encoded_text}"
