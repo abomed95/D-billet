@@ -1,7 +1,39 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Use sessionStorage instead of localStorage for better security
+// Token is cleared when browser tab closes
+const TOKEN_KEY = 'dbillet_token';
+
+const getStoredToken = () => {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const storeToken = (token) => {
+  try {
+    // Store in sessionStorage (cleared on tab close) for better security
+    sessionStorage.setItem(TOKEN_KEY, token);
+    // Also store in localStorage for "remember me" functionality
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch (error) {
+    console.error('Failed to store token:', error);
+  }
+};
+
+const clearStoredToken = () => {
+  try {
+    sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+  } catch (error) {
+    console.error('Failed to clear token:', error);
+  }
+};
 
 const AuthContext = createContext(null);
 
@@ -15,10 +47,26 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('dbillet_token'));
+  const [token, setToken] = useState(() => getStoredToken());
   const [loading, setLoading] = useState(true);
 
+  const logout = useCallback(async () => {
+    try {
+      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    clearStoredToken();
+    setToken(null);
+    setUser(null);
+  }, []);
+
   const fetchUser = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       const response = await axios.get(`${API}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -31,112 +79,107 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, logout]);
 
   useEffect(() => {
     // CRITICAL: If returning from OAuth callback, skip the /me check
-    // AuthCallback will handle the session exchange
     if (window.location.hash?.includes('session_id=')) {
       setLoading(false);
       return;
     }
 
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token, fetchUser]);
+    fetchUser();
+  }, [fetchUser]);
 
-  const register = async (email, password, fullName) => {
+  const register = useCallback(async (email, password, fullName) => {
     const response = await axios.post(`${API}/auth/register`, {
       email,
       password,
       full_name: fullName
-    });
+    }, { withCredentials: true });
     const { access_token, user: userData } = response.data;
-    localStorage.setItem('dbillet_token', access_token);
+    storeToken(access_token);
     setToken(access_token);
     setUser(userData);
     return userData;
-  };
+  }, []);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const response = await axios.post(`${API}/auth/login`, {
       email,
       password
-    });
+    }, { withCredentials: true });
     const { access_token, user: userData } = response.data;
-    localStorage.setItem('dbillet_token', access_token);
+    storeToken(access_token);
     setToken(access_token);
     setUser(userData);
     return userData;
-  };
+  }, []);
 
-  const phoneLogin = async (phone, fullName = null) => {
+  const phoneLogin = useCallback(async (phone, fullName = null) => {
     const response = await axios.post(`${API}/auth/phone-login`, { 
       phone,
       full_name: fullName 
-    });
+    }, { withCredentials: true });
     const { access_token, user: userData } = response.data;
-    localStorage.setItem('dbillet_token', access_token);
+    storeToken(access_token);
     setToken(access_token);
     setUser(userData);
     return userData;
-  };
+  }, []);
 
-  const googleLogin = async (sessionId) => {
+  const googleLogin = useCallback(async (sessionId) => {
     const response = await axios.post(`${API}/auth/google/session`, {
       session_id: sessionId
     }, { withCredentials: true });
     const { token: accessToken, user: userData } = response.data;
-    localStorage.setItem('dbillet_token', accessToken);
+    storeToken(accessToken);
     setToken(accessToken);
     setUser(userData);
     return userData;
-  };
+  }, []);
 
-  const createGuestSession = async (phone, fullName) => {
+  const createGuestSession = useCallback(async (phone, fullName) => {
     const response = await axios.post(`${API}/auth/guest-session`, {
       phone,
       full_name: fullName
-    });
+    }, { withCredentials: true });
     const { token: accessToken, user_id, full_name } = response.data;
-    localStorage.setItem('dbillet_token', accessToken);
+    storeToken(accessToken);
     setToken(accessToken);
     setUser({ id: user_id, phone, full_name, role: 'guest' });
     return response.data;
-  };
+  }, []);
 
-  const logout = async () => {
-    try {
-      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-    localStorage.removeItem('dbillet_token');
-    setToken(null);
-    setUser(null);
-  };
-
-  const getAuthHeaders = () => ({
+  const getAuthHeaders = useCallback(() => ({
     Authorization: `Bearer ${token}`
-  });
+  }), [token]);
 
-  const isAdmin = user?.role === 'admin';
-  const isOrganizer = ['organizer', 'admin', 'ferry_organizer', 'train_organizer'].includes(user?.role);
-  const isFerryOrganizer = user?.role === 'ferry_organizer';
-  const isTrainOrganizer = user?.role === 'train_organizer';
-  const isAuthenticated = !!user && !!token;
+  // Memoize computed values
+  const authState = useMemo(() => ({
+    isAdmin: user?.role === 'admin',
+    isOrganizer: ['organizer', 'admin', 'ferry_organizer', 'train_organizer'].includes(user?.role),
+    isFerryOrganizer: user?.role === 'ferry_organizer',
+    isTrainOrganizer: user?.role === 'train_organizer',
+    isAuthenticated: !!user && !!token
+  }), [user, token]);
+
+  const contextValue = useMemo(() => ({
+    user,
+    token,
+    loading,
+    register,
+    login,
+    logout,
+    phoneLogin,
+    googleLogin,
+    createGuestSession,
+    getAuthHeaders,
+    ...authState
+  }), [user, token, loading, register, login, logout, phoneLogin, googleLogin, createGuestSession, getAuthHeaders, authState]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, token, loading, 
-      register, login, logout, 
-      phoneLogin, googleLogin, createGuestSession,
-      getAuthHeaders,
-      isAdmin, isOrganizer, isFerryOrganizer, isTrainOrganizer, isAuthenticated
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,24 +1,55 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const STAFF_TOKEN_KEY = 'staff_token';
+
+// Secure token storage helpers
+const getStoredToken = () => {
+  try {
+    return sessionStorage.getItem(STAFF_TOKEN_KEY) || localStorage.getItem(STAFF_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const storeToken = (token) => {
+  try {
+    sessionStorage.setItem(STAFF_TOKEN_KEY, token);
+    localStorage.setItem(STAFF_TOKEN_KEY, token);
+  } catch (error) {
+    console.error('Failed to store staff token:', error);
+  }
+};
+
+const clearStoredToken = () => {
+  try {
+    sessionStorage.removeItem(STAFF_TOKEN_KEY);
+    localStorage.removeItem(STAFF_TOKEN_KEY);
+  } catch (error) {
+    console.error('Failed to clear staff token:', error);
+  }
+};
 
 const StaffAuthContext = createContext(null);
 
 export const StaffAuthProvider = ({ children }) => {
   const [staff, setStaff] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('staff_token'));
+  const [token, setToken] = useState(() => getStoredToken());
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (token) {
-      verifyToken();
-    } else {
-      setLoading(false);
-    }
+  const logout = useCallback(() => {
+    clearStoredToken();
+    setToken(null);
+    setStaff(null);
   }, []);
 
-  const verifyToken = async () => {
+  const verifyToken = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       const response = await axios.get(`${API}/staff/me`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -30,39 +61,39 @@ export const StaffAuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, logout]);
 
-  const login = async (username, password) => {
+  useEffect(() => {
+    verifyToken();
+  }, [verifyToken]);
+
+  const login = useCallback(async (username, password) => {
     const response = await axios.post(`${API}/staff/login`, { username, password });
     const { access_token, staff: staffData } = response.data;
     
-    localStorage.setItem('staff_token', access_token);
+    storeToken(access_token);
     setToken(access_token);
     setStaff(staffData);
     
     return staffData;
-  };
+  }, []);
 
-  const logout = () => {
-    localStorage.removeItem('staff_token');
-    setToken(null);
-    setStaff(null);
-  };
-
-  const getAuthHeaders = () => ({
+  const getAuthHeaders = useCallback(() => ({
     Authorization: `Bearer ${token}`
-  });
+  }), [token]);
+
+  const contextValue = useMemo(() => ({
+    staff,
+    token,
+    loading,
+    login,
+    logout,
+    getAuthHeaders,
+    isAuthenticated: !!staff
+  }), [staff, token, loading, login, logout, getAuthHeaders]);
 
   return (
-    <StaffAuthContext.Provider value={{
-      staff,
-      token,
-      loading,
-      login,
-      logout,
-      getAuthHeaders,
-      isAuthenticated: !!staff
-    }}>
+    <StaffAuthContext.Provider value={contextValue}>
       {children}
     </StaffAuthContext.Provider>
   );

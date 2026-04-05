@@ -1,7 +1,8 @@
 """
-Authentication services
+Authentication services - Secure implementation
 """
-import random
+import secrets
+import string
 from datetime import datetime, timezone, timedelta
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException
@@ -39,14 +40,14 @@ def create_staff_token(data: dict) -> str:
 
 
 def generate_otp() -> str:
-    return str(random.randint(100000, 999999))
+    """Generate secure 6-digit OTP using secrets module"""
+    return str(secrets.randbelow(900000) + 100000)
 
 
 def generate_staff_password() -> str:
-    """Generate a random 8-character password"""
-    import string
+    """Generate a secure random 8-character password using secrets module"""
     chars = string.ascii_letters + string.digits
-    return ''.join(random.choice(chars) for _ in range(8))
+    return ''.join(secrets.choice(chars) for _ in range(8))
 
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):

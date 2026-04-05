@@ -120,6 +120,23 @@ Collections indexees pour performances optimales:
 | Ferry Org | ferry@dbillet.dj | ferry123 |
 | Train Org | train@dbillet.dj | train123 |
 
+## Corrections Code Quality (5 Avril 2026)
+
+### Sécurité
+- ✅ `secrets` module pour génération OTP/passwords (remplace `random`)
+- ✅ `sessionStorage` pour tokens (plus sécurisé que localStorage)
+- ✅ Fichier `test_config.py` pour credentials de test
+
+### React Hooks
+- ✅ Dépendances useEffect/useCallback corrigées
+- ✅ useMemo pour optimisation des valeurs calculées
+- ✅ Callbacks stables avec useCallback
+
+### Bonnes Pratiques
+- ✅ Index MongoDB pour performances
+- ✅ Documentation Swagger/OpenAPI
+- ✅ Middleware error handler global
+
 ---
 
 ## Backlog

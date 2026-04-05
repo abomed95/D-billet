@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { 
@@ -31,11 +31,7 @@ const TransportOrganizerDashboard = () => {
   const isTrainOrganizer = user?.role === 'train_organizer' || user?.role === 'admin';
   const transportType = user?.role === 'train_organizer' ? 'train' : 'ferry';
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
-
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     setLoading(true);
     try {
       const endpoint = transportType === 'train' 
@@ -61,7 +57,11 @@ const TransportOrganizerDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, transportType]);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
 
   const saveSettings = async () => {
     setSaving(true);
