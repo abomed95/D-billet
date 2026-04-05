@@ -32,6 +32,7 @@ import OrganizerParticipants from "./pages/organizer/OrganizerParticipants";
 import OrganizerFinances from "./pages/organizer/OrganizerFinances";
 import OrganizerStaff from "./pages/organizer/OrganizerStaff";
 import OrganizerLiveDashboard from "./pages/organizer/OrganizerLiveDashboard";
+import TransportOrganizerDashboard from "./pages/organizer/TransportOrganizerDashboard";
 import StaffLoginPage from "./pages/staff/StaffLoginPage";
 import StaffScannerPage from "./pages/staff/StaffScannerPage";
 
@@ -108,6 +109,9 @@ function AppRoutes() {
       
       {/* Organizer Live Dashboard (Full Screen) */}
       <Route path="/organizer/live/:eventId" element={<ProtectedRoute organizerOnly><OrganizerLiveDashboard /></ProtectedRoute>} />
+      
+      {/* Transport Organizer Dashboard */}
+      <Route path="/transport-organizer" element={<ProtectedRoute organizerOnly><TransportOrganizerDashboard /></ProtectedRoute>} />
       
       {/* Staff Routes - Separate Auth Context */}
       <Route path="/staff/login" element={<StaffAuthProvider><StaffLoginPage /></StaffAuthProvider>} />
