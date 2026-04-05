@@ -1,30 +1,53 @@
 # D-Billet - Plateforme de Billetterie Djibouti
 
 ## Probleme Original
-Developper une application web moderne et responsive appelee "D-Billet" (Ticket Djibouti), une plateforme de billetterie centralisee pour Djibouti avec gestion complete pour les administrateurs et organisateurs.
-
-## Personas Utilisateurs
-- **Clients**: Achetent des billets pour evenements et transport
-- **Organisateurs**: Creent evenements, gerent ventes et retraits
-- **Administrateur**: Controle total de la plateforme (evenements, utilisateurs, finances, transport)
-- **Staff**: Personnel de securite pour scanner les billets
+Developper une application web moderne et responsive appelee "D-Billet", une plateforme de billetterie centralisee pour Djibouti avec gestion complete pour les administrateurs, organisateurs et transport.
 
 ## Stack Technique
 - **Frontend**: React 18 + Tailwind CSS + Shadcn/UI + PWA
 - **Backend**: FastAPI (Python) - Architecture modulaire
 - **Base de donnees**: MongoDB
-- **Authentification**: JWT (email/mot de passe) + OTP simule
+- **Authentification**: JWT + Google OAuth (Emergent Auth) + Login par telephone (sans OTP)
 
 ---
 
-## Architecture Backend Refactorisee (10 Mars 2026)
+## Mise a Jour Majeure (5 Avril 2026)
 
-Le backend a ete refactorise d'un seul fichier monolithique (`server.py` 3600+ lignes) vers une structure modulaire professionnelle:
+### Nouvelles Fonctionnalites
+- **Authentification Simplifiee**: Login par telephone sans OTP + Google OAuth
+- **Guest Checkout**: Achat de billets sans inscription obligatoire
+- **Planning Ferry Complet**: Tadjoura ET Obock sur plusieurs jours
+- **Prix Ferry**: 1100 FDJ/adulte, enfants <10 ans gratuits
+- **Reservation Vehicules**: Types de vehicules configurables pour le ferry
+- **Footer Unifie**: Meme footer pour tous les ecrans
+- **Contact**: +253 77 69 48 12 | contact@d-billet.com
+
+### Planning Ferry Hebdomadaire
+| Jour | Destination | Depart | Retour |
+|------|-------------|--------|--------|
+| Lundi | Ferme | - | - |
+| **Mardi** | **Tadjoura** | **08:00** | **12:00** |
+| Mercredi | Ferme | - | - |
+| **Jeudi** | **Tadjoura** | **13:00** | **15:00** |
+|  | **Obock** | **09:00** | **14:00** |
+| **Vendredi** | **Tadjoura** | **08:00** | **13:00** |
+| **Samedi** | **Tadjoura** | **08:00** | **12:00** |
+|  | **Obock** | **08:00** | **13:00** |
+| Dimanche | Ferme | - | - |
+
+### Tarifs Ferry
+- **Adulte**: 1100 FDJ
+- **Enfant <10 ans**: Gratuit (accompagne d'un adulte)
+- **Vehicules**: Prix configurables par l'organisateur
+
+---
+
+## Architecture Backend Modulaire
 
 ```
 /app/backend/
-├── main.py              # Point d'entree FastAPI avec tous les routers
-├── config.py            # Configuration (DB, JWT, constantes)
+├── main.py              # Point d'entree FastAPI
+├── config.py            # Configuration DB, JWT, constantes
 ├── server.py            # Wrapper pour uvicorn
 ├── models/              # Modeles Pydantic
 │   ├── auth.py          # UserRegister, UserLogin, TokenResponse
@@ -34,7 +57,7 @@ Le backend a ete refactorise d'un seul fichier monolithique (`server.py` 3600+ l
 │   ├── staff.py         # StaffCreate, ScanRequest
 │   └── admin.py         # Testimonial, News
 ├── routes/              # Routers FastAPI
-│   ├── auth.py          # /api/auth/* (login, register, OTP)
+│   ├── auth.py          # /api/auth/* (login, register, phone-login, google)
 │   ├── events.py        # /api/events/*, /api/promo-codes/*
 │   ├── cart.py          # /api/cart/*, /api/checkout
 │   ├── tickets.py       # /api/tickets/*, /api/scanner/*
@@ -43,94 +66,89 @@ Le backend a ete refactorise d'un seul fichier monolithique (`server.py` 3600+ l
 │   ├── organizer.py     # /api/organizer/*
 │   └── admin.py         # /api/admin/*
 └── services/            # Logique metier
-    ├── auth.py          # JWT, password hashing, auth deps
+    ├── auth.py          # JWT, password hashing
     └── pdf.py           # Generation PDF billets
 ```
 
 ---
 
-## Planning Ferry Mis a Jour (10 Mars 2026)
+## Fonctionnalites Implementees
 
-**Route**: Djibouti - Obock uniquement
+### Authentification
+- [x] Login par email/mot de passe
+- [x] Login par telephone (sans OTP)
+- [x] Google OAuth via Emergent Auth
+- [x] Guest checkout pour achats rapides
+- [x] JWT avec expiration 30 jours
 
-| Jour | Service | Destination | Aller | Retour |
-|------|---------|-------------|-------|--------|
-| Lundi | Ferme | - | - | - |
-| Mardi | Ferme | - | - | - |
-| Mercredi | Ferme | - | - | - |
-| **Jeudi** | **Oui** | **Obock** | **09:00** | **14:00** |
-| Vendredi | Ferme | - | - | - |
-| **Samedi** | **Oui** | **Obock** | **08:00** | **13:00** |
-| Dimanche | Ferme | - | - | - |
+### Ferry
+- [x] Planning hebdomadaire complet
+- [x] Routes multiples par jour (Tadjoura + Obock)
+- [x] Tarification: 1100 FDJ adulte, gratuit enfants <10 ans
+- [x] Reservation vehicules (types configurables)
+- [x] Affichage capacite restante
+- [x] Notification places restantes
 
-**Prix**: 700 DJF par personne
+### Train
+- [x] Regles jours pairs/impairs
+- [x] Reservation passagers
+- [x] Billets PDF avec QR code
 
----
+### Evenements
+- [x] CRUD evenements
+- [x] Types de billets multiples
+- [x] Codes promo
+- [x] Gestion stock
 
-## Ce qui a ete implemente
+### Staff
+- [x] Module securite pour organisateurs
+- [x] Scanner QR code mobile
+- [x] Dashboard temps reel
 
-### 10 Mars 2026
-- [x] **Refactoring Backend Complet**: Migration de server.py vers architecture modulaire
-- [x] **Mise a jour Planning Ferry**: Djibouti/Obock Jeudi 9h/14h, Samedi 8h/13h
-- [x] **README.md** mis a jour avec la nouvelle architecture
-- [x] Tests valides: 83% backend, 100% frontend
-
-### Sessions Precedentes
-- [x] Dashboard Admin avec KPIs et alertes
-- [x] Gestion evenements (approuver/bloquer/a la une)
-- [x] Gestion utilisateurs avec commission personnalisee
-- [x] Module Staff (securite) avec scanner de billets
-- [x] Dashboard temps reel pour organisateurs
-- [x] PWA avec theme premium or (D-BILLEH)
-- [x] Reservation Train et Ferry
-- [x] Billets PDF avec QR Code
-- [x] Partage WhatsApp
+### Admin
+- [x] Dashboard KPIs
+- [x] Gestion utilisateurs
+- [x] Gestion transport
+- [x] Parametres plateforme
 
 ---
 
 ## API Endpoints Principaux
 
 ### Authentification
-- `POST /api/auth/register` - Inscription
-- `POST /api/auth/login` - Connexion
-- `POST /api/auth/otp/send` - Envoyer OTP
-- `POST /api/auth/otp/verify` - Verifier OTP
+- `POST /api/auth/login` - Connexion email
+- `POST /api/auth/phone-login` - Connexion telephone (sans OTP)
+- `POST /api/auth/guest-session` - Session invitee
+- `POST /api/auth/google/session` - OAuth Google
 - `GET /api/auth/me` - Profil utilisateur
 
-### Evenements
-- `GET /api/events` - Liste evenements
-- `POST /api/events` - Creer evenement (organisateur)
-- `GET /api/events/{id}` - Detail evenement
-
-### Transport
-- `GET /api/ferry/schedule` - Planning hebdomadaire ferry
+### Ferry
+- `GET /api/ferry/schedule` - Planning hebdomadaire
 - `GET /api/ferry/trips?date=YYYY-MM-DD` - Trajets disponibles
-- `POST /api/ferry/book` - Reserver ferry
-- `GET /api/train/trips?date=YYYY-MM-DD` - Trajets train
-- `POST /api/train/book` - Reserver train
+- `POST /api/ferry/book` - Reserver ferry + vehicules
+- `GET /api/ferry/vehicle-types` - Types de vehicules
 
-### Admin
-- `GET /api/admin/stats` - Statistiques plateforme
-- `GET /api/admin/events` - Tous les evenements
-- `PUT /api/admin/transport/ferry/schedule` - Modifier planning ferry
+### Train
+- `GET /api/train/trips?date=YYYY-MM-DD` - Trajets disponibles
+- `POST /api/train/book` - Reserver train
 
 ---
 
 ## Backlog Prioritise
 
 ### P1 (Haute priorite)
-- [ ] Integration reelle Waafi/D-Money (si APIs disponibles)
-- [ ] Notifications email/SMS reelles
-- [ ] Export Excel (en plus de CSV)
+- [ ] Integration paiements reels (Waafi, D-Money, CAC Bank)
+- [ ] Notifications SMS reelles
+- [ ] Dashboard organisateur ferry/train
 
 ### P2 (Moyenne priorite)
 - [ ] Multi-langue (francais/somali/arabe)
-- [ ] Historique complet des actions admin (audit log)
-- [ ] Dashboard analytics avance
+- [ ] Export Excel guestlist
+- [ ] Historique audit admin
 
 ### P3 (Basse priorite)
 - [ ] Application mobile native
-- [ ] Systeme de fidelite/points
+- [ ] Systeme fidelite/points
 
 ---
 
@@ -140,13 +158,22 @@ Le backend a ete refactorise d'un seul fichier monolithique (`server.py` 3600+ l
 |------|-------|--------------|
 | Admin | admin@dbillet.dj | admin123 |
 | Organisateur | organizer@dbillet.dj | organizer123 |
-| Client (OTP) | +25377123456 | Code dans logs |
+| Ferry Org | ferry@dbillet.dj | ferry123 |
+| Train Org | train@dbillet.dj | train123 |
+| Test Phone | +25377123456 | (phone login) |
 
 ---
 
 ## Notes Techniques
 
 - **Paiements**: SIMULES (Waafi, D-Money, CAC Bank)
-- **OTP SMS**: SIMULE (code retourne dans API)
+- **OTP SMS**: SUPPRIME - Login direct par telephone
+- **Google OAuth**: Via Emergent Auth
 - **PWA**: Installable sur mobile avec theme or
-- **Hot Reload**: Active pour frontend et backend
+
+---
+
+## Contact
+- **Telephone**: +253 77 69 48 12
+- **Email**: contact@d-billet.com
+- **Adresse**: Djibouti-Ville, Republique de Djibouti
