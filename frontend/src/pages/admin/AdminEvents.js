@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
@@ -46,11 +46,7 @@ const AdminEvents = () => {
   const [deleteEvent, setDeleteEvent] = useState(null);
   const [processing, setProcessing] = useState(null);
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/events`, {
         headers: getAuthHeaders()
@@ -61,7 +57,11 @@ const AdminEvents = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   const updateStatus = async (eventId, status) => {
     setProcessing(eventId);

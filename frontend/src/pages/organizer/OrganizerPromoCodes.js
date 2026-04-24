@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Plus, Trash2, Loader2, Tag, Copy, Check } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -41,11 +41,7 @@ const OrganizerPromoCodes = () => {
     valid_until: ''
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [codesRes, eventsRes] = await Promise.all([
         axios.get(`${API}/promo-codes`, { headers: getAuthHeaders() }),
@@ -58,7 +54,11 @@ const OrganizerPromoCodes = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';

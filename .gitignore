@@ -76,6 +76,11 @@ agenthub/agents/youtube/db
 # Build caches
 .cache/
 
+# Local tooling and generated prerender assets
+.tools/
+frontend/build/
+frontend/public/prerender-data/
+
 # Mobile development
 android-sdk/ frontend/node_modules/.cache/default-development/0.pack
 frontend/node_modules/.cache/default-development/0.pack

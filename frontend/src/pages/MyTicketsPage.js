@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Ticket, Calendar, Clock, MapPin, ChevronRight, Filter, Train, Ship } from 'lucide-react';
@@ -22,11 +22,7 @@ const MyTicketsPage = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
 
-  useEffect(() => {
-    fetchTickets();
-  }, []);
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/tickets`, {
         headers: getAuthHeaders()
@@ -37,7 +33,11 @@ const MyTicketsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';

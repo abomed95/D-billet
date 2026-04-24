@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dbilleh-cache-v1';
+const CACHE_NAME = 'dbillet-cache-v2';
 const urlsToCache = [
   '/',
   '/index.html',

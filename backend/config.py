@@ -13,6 +13,7 @@ load_dotenv(ROOT_DIR / '.env')
 # MongoDB connection
 MONGO_URL = os.environ['MONGO_URL']
 DB_NAME = os.environ['DB_NAME']
+APP_URL = os.environ.get('APP_URL', 'https://d-billet.com').rstrip('/')
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]

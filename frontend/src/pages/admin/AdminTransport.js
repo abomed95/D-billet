@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   Train, Ship, Clock, DollarSign, MapPin, Save, Loader2, 
@@ -76,13 +76,7 @@ const AdminTransport = () => {
     duration: ''
   });
 
-  useEffect(() => {
-    fetchSettings();
-    fetchFerrySchedule();
-    fetchTransportStaff();
-  }, []);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/transport/settings`, {
         headers: getAuthHeaders()
@@ -93,9 +87,9 @@ const AdminTransport = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
 
-  const fetchFerrySchedule = async () => {
+  const fetchFerrySchedule = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/transport/ferry/schedule`, {
         headers: getAuthHeaders()
@@ -104,9 +98,9 @@ const AdminTransport = () => {
     } catch (error) {
       console.error('Failed to fetch ferry schedule:', error);
     }
-  };
+  }, [getAuthHeaders]);
 
-  const fetchTransportStaff = async () => {
+  const fetchTransportStaff = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/transport/staff`, {
         headers: getAuthHeaders()
@@ -115,7 +109,13 @@ const AdminTransport = () => {
     } catch (error) {
       console.error('Failed to fetch transport staff:', error);
     }
-  };
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchSettings();
+    fetchFerrySchedule();
+    fetchTransportStaff();
+  }, [fetchFerrySchedule, fetchSettings, fetchTransportStaff]);
 
   const handleCreateStaff = async () => {
     if (!staffForm.username || !staffForm.full_name) {

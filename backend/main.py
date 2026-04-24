@@ -17,7 +17,9 @@ from routes import (
     transport_router,
     staff_router,
     organizer_router,
-    admin_router
+    admin_router,
+    content_router,
+    seo_router
 )
 from routes.transport_organizer import router as transport_organizer_router
 
@@ -129,7 +131,9 @@ app.include_router(transport_router, prefix="/api")
 app.include_router(staff_router, prefix="/api")
 app.include_router(organizer_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
+app.include_router(content_router, prefix="/api")
 app.include_router(transport_organizer_router, prefix="/api")
+app.include_router(seo_router)
 
 
 # ============== ROOT ENDPOINTS ==============

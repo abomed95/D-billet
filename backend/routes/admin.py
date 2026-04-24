@@ -330,6 +330,11 @@ async def get_platform_settings(admin: dict = Depends(get_admin_user)):
             "categories": ["Concert", "Cinema", "Football", "Theatre", "Conference", "Soiree"]
         }
         await db.settings.insert_one(settings)
+
+    if "terms_content" not in settings:
+        settings["terms_content"] = settings.get("terms", "")
+    if "legal_content" not in settings:
+        settings["legal_content"] = settings.get("legal", "")
     
     return settings
 
@@ -340,7 +345,9 @@ async def update_platform_settings(
     commission_rate: Optional[float] = None,
     min_withdrawal: Optional[int] = None,
     terms: Optional[str] = None,
+    terms_content: Optional[str] = None,
     legal: Optional[str] = None,
+    legal_content: Optional[str] = None,
     banner_text: Optional[str] = None,
     banner_active: Optional[bool] = None
 ):
@@ -350,10 +357,14 @@ async def update_platform_settings(
         update_data["commission_rate"] = commission_rate
     if min_withdrawal is not None:
         update_data["min_withdrawal"] = min_withdrawal
-    if terms is not None:
-        update_data["terms"] = terms
-    if legal is not None:
-        update_data["legal"] = legal
+    if terms is not None or terms_content is not None:
+        terms_value = terms_content if terms_content is not None else terms
+        update_data["terms"] = terms_value
+        update_data["terms_content"] = terms_value
+    if legal is not None or legal_content is not None:
+        legal_value = legal_content if legal_content is not None else legal
+        update_data["legal"] = legal_value
+        update_data["legal_content"] = legal_value
     if banner_text is not None:
         update_data["banner_text"] = banner_text
     if banner_active is not None:

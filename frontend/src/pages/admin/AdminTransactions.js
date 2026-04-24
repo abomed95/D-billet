@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   DollarSign, Search, Filter, Download, CreditCard, 
@@ -26,11 +26,7 @@ const AdminTransactions = () => {
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [daysFilter, setDaysFilter] = useState(30);
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [paymentFilter, daysFilter]);
-
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
       let url = `${API}/admin/transactions?days=${daysFilter}`;
@@ -44,7 +40,11 @@ const AdminTransactions = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [daysFilter, getAuthHeaders, paymentFilter]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';

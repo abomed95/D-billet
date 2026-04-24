@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Calendar, Clock, MapPin, Users, Minus, Plus, ShoppingCart, ArrowLeft, Ticket, AlertTriangle, Tag, Check } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -8,8 +8,12 @@ import { Skeleton } from '../components/ui/skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { toast } from 'sonner';
+import Seo from '../components/Seo';
+import { API_BASE, isPrerender } from '../lib/api';
+import { loadPrerenderEventData } from '../lib/prerender';
+import { absoluteUrl, slugify } from '../lib/seo';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = API_BASE;
 
 const CATEGORY_COLORS = {
   cinema: '#FF0055',
@@ -21,6 +25,7 @@ const CATEGORY_COLORS = {
 const EventDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { addToCart } = useCart();
   
@@ -32,16 +37,17 @@ const EventDetailPage = () => {
   const [promoCode, setPromoCode] = useState('');
   const [promoValid, setPromoValid] = useState(null);
 
-  useEffect(() => {
-    fetchEvent();
-  }, [id]);
-
-  const fetchEvent = async () => {
+  const fetchEvent = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/events/${id}`);
-      setEvent(response.data);
+      const eventData = isPrerender
+        ? await loadPrerenderEventData(id)
+        : (await axios.get(`${API}/events/${id}`)).data;
+
+      setEvent(eventData);
       // Select first available ticket type
-      const availableTypes = response.data.ticket_types?.filter(tt => (tt.quantity - (tt.sold || 0)) > 0);
+      const availableTypes = eventData.ticket_types?.filter(
+        (tt) => tt.quantity - (tt.sold || 0) > 0
+      );
       if (availableTypes?.length > 0) {
         setSelectedTicketType(availableTypes[0]);
       }
@@ -52,7 +58,11 @@ const EventDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchEvent();
+  }, [fetchEvent]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';
@@ -143,6 +153,21 @@ const EventDetailPage = () => {
     }
   };
 
+  const eventSlug = event ? (event.slug || slugify(event.title)) : '';
+  const canonicalPath = event ? `/events/${event.id}/${eventSlug}` : location.pathname;
+
+  useEffect(() => {
+    if (!event) {
+      return;
+    }
+
+    const currentPath = location.pathname.replace(/\/+$/, '');
+    const desiredPath = canonicalPath.replace(/\/+$/, '');
+    if (currentPath !== desiredPath) {
+      navigate(desiredPath, { replace: true });
+    }
+  }, [canonicalPath, event, location.pathname, navigate]);
+
   if (loading) {
     return (
       <div className="min-h-screen">
@@ -159,9 +184,53 @@ const EventDetailPage = () => {
   if (!event) return null;
 
   const categoryColor = CATEGORY_COLORS[event.category] || '#7000FF';
+  const eventDateTime = event.time ? `${event.date}T${event.time}` : event.date;
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: event.title,
+    description: event.description,
+    startDate: eventDateTime,
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    eventStatus: 'https://schema.org/EventScheduled',
+    image: [event.image_url || absoluteUrl('/images/dbillet-logo.png')],
+    location: {
+      '@type': 'Place',
+      name: event.venue || 'Djibouti',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Djibouti',
+        addressCountry: 'DJ',
+      },
+    },
+    organizer: {
+      '@type': 'Organization',
+      name: 'D-Billet',
+      url: absoluteUrl('/'),
+    },
+    offers: (event.ticket_types || []).map((ticketType) => ({
+      '@type': 'Offer',
+      priceCurrency: 'DJF',
+      price: ticketType.price,
+      availability:
+        (ticketType.quantity - (ticketType.sold || 0)) > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/SoldOut',
+      url: absoluteUrl(canonicalPath),
+      category: ticketType.name,
+    })),
+  };
 
   return (
     <div className="min-h-screen pb-40">
+      <Seo
+        title={`${event.title} a Djibouti`}
+        description={event.description || `Reservez vos billets pour ${event.title} sur D-Billet.`}
+        path={canonicalPath}
+        image={event.image_url || '/images/dbillet-logo.png'}
+        type="event"
+        structuredData={structuredData}
+      />
       {/* Hero Image */}
       <div className="relative h-[50vh] md:h-[60vh]">
         <img

@@ -1,8 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "./components/ui/sonner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { StaffAuthProvider } from "./context/StaffAuthContext";
+import Seo from "./components/Seo";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -16,6 +17,8 @@ import TrainBookingPage from "./pages/TrainBookingPage";
 import FerryBookingPage from "./pages/FerryBookingPage";
 import ScannerPage from "./pages/ScannerPage";
 import TermsPage from "./pages/TermsPage";
+import LegalPage from "./pages/LegalPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminEvents from "./pages/admin/AdminEvents";
 import AdminScanner from "./pages/admin/AdminScanner";
@@ -73,66 +76,98 @@ const ProtectedRoute = ({ children, adminOnly = false, organizerOnly = false }) 
   return children;
 };
 
+function RouteMetadata() {
+  const location = useLocation();
+  const pathname = location.pathname;
+  const noIndexPrefixes = ["/admin", "/organizer", "/staff"];
+  const noIndexExact = ["/auth", "/cart", "/checkout", "/my-tickets", "/scan", "/transport-organizer"];
+  const isNoIndex =
+    noIndexExact.includes(pathname) ||
+    noIndexPrefixes.some((prefix) => pathname.startsWith(prefix)) ||
+    pathname.startsWith("/ticket/");
+
+  if (!isNoIndex) {
+    return null;
+  }
+
+  return (
+    <Seo
+      title="Espace prive"
+      description="Section privee de D-Billet reservee a l'authentification, aux achats ou a l'administration."
+      path={pathname}
+      robots="noindex, nofollow, noarchive"
+    />
+  );
+}
+
 function AppRoutes() {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<HomePage />} />
-        <Route path="event/:id" element={<EventDetailPage />} />
-        <Route path="auth" element={<AuthPage />} />
-        <Route path="train" element={<TrainBookingPage />} />
-        <Route path="ferry" element={<FerryBookingPage />} />
-        <Route path="ticket/:id" element={<TicketViewPage />} />
-        <Route path="terms" element={<TermsPage />} />
-      </Route>
-      
-      {/* Scanner - Separate Public App */}
-      <Route path="/scan" element={<ScannerPage />} />
-      
-      {/* Protected User Routes */}
-      <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="cart" element={<CartPage />} />
-        <Route path="checkout" element={<CheckoutPage />} />
-        <Route path="my-tickets" element={<MyTicketsPage />} />
-      </Route>
-      
-      {/* Organizer Routes */}
-      <Route path="/organizer" element={<ProtectedRoute organizerOnly><OrganizerLayout /></ProtectedRoute>}>
-        <Route index element={<OrganizerDashboard />} />
-        <Route path="events" element={<OrganizerEvents />} />
-        <Route path="participants" element={<OrganizerParticipants />} />
-        <Route path="promo-codes" element={<OrganizerPromoCodes />} />
-        <Route path="finances" element={<OrganizerFinances />} />
-        <Route path="staff" element={<OrganizerStaff />} />
-      </Route>
-      
-      {/* Organizer Live Dashboard (Full Screen) */}
-      <Route path="/organizer/live/:eventId" element={<ProtectedRoute organizerOnly><OrganizerLiveDashboard /></ProtectedRoute>} />
-      
-      {/* Transport Organizer Dashboard */}
-      <Route path="/transport-organizer" element={<ProtectedRoute organizerOnly><TransportOrganizerDashboard /></ProtectedRoute>} />
-      
-      {/* Staff Routes - Separate Auth Context */}
-      <Route path="/staff/login" element={<StaffAuthProvider><StaffLoginPage /></StaffAuthProvider>} />
-      <Route path="/staff/scanner" element={<StaffAuthProvider><StaffScannerPage /></StaffAuthProvider>} />
-      
-      {/* Admin Routes */}
-      <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="events" element={<AdminEvents />} />
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="transactions" element={<AdminTransactions />} />
-        <Route path="payouts" element={<AdminPayouts />} />
-        <Route path="settings" element={<AdminSettings />} />
-        <Route path="transport" element={<AdminTransport />} />
-        <Route path="scanner" element={<AdminScanner />} />
-        <Route path="organizers" element={<AdminOrganizers />} />
-      </Route>
-      
-      {/* Catch all */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <RouteMetadata />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="event/:id" element={<EventDetailPage />} />
+          <Route path="events/:id/:slug" element={<EventDetailPage />} />
+          <Route path="auth" element={<AuthPage />} />
+          <Route path="train" element={<TrainBookingPage />} />
+          <Route path="ferry" element={<FerryBookingPage />} />
+          <Route path="ticket/:id" element={<TicketViewPage />} />
+          <Route path="terms" element={<TermsPage />} />
+          <Route path="legal/:page" element={<LegalPage />} />
+          <Route path="privacy" element={<Navigate to="/legal/privacy" replace />} />
+        </Route>
+        
+        {/* Scanner - Separate Public App */}
+        <Route path="/scan" element={<ScannerPage />} />
+        
+        {/* Protected User Routes */}
+        <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+          <Route path="cart" element={<CartPage />} />
+          <Route path="checkout" element={<CheckoutPage />} />
+          <Route path="my-tickets" element={<MyTicketsPage />} />
+        </Route>
+        
+        {/* Organizer Routes */}
+        <Route path="/organizer" element={<ProtectedRoute organizerOnly><OrganizerLayout /></ProtectedRoute>}>
+          <Route index element={<OrganizerDashboard />} />
+          <Route path="events" element={<OrganizerEvents />} />
+          <Route path="participants" element={<OrganizerParticipants />} />
+          <Route path="promo-codes" element={<OrganizerPromoCodes />} />
+          <Route path="finances" element={<OrganizerFinances />} />
+          <Route path="staff" element={<OrganizerStaff />} />
+        </Route>
+        
+        {/* Organizer Live Dashboard (Full Screen) */}
+        <Route path="/organizer/live/:eventId" element={<ProtectedRoute organizerOnly><OrganizerLiveDashboard /></ProtectedRoute>} />
+        
+        {/* Transport Organizer Dashboard */}
+        <Route path="/transport-organizer" element={<ProtectedRoute organizerOnly><TransportOrganizerDashboard /></ProtectedRoute>} />
+        
+        {/* Staff Routes - Separate Auth Context */}
+        <Route path="/staff/login" element={<StaffAuthProvider><StaffLoginPage /></StaffAuthProvider>} />
+        <Route path="/staff/scanner" element={<StaffAuthProvider><StaffScannerPage /></StaffAuthProvider>} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="events" element={<AdminEvents />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="transactions" element={<AdminTransactions />} />
+          <Route path="payouts" element={<AdminPayouts />} />
+          <Route path="settings" element={<AdminSettings />} />
+          <Route path="transport" element={<AdminTransport />} />
+          <Route path="scanner" element={<AdminScanner />} />
+          <Route path="organizers" element={<AdminOrganizers />} />
+        </Route>
+        
+        <Route path="404" element={<NotFoundPage />} />
+
+        {/* Catch all */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </>
   );
 }
 

@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /organizer
+Disallow: /staff
+Disallow: /cart
+Disallow: /checkout
+Disallow: /my-tickets
+Disallow: /ticket
+Disallow: /auth
+Disallow: /scan
+
+Sitemap: https://d-billet.com/sitemap.xml

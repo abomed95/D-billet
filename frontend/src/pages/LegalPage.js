@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, FileText, Phone, Mail } from 'lucide-react';
 import { Skeleton } from '../components/ui/skeleton';
+import Seo from '../components/Seo';
+import { API_BASE, isPrerender } from '../lib/api';
+import { loadPrerenderLegalPage } from '../lib/prerender';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = API_BASE;
 
 const LEGAL_PAGES = {
   mentions: { title: 'Mentions Légales', icon: FileText, endpoint: '/legal/mentions' },
@@ -20,23 +23,26 @@ const LegalPage = () => {
 
   const pageConfig = LEGAL_PAGES[page];
 
-  useEffect(() => {
-    if (pageConfig) {
-      fetchContent();
-    }
-  }, [page]);
-
-  const fetchContent = async () => {
+  const fetchContent = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API}${pageConfig.endpoint}`);
-      setContent(response.data);
+      const legalData = isPrerender
+        ? await loadPrerenderLegalPage(page)
+        : (await axios.get(`${API}${pageConfig.endpoint}`)).data;
+
+      setContent(legalData);
     } catch (error) {
       console.error('Failed to fetch legal content:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageConfig]);
+
+  useEffect(() => {
+    if (pageConfig) {
+      fetchContent();
+    }
+  }, [fetchContent, pageConfig]);
 
   if (!pageConfig) {
     return (
@@ -64,6 +70,11 @@ const LegalPage = () => {
 
   return (
     <div className="min-h-screen py-12 px-4">
+      <Seo
+        title={content?.title || pageConfig.title}
+        description={`Informations legales D-Billet: ${content?.title || pageConfig.title}.`}
+        path={`/legal/${page}`}
+      />
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   Wallet, Check, X, Clock, Loader2, Building, 
@@ -47,11 +47,7 @@ const AdminPayouts = () => {
   const [notes, setNotes] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    fetchPayouts();
-  }, [statusFilter]);
-
-  const fetchPayouts = async () => {
+  const fetchPayouts = useCallback(async () => {
     setLoading(true);
     try {
       let url = `${API}/admin/payouts`;
@@ -65,7 +61,11 @@ const AdminPayouts = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders, statusFilter]);
+
+  useEffect(() => {
+    fetchPayouts();
+  }, [fetchPayouts]);
 
   const handleAction = async (status) => {
     setProcessing(true);

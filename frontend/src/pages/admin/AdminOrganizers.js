@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Plus, Trash2, Loader2, Users, Building, Mail, Phone } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -42,11 +42,7 @@ const AdminOrganizers = () => {
     company_name: ''
   });
 
-  useEffect(() => {
-    fetchOrganizers();
-  }, []);
-
-  const fetchOrganizers = async () => {
+  const fetchOrganizers = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/organizers`, {
         headers: getAuthHeaders()
@@ -57,7 +53,11 @@ const AdminOrganizers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchOrganizers();
+  }, [fetchOrganizers]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Wallet, DollarSign, ArrowUpRight, Clock, CheckCircle, XCircle, Loader2, CreditCard, Building2, Smartphone } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -53,11 +53,7 @@ const OrganizerFinances = () => {
     account_info: ''
   });
 
-  useEffect(() => {
-    fetchFinances();
-  }, []);
-
-  const fetchFinances = async () => {
+  const fetchFinances = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/organizer/finances`, {
         headers: getAuthHeaders()
@@ -68,7 +64,11 @@ const OrganizerFinances = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchFinances();
+  }, [fetchFinances]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';

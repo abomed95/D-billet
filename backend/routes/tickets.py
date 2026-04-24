@@ -9,7 +9,7 @@ import qrcode
 import base64
 from io import BytesIO
 
-from config import db
+from config import APP_URL, db
 from services import get_current_user, generate_ticket_pdf
 
 router = APIRouter(tags=["Tickets"])
@@ -47,10 +47,7 @@ async def get_ticket_view(ticket_id: str):
     qr_img.save(buffer, format="PNG")
     qr_base64 = base64.b64encode(buffer.getvalue()).decode()
     
-    # Use environment variable for share URL (auto-configured by deployment)
-    import os
-    app_url = os.environ.get('APP_URL', 'https://dbillet.dj')
-    share_url = f"{app_url}/ticket/{ticket_id}"
+    share_url = f"{APP_URL}/ticket/{ticket_id}"
     whatsapp_text = f"Mon billet D-Billet - {ticket['event_title']} - {ticket['event_date']} a {ticket['event_time']} - {ticket['event_venue']} - {share_url}"
     encoded_text = whatsapp_text.replace(' ', '%20')
     whatsapp_url = f"https://wa.me/?text={encoded_text}"

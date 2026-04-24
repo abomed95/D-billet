@@ -7,8 +7,11 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import Seo from '../components/Seo';
+import { API_BASE } from '../lib/api';
+import { absoluteUrl } from '../lib/seo';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = API_BASE;
 
 const TrainBookingPage = () => {
   const { user, token } = useAuth();
@@ -126,6 +129,27 @@ const TrainBookingPage = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] py-8 px-4">
+      <Seo
+        title="Reservation Train Djibouti"
+        description="Consultez les trajets ferroviaires et reservez votre billet de train depuis Djibouti sur D-Billet."
+        path="/train"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          name: 'Reservation Train D-Billet',
+          serviceType: 'Billetterie train',
+          provider: {
+            '@type': 'Organization',
+            name: 'D-Billet',
+            url: absoluteUrl('/'),
+          },
+          areaServed: {
+            '@type': 'Country',
+            name: 'Djibouti',
+          },
+          url: absoluteUrl('/train'),
+        }}
+      />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -371,6 +395,50 @@ const TrainBookingPage = () => {
             <li>• Présentez votre billet avec QR code et votre pièce d'identité à l'embarquement</li>
           </ul>
         </div>
+
+        <section className="mt-8 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
+          <div className="glass p-6 rounded-2xl">
+            <h2 className="font-unbounded text-2xl text-white mb-4">Voyager en train depuis Djibouti</h2>
+            <div className="space-y-4 text-gray-300 leading-7">
+              <p>
+                D-Billet rassemble les informations utiles pour reserver un billet train a Djibouti,
+                verifier le sens du trajet du jour et preparer l&apos;embarquement avant le depart.
+              </p>
+              <p>
+                La circulation alterne selon le jour du mois. Les jours impairs, le train part de
+                Djibouti vers Ali Sabieh. Les jours pairs, le trajet inverse est propose pour organiser
+                facilement son voyage et consulter le tarif avant paiement.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
+            <div className="glass p-5 rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">Trajet</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Direction du jour</h3>
+              <p className="text-gray-400 text-sm leading-6">
+                La page affiche le sens de circulation du train a partir de la date choisie, sans
+                ambiguite sur le depart et l&apos;arrivee.
+              </p>
+            </div>
+            <div className="glass p-5 rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">Reservation</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Paiement et billet</h3>
+              <p className="text-gray-400 text-sm leading-6">
+                Le voyageur renseigne les passagers, choisit son mode de paiement puis recoit son billet
+                numerique avec QR code.
+              </p>
+            </div>
+            <div className="glass p-5 rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">Depart</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Controle rapide</h3>
+              <p className="text-gray-400 text-sm leading-6">
+                Le QR code du billet et une piece d&apos;identite permettent de fluidifier l&apos;acces a
+                l&apos;embarquement le jour du depart.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

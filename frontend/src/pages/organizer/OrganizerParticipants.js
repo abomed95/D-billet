@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Search, Download, Users, Mail, Phone, Ticket, Filter, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -26,15 +26,7 @@ const OrganizerParticipants = () => {
   const [total, setTotal] = useState(0);
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  useEffect(() => {
-    fetchParticipants();
-  }, [selectedEvent, search]);
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/organizer/events`, {
         headers: getAuthHeaders()
@@ -43,9 +35,9 @@ const OrganizerParticipants = () => {
     } catch (error) {
       console.error('Failed to fetch events:', error);
     }
-  };
+  }, [getAuthHeaders]);
 
-  const fetchParticipants = async () => {
+  const fetchParticipants = useCallback(async () => {
     setLoading(true);
     try {
       let url = `${API}/organizer/participants`;
@@ -70,7 +62,15 @@ const OrganizerParticipants = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders, search, selectedEvent]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  useEffect(() => {
+    fetchParticipants();
+  }, [fetchParticipants]);
 
   const handleExport = async () => {
     setExporting(true);

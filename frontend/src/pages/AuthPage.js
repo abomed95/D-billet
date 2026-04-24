@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, ArrowLeft, Phone, Chrome } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -25,28 +25,7 @@ const AuthPage = () => {
   const location = useLocation();
   const hasProcessed = useRef(false);
 
-  // Handle Google OAuth callback
-  useEffect(() => {
-    if (hasProcessed.current) return;
-    
-    const hash = window.location.hash;
-    if (hash && hash.includes('session_id=')) {
-      hasProcessed.current = true;
-      const sessionId = hash.split('session_id=')[1]?.split('&')[0];
-      if (sessionId) {
-        handleGoogleCallback(sessionId);
-      }
-    }
-  }, []);
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (user) {
-      redirectByRole(user);
-    }
-  }, [user]);
-
-  const redirectByRole = (userData) => {
+  const redirectByRole = useCallback((userData) => {
     if (userData.role === 'admin') {
       navigate('/admin');
     } else if (['organizer', 'ferry_organizer', 'train_organizer'].includes(userData.role)) {
@@ -54,9 +33,9 @@ const AuthPage = () => {
     } else {
       navigate('/');
     }
-  };
+  }, [navigate]);
 
-  const handleGoogleCallback = async (sessionId) => {
+  const handleGoogleCallback = useCallback(async (sessionId) => {
     setLoading(true);
     try {
       const userData = await googleLogin(sessionId);
@@ -71,7 +50,28 @@ const AuthPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [googleLogin, redirectByRole]);
+
+  // Handle Google OAuth callback
+  useEffect(() => {
+    if (hasProcessed.current) return;
+    
+    const hash = window.location.hash;
+    if (hash && hash.includes('session_id=')) {
+      hasProcessed.current = true;
+      const sessionId = hash.split('session_id=')[1]?.split('&')[0];
+      if (sessionId) {
+        handleGoogleCallback(sessionId);
+      }
+    }
+  }, [handleGoogleCallback]);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      redirectByRole(user);
+    }
+  }, [redirectByRole, user]);
 
   const handleGoogleLogin = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH

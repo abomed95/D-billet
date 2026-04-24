@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Edit, Trash2, Loader2, Search, Ticket, Activity, Upload, Image, X } from 'lucide-react';
@@ -55,11 +55,7 @@ const OrganizerEvents = () => {
     ]
   });
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/organizer/events`, {
         headers: getAuthHeaders()
@@ -70,7 +66,11 @@ const OrganizerEvents = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];

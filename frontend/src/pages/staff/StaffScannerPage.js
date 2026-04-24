@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
@@ -55,7 +55,7 @@ const StaffScannerPage = () => {
     if (isAuthenticated) {
       fetchEvents();
     }
-  }, [isAuthenticated]);
+  }, [fetchEvents, isAuthenticated]);
 
   useEffect(() => {
     if (selectedEvent) {
@@ -63,16 +63,16 @@ const StaffScannerPage = () => {
       const interval = setInterval(fetchStats, 10000);
       return () => clearInterval(interval);
     }
-  }, [selectedEvent]);
+  }, [fetchStats, selectedEvent]);
 
   useEffect(() => {
     if (scanning && !showManual) {
       startCamera();
     }
     return () => stopCamera();
-  }, [scanning, showManual]);
+  }, [scanning, showManual, startCamera, stopCamera]);
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     try {
       setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -88,16 +88,16 @@ const StaffScannerPage = () => {
       setCameraError('Impossible d\'accéder à la caméra');
       setShowManual(true);
     }
-  };
+  }, []);
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
-  };
+  }, []);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/staff/events`, {
         headers: getAuthHeaders()
@@ -111,9 +111,9 @@ const StaffScannerPage = () => {
     } finally {
       setLoadingEvents(false);
     }
-  };
+  }, [getAuthHeaders]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!selectedEvent) return;
     try {
       const response = await axios.get(`${API}/staff/events`, {
@@ -126,7 +126,7 @@ const StaffScannerPage = () => {
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     }
-  };
+  }, [getAuthHeaders, selectedEvent]);
 
   const handleScan = async (qrCode) => {
     if (!qrCode || processing) return;

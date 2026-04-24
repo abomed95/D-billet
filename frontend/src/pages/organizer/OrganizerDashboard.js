@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { DollarSign, Ticket, Calendar, TrendingUp, Wallet, Users } from 'lucide-react';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -14,17 +14,7 @@ const OrganizerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [chartPeriod, setChartPeriod] = useState(7);
 
-  useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    fetchChartData();
-  }, [chartPeriod]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/organizer/stats`, {
         headers: getAuthHeaders()
@@ -35,9 +25,9 @@ const OrganizerDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
 
-  const fetchChartData = async () => {
+  const fetchChartData = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/organizer/sales-chart?days=${chartPeriod}`, {
         headers: getAuthHeaders()
@@ -46,7 +36,17 @@ const OrganizerDashboard = () => {
     } catch (error) {
       console.error('Failed to fetch chart data:', error);
     }
-  };
+  }, [chartPeriod, getAuthHeaders]);
+
+  useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';

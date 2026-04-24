@@ -7,8 +7,12 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import Seo from '../components/Seo';
+import { API_BASE, isPrerender } from '../lib/api';
+import { loadPrerenderFerrySchedule } from '../lib/prerender';
+import { absoluteUrl } from '../lib/seo';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = API_BASE;
 
 const FerryBookingPage = () => {
   const { user, token, createGuestSession } = useAuth();
@@ -51,11 +55,14 @@ const FerryBookingPage = () => {
 
   const fetchWeeklySchedule = async () => {
     try {
-      const response = await axios.get(`${API}/ferry/schedule`);
-      setWeeklySchedule(response.data.schedule || []);
-      setPassengerPrice(response.data.passenger_price || 1100);
-      setChildFreeAge(response.data.child_free_age || 10);
-      setVehicleTypes(response.data.vehicle_types || []);
+      const scheduleData = isPrerender
+        ? await loadPrerenderFerrySchedule()
+        : (await axios.get(`${API}/ferry/schedule`)).data;
+
+      setWeeklySchedule(scheduleData.schedule || []);
+      setPassengerPrice(scheduleData.passenger_price || 1100);
+      setChildFreeAge(scheduleData.child_free_age || 10);
+      setVehicleTypes(scheduleData.vehicle_types || []);
     } catch (error) {
       console.error('Failed to fetch schedule:', error);
     } finally {
@@ -237,6 +244,27 @@ const FerryBookingPage = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] py-8 px-4">
+      <Seo
+        title="Reservation Ferry Djibouti"
+        description="Reservez votre ferry Djibouti, Tadjoura et Obock en ligne sur D-Billet. Horaires, tarifs et disponibilites."
+        path="/ferry"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          name: 'Reservation Ferry D-Billet',
+          serviceType: 'Billetterie ferry',
+          provider: {
+            '@type': 'Organization',
+            name: 'D-Billet',
+            url: absoluteUrl('/'),
+          },
+          areaServed: {
+            '@type': 'Country',
+            name: 'Djibouti',
+          },
+          url: absoluteUrl('/ferry'),
+        }}
+      />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -736,6 +764,50 @@ const FerryBookingPage = () => {
             <p>- Enfants de moins de {childFreeAge} ans: <strong className="text-green-400">Gratuit</strong> (accompagnes d'un adulte)</p>
           </div>
         </div>
+
+        <section className="mt-8 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
+          <div className="glass p-6 rounded-2xl">
+            <h2 className="font-unbounded text-2xl text-white mb-4">Ferry Djibouti, Tadjoura et Obock</h2>
+            <div className="space-y-4 text-gray-300 leading-7">
+              <p>
+                Cette page rassemble les informations utiles pour reserver un billet ferry au depart de
+                Djibouti, consulter le planning hebdomadaire et preparer le voyage vers Tadjoura ou Obock.
+              </p>
+              <p>
+                Le service affiche les horaires, la capacite passagers, les vehicules acceptes et le tarif
+                adulte avant la validation. Les familles peuvent aussi verifier la regle de gratuit pour
+                les enfants en dessous de l&apos;age defini.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
+            <div className="glass p-5 rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">Destinations</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Routes hebdomadaires</h3>
+              <p className="text-gray-400 text-sm leading-6">
+                Le planning permet d&apos;identifier rapidement les jours de service et les rotations
+                disponibles selon la destination choisie.
+              </p>
+            </div>
+            <div className="glass p-5 rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">Reservation</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Passagers et vehicules</h3>
+              <p className="text-gray-400 text-sm leading-6">
+                La reservation peut inclure les passagers, les vehicules et les informations d&apos;identite
+                utiles pour le controle avant l&apos;embarquement.
+              </p>
+            </div>
+            <div className="glass p-5 rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">Depart</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Arrivee a l&apos;escale</h3>
+              <p className="text-gray-400 text-sm leading-6">
+                Les voyageurs sont invites a se presenter en avance avec leur billet numerique afin de
+                faciliter l&apos;acces a bord.
+              </p>
+            </div>
+          </div>
+        </section>
 
         {/* Contact Info */}
         <div className="mt-6 text-center text-gray-500 text-sm">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   Search, Users, Building, Mail, Phone, Ticket, DollarSign, 
@@ -38,11 +38,7 @@ const AdminUsers = () => {
   const [newCommission, setNewCommission] = useState('');
   const [savingCommission, setSavingCommission] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [activeTab]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       let url = `${API}/admin/users`;
@@ -56,7 +52,11 @@ const AdminUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, getAuthHeaders]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const fetchUserDetail = async (userId) => {
     setLoadingDetail(true);

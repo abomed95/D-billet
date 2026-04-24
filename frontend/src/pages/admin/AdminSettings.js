@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   Settings, Percent, Wallet, Tag, FileText, Megaphone, 
@@ -36,11 +36,7 @@ const AdminSettings = () => {
   const [categoryModal, setCategoryModal] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: '', color: '#00FF94' });
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/settings`, {
         headers: getAuthHeaders()
@@ -51,7 +47,11 @@ const AdminSettings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const saveSettings = async (field, value) => {
     setSaving(true);

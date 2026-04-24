@@ -48,6 +48,7 @@ class EventUpdate(BaseModel):
 
 class EventResponse(BaseModel):
     id: str
+    slug: Optional[str] = None
     title: str
     description: str
     category: str
@@ -60,6 +61,7 @@ class EventResponse(BaseModel):
     total_tickets: int = 0
     sold_tickets: int = 0
     created_at: str
+    updated_at: Optional[str] = None
 
 
 class PromoCodeCreate(BaseModel):

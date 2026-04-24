@@ -8,7 +8,7 @@ import uuid
 
 from config import db
 from models import EventCreate, EventUpdate, TicketTypeCreate, PromoCodeCreate, PromoCodeResponse
-from services import get_organizer_user
+from services import get_organizer_user, generate_unique_event_slug, ensure_event_slug
 
 router = APIRouter(tags=["Events"])
 
@@ -28,6 +28,7 @@ async def get_events(category: Optional[str] = None, search: Optional[str] = Non
     
     result = []
     for event in events:
+        event = await ensure_event_slug(event)
         total_tickets = sum(tt.get("quantity", 0) for tt in event.get("ticket_types", []))
         sold_tickets = sum(tt.get("sold", 0) for tt in event.get("ticket_types", []))
         available = total_tickets - sold_tickets
@@ -53,6 +54,7 @@ async def get_event(event_id: str):
     event = await db.events.find_one({"id": event_id}, {"_id": 0})
     if not event:
         raise HTTPException(status_code=404, detail="Evenement non trouve")
+    event = await ensure_event_slug(event)
     
     total_tickets = sum(tt.get("quantity", 0) for tt in event.get("ticket_types", []))
     sold_tickets = sum(tt.get("sold", 0) for tt in event.get("ticket_types", []))
@@ -73,6 +75,8 @@ async def get_event(event_id: str):
 async def create_event(event_data: EventCreate, user: dict = Depends(get_organizer_user)):
     """Create event (Organizer or Admin)"""
     event_id = str(uuid.uuid4())
+    event_slug = await generate_unique_event_slug(event_data.title, event_id)
+    now = datetime.now(timezone.utc).isoformat()
     
     ticket_types = []
     for tt in event_data.ticket_types:
@@ -89,6 +93,7 @@ async def create_event(event_data: EventCreate, user: dict = Depends(get_organiz
     
     event_doc = {
         "id": event_id,
+        "slug": event_slug,
         "title": event_data.title,
         "description": event_data.description,
         "category": event_data.category,
@@ -98,7 +103,8 @@ async def create_event(event_data: EventCreate, user: dict = Depends(get_organiz
         "image_url": event_data.image_url,
         "ticket_types": ticket_types,
         "organizer_id": user["id"],
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": now,
+        "updated_at": now
     }
     await db.events.insert_one(event_doc)
     
@@ -116,9 +122,13 @@ async def update_event(event_id: str, event_data: EventUpdate, user: dict = Depe
     
     update_data = {k: v for k, v in event_data.model_dump().items() if v is not None}
     if update_data:
+        if "title" in update_data:
+            update_data["slug"] = await generate_unique_event_slug(update_data["title"], event_id, exclude_event_id=event_id)
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         await db.events.update_one({"id": event_id}, {"$set": update_data})
     
     updated = await db.events.find_one({"id": event_id}, {"_id": 0})
+    updated = await ensure_event_slug(updated)
     return updated
 
 

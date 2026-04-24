@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { 
   Shield, Plus, Trash2, Eye, EyeOff, Copy, Check, 
@@ -56,11 +56,7 @@ const OrganizerStaff = () => {
   const [showPassword, setShowPassword] = useState({});
   const [copiedField, setCopiedField] = useState(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [staffRes, eventsRes, logsRes] = await Promise.all([
         axios.get(`${API}/organizer/staff`, { headers: getAuthHeaders() }),
@@ -76,7 +72,11 @@ const OrganizerStaff = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleCreateStaff = async () => {
     if (!newStaff.username || !newStaff.full_name) {

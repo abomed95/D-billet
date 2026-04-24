@@ -11,8 +11,12 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
 import { useAuth } from '../context/AuthContext';
+import Seo from '../components/Seo';
+import { API_BASE, isPrerender } from '../lib/api';
+import { loadPrerenderHomeData } from '../lib/prerender';
+import { absoluteUrl, slugify } from '../lib/seo';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = API_BASE;
 
 const CATEGORIES = [
   { id: 'cinema', label: 'Cinéma', icon: Film, color: '#FF0055' },
@@ -71,6 +75,28 @@ const FAQ_DATA = [
   },
 ];
 
+const HOW_IT_WORKS = [
+  {
+    title: 'Choisissez votre sortie',
+    description: 'Recherchez un evenement, un trajet ferry ou une reservation train depuis une seule plateforme.',
+  },
+  {
+    title: 'Payez en ligne',
+    description: 'Finalisez votre commande avec Waafi, D-Money ou CAC Bank selon le service disponible.',
+  },
+  {
+    title: 'Recevez votre billet',
+    description: 'Votre QR code est disponible en ligne pour un acces rapide le jour du depart ou de l evenement.',
+  },
+];
+
+const HOME_LINKS = [
+  { to: '/train', label: 'Billet train Djibouti' },
+  { to: '/ferry', label: 'Reservation ferry Djibouti Obock' },
+  { to: '/legal/privacy', label: 'Politique de confidentialite' },
+  { to: '/terms', label: "Conditions d'utilisation D-Billet" },
+];
+
 const HomePage = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const [events, setEvents] = useState([]);
@@ -87,15 +113,25 @@ const HomePage = () => {
 
   const fetchData = async () => {
     try {
-      await axios.post(`${API}/seed`).catch(() => {});
-      const [eventsRes, testimonialsRes, newsRes] = await Promise.all([
+      if (isPrerender) {
+        const prerenderData = await loadPrerenderHomeData();
+        setEvents(prerenderData.events || []);
+        setTestimonials(prerenderData.testimonials || []);
+        setNews(prerenderData.news || []);
+        return;
+      }
+
+      const [eventsRes, testimonialsRes, newsRes] = await Promise.allSettled([
         axios.get(`${API}/events`),
         axios.get(`${API}/testimonials`),
-        axios.get(`${API}/news`)
+        axios.get(`${API}/news`),
       ]);
-      setEvents(eventsRes.data);
-      setTestimonials(testimonialsRes.data);
-      setNews(newsRes.data);
+
+      setEvents(eventsRes.status === 'fulfilled' ? eventsRes.value.data : []);
+      setTestimonials(
+        testimonialsRes.status === 'fulfilled' ? testimonialsRes.value.data : []
+      );
+      setNews(newsRes.status === 'fulfilled' ? newsRes.value.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -125,8 +161,88 @@ const HomePage = () => {
     return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';
   };
 
+  const featuredEvents = events.slice(0, 6).map((event) => ({
+    '@type': 'Event',
+    name: event.title,
+    startDate: event.date,
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    eventStatus: 'https://schema.org/EventScheduled',
+    location: {
+      '@type': 'Place',
+      name: event.venue || 'Djibouti',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Djibouti',
+        addressCountry: 'DJ',
+      },
+    },
+    image: event.image_url ? [event.image_url] : [absoluteUrl('/images/dbillet-logo.png')],
+    description: event.description,
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'DJF',
+      price: event.min_price || event.price || 0,
+      availability:
+        (event.available_tickets || 0) > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/SoldOut',
+      url: absoluteUrl(`/events/${event.id}/${slugify(event.title)}`),
+    },
+    organizer: {
+      '@type': 'Organization',
+      name: 'D-Billet',
+      url: absoluteUrl('/'),
+    },
+  }));
+
+  const faqStructuredData = {
+    '@type': 'FAQPage',
+    mainEntity: FAQ_DATA.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+
+  const organizationStructuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        name: 'D-Billet',
+        url: absoluteUrl('/'),
+        logo: absoluteUrl('/images/dbillet-logo.png'),
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'customer support',
+          telephone: '+25377694812',
+          email: 'contact@d-billet.com',
+          areaServed: 'DJ',
+          availableLanguage: ['fr', 'ar'],
+        },
+      },
+      {
+        '@type': 'WebSite',
+        name: 'D-Billet',
+        url: absoluteUrl('/'),
+        inLanguage: 'fr-DJ',
+      },
+      faqStructuredData,
+      ...featuredEvents,
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-[#050505]">
+      <Seo
+        title="Billetterie Djibouti, Train et Ferry"
+        description="D-Billet est la plateforme de billetterie de Djibouti pour les evenements, les reservations train et ferry. Achetez vos billets en ligne."
+        path="/"
+        structuredData={organizationStructuredData}
+      />
       {/* Hero Section - Modern Presentation */}
       <section className="relative h-[70vh] md:h-[75vh] overflow-hidden">
         <div 
@@ -312,6 +428,58 @@ const HomePage = () => {
         </div>
       </section>
 
+      <section className="py-12 px-4 border-t border-white/5">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-10 items-start">
+          <div>
+            <h2 className="font-unbounded text-2xl text-white mb-4">Billetterie en ligne a Djibouti</h2>
+            <div className="space-y-4 text-gray-300 leading-7">
+              <p>
+                D-Billet centralise la reservation de billets pour les concerts, matchs, conferences,
+                trajets ferry et trajets train au depart de Djibouti. L objectif est simple: permettre
+                aux voyageurs, spectateurs et organisateurs de retrouver les informations utiles sur une
+                seule plateforme.
+              </p>
+              <p>
+                Cette page d accueil presente les evenements a venir, les services de transport
+                disponibles, les moyens de paiement acceptes et les informations pratiques pour acheter
+                un billet en ligne sans se deplacer. Les pages evenement contiennent ensuite la date,
+                le lieu, la description, le prix et la disponibilite en temps reel.
+              </p>
+              <p>
+                Pour les recherches de type <strong className="text-white">billetterie Djibouti</strong>,
+                <strong className="text-white"> billet ferry Djibouti</strong> ou
+                <strong className="text-white"> reservation train Djibouti</strong>, D-Billet sert de point
+                d entree unique vers les principaux services publics et prives de reservation.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {HOW_IT_WORKS.map((item) => (
+              <div key={item.title} className="glass p-5 rounded-2xl">
+                <p className="text-gold text-xs uppercase tracking-[0.18em] mb-2">Parcours</p>
+                <h3 className="font-unbounded text-white text-lg mb-2">{item.title}</h3>
+                <p className="text-gray-400 text-sm leading-6">{item.description}</p>
+              </div>
+            ))}
+            <div className="glass p-5 rounded-2xl sm:col-span-2">
+              <p className="text-gold text-xs uppercase tracking-[0.18em] mb-2">Liens utiles</p>
+              <div className="flex flex-wrap gap-3">
+                {HOME_LINKS.map((link) => (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-gray-200 hover:text-white hover:border-gold/40 transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Advantages Section - Desktop Only */}
       <section className="hidden lg:block py-16 px-4 bg-gradient-to-b from-transparent via-gold/5 to-transparent">
         <div className="max-w-6xl mx-auto">
@@ -393,6 +561,51 @@ const HomePage = () => {
         </section>
       )}
 
+      {events.length > 0 && (
+        <section className="py-12 px-4 border-t border-white/5">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-end justify-between gap-4 mb-6">
+              <div>
+                <h2 className="font-unbounded text-2xl text-white mb-2">Agenda complet des evenements</h2>
+                <p className="text-gray-400 max-w-3xl">
+                  Cette section regroupe les pages evenement publiques pour faciliter la navigation,
+                  la decouverte des sorties a Djibouti et le pre-rendu des fiches importantes.
+                </p>
+              </div>
+              <span className="text-xs uppercase tracking-[0.18em] text-gold">
+                {events.length} pages publiques
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {events.map((event) => {
+                const eventPath = `/events/${event.id}/${event.slug || slugify(event.title)}`;
+
+                return (
+                  <Link
+                    key={event.id}
+                    to={eventPath}
+                    className="glass rounded-2xl p-4 border border-white/5 hover:border-gold/30 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-medium text-white line-clamp-2">{event.title}</h3>
+                        <p className="text-sm text-gray-400 mt-1 line-clamp-1">{event.venue}</p>
+                      </div>
+                      <ChevronRight className="text-gold flex-shrink-0" size={18} />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+                      <span>{event.date}</span>
+                      <span>{event.min_price > 0 ? `${event.min_price} DJF` : 'Gratuit'}</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* FAQ Section */}
       <section className="py-12 px-4">
         <div className="max-w-3xl mx-auto">
@@ -436,7 +649,7 @@ const HomePage = () => {
 };
 
 const EventCard = ({ event }) => {
-  const navigate = useNavigate();
+  const eventPath = `/events/${event.id}/${event.slug || slugify(event.title)}`;
   
   const getCategoryColor = (category) => {
     const colors = {
@@ -461,10 +674,10 @@ const EventCard = ({ event }) => {
   const minPrice = event.min_price || event.price || 0;
 
   return (
-    <div
-      onClick={() => navigate(`/event/${event.id}`)}
+    <Link
+      to={eventPath}
       className="group relative overflow-hidden rounded-2xl bg-card border border-white/5 
-        hover:border-gold/30 transition-all duration-300 cursor-pointer h-64"
+        hover:border-gold/30 transition-all duration-300 cursor-pointer h-64 block"
       data-testid={`event-card-${event.id}`}
     >
       {/* Image */}
@@ -522,7 +735,7 @@ const EventCard = ({ event }) => {
       <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-gold/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
         <ChevronRight className="text-gold" size={20} />
       </div>
-    </div>
+    </Link>
   );
 };
 

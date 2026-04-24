@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Seo from '../components/Seo';
+import { API_BASE, isPrerender } from '../lib/api';
+import { loadPrerenderTerms } from '../lib/prerender';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = API_BASE;
 
 const TermsPage = () => {
   const navigate = useNavigate();
@@ -16,8 +19,11 @@ const TermsPage = () => {
 
   const fetchTerms = async () => {
     try {
-      const response = await axios.get(`${API}/terms`);
-      setTerms(response.data);
+      const termsData = isPrerender
+        ? await loadPrerenderTerms()
+        : (await axios.get(`${API}/terms`)).data;
+
+      setTerms(termsData);
     } catch (error) {
       console.error('Failed to fetch terms:', error);
     } finally {
@@ -35,6 +41,11 @@ const TermsPage = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] py-8 px-4">
+      <Seo
+        title={terms?.title || "Conditions d'utilisation"}
+        description="Consultez les conditions d'utilisation de D-Billet pour les reservations, paiements et billets."
+        path="/terms"
+      />
       <div className="max-w-3xl mx-auto">
         {/* Back Button */}
         <button

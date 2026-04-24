@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Download, Calendar, Clock, MapPin, User, ArrowLeft, CheckCircle, XCircle, Train, Ship, Share2, MessageCircle } from 'lucide-react';
@@ -18,11 +18,7 @@ const TicketViewPage = () => {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
-  useEffect(() => {
-    fetchTicket();
-  }, [id]);
-
-  const fetchTicket = async () => {
+  const fetchTicket = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/tickets/${id}/view`);
       setTicket(response.data);
@@ -33,7 +29,11 @@ const TicketViewPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchTicket();
+  }, [fetchTicket]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';
