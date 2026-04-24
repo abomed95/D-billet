@@ -133,7 +133,7 @@ app.include_router(organizer_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(content_router, prefix="/api")
 app.include_router(transport_organizer_router, prefix="/api")
-app.include_router(seo_router)
+app.include_router(seo_router, prefix="/api")
 
 
 # ============== ROOT ENDPOINTS ==============

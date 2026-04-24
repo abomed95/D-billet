@@ -4,6 +4,6 @@
     <loc>https://d-billet.com/sitemap-static.xml</loc>
   </sitemap>
   <sitemap>
-    <loc>https://d-billet.com/sitemap-events.xml</loc>
+    <loc>https://d-billet.com/api/sitemap-events.xml</loc>
   </sitemap>
 </sitemapindex>
