@@ -1,16 +1,31 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { 
-  Search, MapPin, Calendar, ChevronRight, Train, Ship, Film, Trophy, Mic2, Music, 
-  Star, AlertTriangle, Newspaper, Quote, LogOut, User, Ticket, Shield, Zap, 
-  Clock, CreditCard, ChevronDown, Phone, Mail, Instagram, Facebook, Twitter,
-  CheckCircle, HelpCircle, Plus, Minus
+import {
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  Film,
+  HelpCircle,
+  Mic2,
+  Minus,
+  Music,
+  Plus,
+  Quote,
+  Search,
+  Shield,
+  Ship,
+  Star,
+  Ticket,
+  Train,
+  Trophy,
+  Zap,
 } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
-import { useAuth } from '../context/AuthContext';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
 import { loadPrerenderHomeData } from '../lib/prerender';
@@ -25,87 +40,136 @@ const CATEGORIES = [
   { id: 'conferences', label: 'Conférences', icon: Mic2, color: '#FF5C00' },
 ];
 
-const ADVANTAGES = [
-  { 
-    icon: Ticket, 
-    title: 'Billetterie 100% Numérique',
-    description: 'Achetez vos billets en ligne et recevez-les instantanément sur votre téléphone. Plus besoin de faire la queue!'
-  },
-  { 
-    icon: Shield, 
-    title: 'Paiement Sécurisé',
-    description: 'Transactions sécurisées via D-Money, Waafi ou CAC Bank. Vos données sont protégées.'
-  },
-  { 
-    icon: Zap, 
-    title: 'Accès Instantané',
-    description: 'QR Code unique pour chaque billet. Scannez et entrez en quelques secondes.'
-  },
-  { 
-    icon: Clock, 
-    title: 'Disponible 24/7',
-    description: 'Réservez à tout moment, de n\'importe où. Notre plateforme est toujours accessible.'
-  },
+const CATEGORY_LABELS = {
+  cinema: 'Cinéma',
+  football: 'Football',
+  concerts: 'Concerts',
+  conferences: 'Conférences',
+};
+
+const METRICS = [
+  { value: '500+', label: 'Événements et trajets disponibles' },
+  { value: '10K+', label: 'Réservations traitées' },
+  { value: '24/7', label: 'Accès sécurisé en ligne' },
 ];
 
-const FAQ_DATA = [
+const ADVANTAGES = [
   {
-    question: 'Comment acheter un billet sur D-BILLEH?',
-    answer: 'Sélectionnez l\'événement, choisissez votre type de billet, procédez au paiement via D-Money, Waafi ou CAC Bank, et recevez instantanément votre billet avec QR code par email ou dans l\'application.'
+    icon: Ticket,
+    title: 'Billetterie événementielle',
+    text: 'Réservez vos places pour concerts, matchs, conférences et spectacles depuis une seule plateforme officielle.',
   },
   {
-    question: 'Puis-je annuler ou rembourser mon billet?',
-    answer: 'Les conditions de remboursement varient selon l\'organisateur. Consultez les conditions spécifiques de chaque événement avant l\'achat. En général, les remboursements sont possibles jusqu\'à 48h avant l\'événement.'
+    icon: Shield,
+    title: 'Paiement sécurisé',
+    text: 'Réglez votre commande avec les moyens de paiement locaux disponibles, dans un parcours clair et rassurant.',
   },
   {
-    question: 'Comment fonctionne le billet électronique?',
-    answer: 'Après l\'achat, vous recevez un billet PDF avec un QR code unique. Présentez ce QR code sur votre téléphone à l\'entrée de l\'événement pour validation.'
+    icon: Zap,
+    title: 'Billet QR code',
+    text: "Recevez immédiatement votre billet numérique, prêt à être présenté à l'entrée ou au contrôle.",
   },
   {
-    question: 'Quels moyens de paiement sont acceptés?',
-    answer: 'Nous acceptons D-Money, Waafi et CAC Bank. Le paiement est sécurisé et instantané.'
-  },
-  {
-    question: 'Comment installer D-BILLEH sur mon téléphone?',
-    answer: 'D-BILLEH est une PWA (Progressive Web App). Sur votre navigateur, cliquez sur "Ajouter à l\'écran d\'accueil" dans le menu pour installer l\'application comme une app native.'
-  },
-  {
-    question: 'Comment contacter le support?',
-    answer: 'Contactez-nous par email à contact@d-billet.com ou par téléphone au +253 77 69 48 12. Notre équipe répond sous 24h.'
+    icon: Clock,
+    title: 'Disponible à tout moment',
+    text: 'Retrouvez vos réservations en ligne à tout moment, directement depuis votre téléphone.',
   },
 ];
 
 const HOW_IT_WORKS = [
   {
-    title: 'Choisissez votre sortie',
-    description: 'Recherchez un evenement, un trajet ferry ou une reservation train depuis une seule plateforme.',
+    icon: Search,
+    label: 'ÉTAPE 1',
+    title: 'Choisissez votre billet',
+    text: 'Recherchez un événement, un trajet train ou une liaison ferry selon votre besoin.',
   },
   {
-    title: 'Payez en ligne',
-    description: 'Finalisez votre commande avec Waafi, D-Money ou CAC Bank selon le service disponible.',
+    icon: CreditCard,
+    label: 'ÉTAPE 2',
+    title: 'Payez simplement',
+    text: 'Finalisez votre réservation avec le moyen de paiement disponible sur la plateforme.',
   },
   {
-    title: 'Recevez votre billet',
-    description: 'Votre QR code est disponible en ligne pour un acces rapide le jour du depart ou de l evenement.',
+    icon: Ticket,
+    label: 'ÉTAPE 3',
+    title: 'Recevez votre QR code',
+    text: 'Votre billet numérique est généré après confirmation et reste accessible en ligne.',
+  },
+];
+
+const FAQ_DATA = [
+  {
+    question: 'Comment acheter un billet sur D-BILLET ?',
+    answer: 'Sélectionnez un service, confirmez votre choix, payez en ligne puis récupérez votre billet avec QR code.',
+  },
+  {
+    question: 'Quels moyens de paiement sont acceptés ?',
+    answer: 'D-BILLET prend en charge Waafi, D-Money et CAC Bank selon le service disponible.',
+  },
+  {
+    question: 'Comment fonctionne le billet électronique ?',
+    answer: 'Le billet est généré avec un QR code unique à présenter depuis votre téléphone.',
+  },
+  {
+    question: 'Comment installer D-BILLET sur mon téléphone ?',
+    answer: "Ajoutez simplement l'application à votre écran d'accueil depuis votre navigateur mobile.",
   },
 ];
 
 const HOME_LINKS = [
   { to: '/train', label: 'Billet train Djibouti' },
-  { to: '/ferry', label: 'Reservation ferry Djibouti Obock' },
-  { to: '/legal/privacy', label: 'Politique de confidentialite' },
-  { to: '/terms', label: "Conditions d'utilisation D-Billet" },
+  { to: '/ferry', label: 'Réservation ferry Djibouti - Obock' },
+  { to: '/legal/privacy', label: 'Politique de confidentialité' },
+  { to: '/terms', label: "Conditions d'utilisation" },
 ];
 
+const TESTIMONIALS_FALLBACK = [
+  {
+    author: 'Amina H.',
+    role: 'Cliente D-BILLET',
+    content: "J'ai réservé mon billet en quelques minutes et tout s'est déroulé sans attente à l'entrée.",
+    rating: 5,
+  },
+  {
+    author: 'Moussa A.',
+    role: 'Voyageur ferry',
+    content: "La réservation en ligne m'a permis d'organiser mon départ plus sereinement, avec mon billet déjà prêt.",
+    rating: 5,
+  },
+  {
+    author: 'Noura S.',
+    role: 'Participante événement',
+    content: 'Le paiement était simple, les informations étaient claires et le QR code a été reçu immédiatement.',
+    rating: 5,
+  },
+];
+
+const getCategoryColor = (category) =>
+  ({
+    cinema: '#FF0055',
+    football: '#D4AF37',
+    concerts: '#7000FF',
+    conferences: '#FF5C00',
+  }[category] || '#D4AF37');
+
+const getCategoryLabel = (category) => CATEGORY_LABELS[category] || 'Événement';
+
+const formatPrice = (price) => `${new Intl.NumberFormat('fr-DJ').format(price || 0)} DJF`;
+
+const formatDate = (dateStr) =>
+  new Date(dateStr).toLocaleDateString('fr-FR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+
 const HomePage = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const [allEvents, setAllEvents] = useState([]);
   const [events, setEvents] = useState([]);
+  const [testimonials, setTestimonials] = useState(TESTIMONIALS_FALLBACK);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [testimonials, setTestimonials] = useState([]);
-  const [news, setNews] = useState([]);
   const [openFaq, setOpenFaq] = useState(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
@@ -114,312 +178,255 @@ const HomePage = () => {
   const fetchData = async () => {
     try {
       if (isPrerender) {
-        const prerenderData = await loadPrerenderHomeData();
-        setEvents(prerenderData.events || []);
-        setTestimonials(prerenderData.testimonials || []);
-        setNews(prerenderData.news || []);
+        const data = await loadPrerenderHomeData();
+        setAllEvents(data.events || []);
+        setEvents(data.events || []);
+        setTestimonials(data.testimonials?.length ? data.testimonials : TESTIMONIALS_FALLBACK);
         return;
       }
 
-      const [eventsRes, testimonialsRes, newsRes] = await Promise.allSettled([
+      const [eventsResponse, testimonialsResponse] = await Promise.all([
         axios.get(`${API}/events`),
-        axios.get(`${API}/testimonials`),
-        axios.get(`${API}/news`),
+        axios.get(`${API}/testimonials`).catch(() => ({ data: TESTIMONIALS_FALLBACK })),
       ]);
 
-      setEvents(eventsRes.status === 'fulfilled' ? eventsRes.value.data : []);
+      setAllEvents(eventsResponse.data || []);
+      setEvents(eventsResponse.data || []);
       setTestimonials(
-        testimonialsRes.status === 'fulfilled' ? testimonialsRes.value.data : []
+        Array.isArray(testimonialsResponse.data) && testimonialsResponse.data.length
+          ? testimonialsResponse.data
+          : TESTIMONIALS_FALLBACK
       );
-      setNews(newsRes.status === 'fulfilled' ? newsRes.value.data : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      setTestimonials(TESTIMONIALS_FALLBACK);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      const filtered = events.filter(ev => 
-        ev.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ev.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setEvents(filtered);
-    } else {
-      fetchData();
+  const handleSearch = (event) => {
+    event.preventDefault();
+    if (!searchQuery.trim()) {
+      setEvents(allEvents);
+      return;
     }
+
+    const query = searchQuery.toLowerCase();
+    setEvents(
+      allEvents.filter(
+        (item) =>
+          item.title?.toLowerCase().includes(query) ||
+          item.description?.toLowerCase().includes(query) ||
+          item.venue?.toLowerCase().includes(query)
+      )
+    );
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  const handleCategoryFilter = (categoryId) => {
+    const filtered = allEvents.filter((item) => item.category === categoryId);
+    setEvents(filtered.length ? filtered : allEvents);
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';
-  };
-
-  const featuredEvents = events.slice(0, 6).map((event) => ({
-    '@type': 'Event',
-    name: event.title,
-    startDate: event.date,
-    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    eventStatus: 'https://schema.org/EventScheduled',
-    location: {
-      '@type': 'Place',
-      name: event.venue || 'Djibouti',
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: 'Djibouti',
-        addressCountry: 'DJ',
-      },
-    },
-    image: event.image_url ? [event.image_url] : [absoluteUrl('/images/dbillet-logo.png')],
-    description: event.description,
-    offers: {
-      '@type': 'Offer',
-      priceCurrency: 'DJF',
-      price: event.min_price || event.price || 0,
-      availability:
-        (event.available_tickets || 0) > 0
-          ? 'https://schema.org/InStock'
-          : 'https://schema.org/SoldOut',
-      url: absoluteUrl(`/events/${event.id}/${slugify(event.title)}`),
-    },
-    organizer: {
-      '@type': 'Organization',
-      name: 'D-Billet',
-      url: absoluteUrl('/'),
-    },
-  }));
-
-  const faqStructuredData = {
-    '@type': 'FAQPage',
-    mainEntity: FAQ_DATA.map((faq) => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer,
-      },
-    })),
-  };
-
-  const organizationStructuredData = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'Organization',
-        name: 'D-Billet',
-        url: absoluteUrl('/'),
-        logo: absoluteUrl('/images/dbillet-logo.png'),
-        contactPoint: {
-          '@type': 'ContactPoint',
-          contactType: 'customer support',
-          telephone: '+25377694812',
-          email: 'contact@d-billet.com',
-          areaServed: 'DJ',
-          availableLanguage: ['fr', 'ar'],
+  const structuredData = useMemo(
+    () => ({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Organization',
+          name: 'D-Billet',
+          url: absoluteUrl('/'),
+          logo: absoluteUrl('/images/dbillet-logo.png'),
         },
-      },
-      {
-        '@type': 'WebSite',
-        name: 'D-Billet',
-        url: absoluteUrl('/'),
-        inLanguage: 'fr-DJ',
-      },
-      faqStructuredData,
-      ...featuredEvents,
-    ],
-  };
+        {
+          '@type': 'WebSite',
+          name: 'D-Billet',
+          url: absoluteUrl('/'),
+          inLanguage: 'fr-DJ',
+        },
+        {
+          '@type': 'FAQPage',
+          mainEntity: FAQ_DATA.map((faq) => ({
+            '@type': 'Question',
+            name: faq.question,
+            acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+          })),
+        },
+        ...allEvents.slice(0, 6).map((event) => ({
+          '@type': 'Event',
+          name: event.title,
+          startDate: event.date,
+          location: {
+            '@type': 'Place',
+            name: event.venue || 'Djibouti',
+            address: { '@type': 'PostalAddress', addressLocality: 'Djibouti', addressCountry: 'DJ' },
+          },
+          image: [event.image_url || absoluteUrl('/images/dbillet-logo.png')],
+          description: event.description,
+          offers: {
+            '@type': 'Offer',
+            priceCurrency: 'DJF',
+            price: event.min_price || event.price || 0,
+            url: absoluteUrl(`/events/${event.id}/${event.slug || slugify(event.title)}`),
+          },
+        })),
+      ],
+    }),
+    [allEvents]
+  );
 
   return (
     <div className="min-h-screen bg-[#050505]">
       <Seo
         title="Billetterie Djibouti, Train et Ferry"
-        description="D-Billet est la plateforme de billetterie de Djibouti pour les evenements, les reservations train et ferry. Achetez vos billets en ligne."
+        description="D-BILLET est la plateforme officielle de billetterie à Djibouti pour les événements, les réservations train et ferry."
         path="/"
-        structuredData={organizationStructuredData}
+        structuredData={structuredData}
       />
-      {/* Hero Section - Modern Presentation */}
-      <section className="relative h-[70vh] md:h-[75vh] overflow-hidden">
-        <div 
+
+      <section className="relative overflow-hidden border-b border-white/5">
+        <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: 'url(https://images.unsplash.com/photo-1492684223066-81342ee5ff30?crop=entropy&cs=srgb&fm=jpg&q=85)',
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-[#050505]" />
-        </div>
-        
-        {/* Floating particles effect */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-2 h-2 bg-gold rounded-full animate-pulse opacity-60"></div>
-          <div className="absolute top-40 right-20 w-3 h-3 bg-gold rounded-full animate-pulse opacity-40"></div>
-          <div className="absolute bottom-40 left-1/4 w-2 h-2 bg-gold rounded-full animate-pulse opacity-50"></div>
-          <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-gold rounded-full animate-pulse opacity-70"></div>
-        </div>
-        
-        <div className="relative z-10 h-full flex flex-col items-center justify-center px-4 text-center">
-          {/* Main Title with gradient */}
-          <div className="mb-6">
-            <h1 className="font-unbounded text-5xl md:text-7xl lg:text-8xl font-bold text-white mb-4 tracking-tight">
-              <span className="bg-gradient-to-r from-gold via-yellow-300 to-gold bg-clip-text text-transparent drop-shadow-2xl">
-                D-BILLEH
-              </span>
-            </h1>
-            <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gold to-transparent mx-auto mb-4"></div>
-          </div>
-          
-          {/* Tagline */}
-          <p className="text-xl md:text-2xl text-white/90 font-light max-w-2xl mb-2">
-            Un clic, et vous y êtes
-          </p>
-          <p className="text-gray-400 text-base md:text-lg max-w-xl mb-8">
-            La billetterie officielle de Djibouti pour vos événements, train et ferry
-          </p>
-          
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="w-full max-w-xl mb-8">
-            <div className="relative glass rounded-2xl p-2 border border-gold/30 backdrop-blur-xl">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gold" size={22} />
-              <Input
-                type="text"
-                placeholder="Rechercher un événement, concert, match..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-14 h-14 bg-transparent border-0 text-white placeholder:text-gray-500 rounded-xl text-base"
-                data-testid="search-input"
-              />
-              <Button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-gold hover:bg-gold-light text-black font-semibold px-6 h-10">
-                Rechercher
-              </Button>
-            </div>
-          </form>
-          
-          {/* Quick Stats */}
-          <div className="flex items-center gap-8 text-center">
-            <div>
-              <p className="text-3xl md:text-4xl font-bold text-gold">500+</p>
-              <p className="text-gray-400 text-sm">Événements</p>
-            </div>
-            <div className="w-px h-12 bg-white/20"></div>
-            <div>
-              <p className="text-3xl md:text-4xl font-bold text-gold">10K+</p>
-              <p className="text-gray-400 text-sm">Utilisateurs</p>
-            </div>
-            <div className="w-px h-12 bg-white/20"></div>
-            <div>
-              <p className="text-3xl md:text-4xl font-bold text-gold">100%</p>
-              <p className="text-gray-400 text-sm">Sécurisé</p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce">
-          <ChevronDown className="text-gold" size={28} />
-        </div>
-      </section>
+          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1800&q=80)' }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(212,175,55,0.24),transparent_32%),linear-gradient(135deg,rgba(5,5,5,0.9),rgba(5,5,5,0.72)_45%,rgba(5,5,5,0.96))]" />
 
-      {/* Transport Section */}
-      <section className="py-8 px-4 -mt-8 relative z-20">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="font-unbounded text-xl text-white mb-4">Transport</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link 
-              to="/train" 
-              className="glass p-6 rounded-2xl flex items-center gap-4 hover:border-gold/50 transition-all group"
-              data-testid="train-link"
-            >
-              <div className="w-16 h-16 rounded-xl bg-gold/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Train className="text-gold" size={32} />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-unbounded text-lg text-white mb-1">Train</h3>
-                <p className="text-gray-400 text-sm">Djibouti - Éthiopie</p>
-                <p className="text-gold text-sm mt-1">À partir de 400 DJF</p>
-              </div>
-              <ChevronRight className="text-gray-500 group-hover:text-gold transition-colors" size={24} />
-            </Link>
+        <div className="relative mx-auto grid min-h-[78vh] max-w-6xl gap-10 px-4 pb-16 pt-24 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div className="space-y-7">
+            <div className="inline-flex items-center gap-3 rounded-full border border-gold/25 bg-black/35 px-4 py-2 backdrop-blur-xl">
+              <img src="/images/dbillet-icon.png" alt="D-Billet" className="h-9 w-9 rounded-xl object-cover" />
+              <span className="text-xs uppercase tracking-[0.24em] text-gold">Billetterie officielle de Djibouti</span>
+            </div>
 
-            <Link 
-              to="/ferry" 
-              className="glass p-6 rounded-2xl flex items-center gap-4 hover:border-ferry/50 transition-all group"
-              data-testid="ferry-link"
-            >
-              <div className="w-16 h-16 rounded-xl bg-ferry/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Ship className="text-ferry" size={32} />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-unbounded text-lg text-white mb-1">Ferry</h3>
-                <p className="text-gray-400 text-sm">Djibouti - Tadjoura - Obock</p>
-                <p className="text-ferry text-sm mt-1">1100 FDJ</p>
-              </div>
-              <ChevronRight className="text-gray-500 group-hover:text-ferry transition-colors" size={24} />
-            </Link>
-          </div>
-        </div>
-      </section>
+            <div className="space-y-4">
+              <p className="text-sm uppercase tracking-[0.24em] text-white/55">ÉVÉNEMENTS, TRAIN ET FERRY</p>
+              <h1 className="max-w-4xl font-unbounded text-4xl leading-[1.05] text-white sm:text-5xl lg:text-6xl">
+                Réservez en toute confiance avec D-BILLET.
+              </h1>
+              <p className="max-w-2xl text-base leading-7 text-gray-300 sm:text-lg">
+                La plateforme officielle pour vos événements, trajets train et traversées ferry à Djibouti. Paiement local sécurisé, confirmation immédiate et billet numérique avec QR code.
+              </p>
+            </div>
 
-      {/* Categories */}
-      <section className="py-6 px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="font-unbounded text-xl text-white mb-4">Catégories</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  const filtered = events.filter(ev => ev.category === cat.id);
-                  if (filtered.length > 0) {
-                    setEvents(filtered);
-                  }
-                }}
-                className="glass p-4 flex flex-col items-center gap-2 hover:border-gold/30 transition-all group rounded-xl"
-                data-testid={`category-${cat.id}`}
-              >
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                  style={{ backgroundColor: `${cat.color}20` }}
-                >
-                  <cat.icon size={24} style={{ color: cat.color }} />
+            <form onSubmit={handleSearch} className="max-w-2xl">
+              <div className="rounded-[28px] border border-gold/20 bg-black/45 p-2 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+                <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gold" size={20} />
+                    <Input
+                      type="text"
+                      placeholder="Rechercher un événement, un trajet ou une réservation..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-14 rounded-2xl border-0 bg-transparent pl-14 text-white placeholder:text-gray-500"
+                      data-testid="search-input"
+                    />
+                  </div>
+                  <Button type="submit" className="h-12 rounded-2xl bg-gold px-6 text-black hover:bg-gold-light">
+                    Rechercher
+                  </Button>
                 </div>
-                <span className="text-sm text-gray-300 group-hover:text-white">{cat.label}</span>
+              </div>
+            </form>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {METRICS.map((metric) => (
+                <div key={metric.label} className="rounded-3xl border border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl">
+                  <p className="font-unbounded text-2xl text-gold">{metric.value}</p>
+                  <p className="mt-2 text-sm text-gray-400">{metric.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            <div className="rounded-[30px] border border-white/10 bg-black/45 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.36)] backdrop-blur-xl">
+              <p className="text-xs uppercase tracking-[0.24em] text-gold">PLATEFORME D-BILLET</p>
+              <h2 className="mt-2 font-unbounded text-2xl text-white">Une plateforme de confiance, pensée pour réserver vite</h2>
+              <div className="mt-5 space-y-3">
+                {[
+                  'Événements, train et ferry réunis sur une seule plateforme officielle',
+                  'Paiement local avec Waafi, D-Money et CAC Bank',
+                  'Billet numérique disponible immédiatement après confirmation',
+                ].map((item) => (
+                  <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-gray-300">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[28px] border border-gold/15 bg-gradient-to-br from-gold/12 to-transparent p-5">
+                <p className="text-xs uppercase tracking-[0.24em] text-gold">PAIEMENT</p>
+                <h3 className="mt-2 font-unbounded text-xl text-white">Waafi, D-Money, CAC Bank</h3>
+              </div>
+              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5">
+                <p className="text-xs uppercase tracking-[0.24em] text-gold">ACCÈS RAPIDE</p>
+                <h3 className="mt-2 font-unbounded text-xl text-white">Événements, train et ferry</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-7 left-1/2 hidden -translate-x-1/2 animate-bounce lg:flex">
+          <ChevronDown className="text-gold" size={26} />
+        </div>
+      </section>
+
+      <section className="relative z-10 -mt-8 px-4 pb-2">
+        <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-2">
+          <TransportCard to="/train" title="Train" subtitle="Djibouti - Éthiopie" icon={Train} color="text-train" border="hover:border-train/40" />
+          <TransportCard to="/ferry" title="Ferry" subtitle="Djibouti - Tadjoura - Obock" icon={Ship} color="text-ferry" border="hover:border-ferry/40" />
+        </div>
+      </section>
+
+      <section className="px-4 py-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-unbounded text-xl text-white">Catégories</h2>
+            <button onClick={() => setEvents(allEvents)} className="text-sm text-gold hover:text-gold-light">
+              Réinitialiser
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {CATEGORIES.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => handleCategoryFilter(category.id)}
+                className="group rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition-all hover:border-gold/30 hover:bg-white/[0.05]"
+                data-testid={`category-${category.id}`}
+              >
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${category.color}20` }}>
+                  <category.icon size={24} style={{ color: category.color }} />
+                </div>
+                <span className="mt-3 block text-sm text-gray-300 group-hover:text-white">{category.label}</span>
               </button>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Events List */}
-      <section className="py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+      <section className="px-4 py-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-6 flex items-center justify-between">
             <h2 className="font-unbounded text-xl text-white">Événements</h2>
-            <Button 
-              variant="ghost" 
-              onClick={fetchData}
-              className="text-gold hover:text-gold-light hover:bg-gold/10"
-            >
+            <Button variant="ghost" onClick={fetchData} className="text-gold hover:bg-gold/10 hover:text-gold-light">
               Voir tout
             </Button>
           </div>
-          
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array(6).fill(0).map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-2xl" />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Skeleton key={index} className="h-72 rounded-[28px]" />
               ))}
             </div>
           ) : events.length === 0 ? (
-            <div className="text-center py-16 glass rounded-xl">
-              <p className="text-gray-400">Aucun événement disponible</p>
+            <div className="rounded-[28px] border border-white/10 bg-white/[0.03] px-6 py-16 text-center text-gray-400">
+              Aucun événement ne correspond à cette recherche.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {events.slice(0, 6).map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
@@ -428,216 +435,122 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="py-12 px-4 border-t border-white/5">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-10 items-start">
-          <div>
-            <h2 className="font-unbounded text-2xl text-white mb-4">Billetterie en ligne a Djibouti</h2>
-            <div className="space-y-4 text-gray-300 leading-7">
-              <p>
-                D-Billet centralise la reservation de billets pour les concerts, matchs, conferences,
-                trajets ferry et trajets train au depart de Djibouti. L objectif est simple: permettre
-                aux voyageurs, spectateurs et organisateurs de retrouver les informations utiles sur une
-                seule plateforme.
-              </p>
-              <p>
-                Cette page d accueil presente les evenements a venir, les services de transport
-                disponibles, les moyens de paiement acceptes et les informations pratiques pour acheter
-                un billet en ligne sans se deplacer. Les pages evenement contiennent ensuite la date,
-                le lieu, la description, le prix et la disponibilite en temps reel.
-              </p>
-              <p>
-                Pour les recherches de type <strong className="text-white">billetterie Djibouti</strong>,
-                <strong className="text-white"> billet ferry Djibouti</strong> ou
-                <strong className="text-white"> reservation train Djibouti</strong>, D-Billet sert de point
-                d entree unique vers les principaux services publics et prives de reservation.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {HOW_IT_WORKS.map((item) => (
-              <div key={item.title} className="glass p-5 rounded-2xl">
-                <p className="text-gold text-xs uppercase tracking-[0.18em] mb-2">Parcours</p>
-                <h3 className="font-unbounded text-white text-lg mb-2">{item.title}</h3>
-                <p className="text-gray-400 text-sm leading-6">{item.description}</p>
+      <section className="border-y border-white/5 px-4 py-14">
+        <div className="mx-auto max-w-6xl rounded-[32px] border border-white/10 bg-[#0B0B10] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] md:p-8">
+          <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="space-y-5">
+              <div className="inline-flex rounded-full border border-gold/20 bg-gold/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-gold">
+                PLATEFORME CENTRALE
               </div>
-            ))}
-            <div className="glass p-5 rounded-2xl sm:col-span-2">
-              <p className="text-gold text-xs uppercase tracking-[0.18em] mb-2">Liens utiles</p>
-              <div className="flex flex-wrap gap-3">
-                {HOME_LINKS.map((link) => (
-                  <Link
-                    key={link.to}
-                    to={link.to}
-                    className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-gray-200 hover:text-white hover:border-gold/40 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
+              <h2 className="font-unbounded text-3xl leading-tight text-white">Tout réserver depuis une seule plateforme.</h2>
+              <p className="text-base leading-7 text-gray-300">
+                D-BILLET simplifie l'achat de billets à Djibouti. Pour un événement, un trajet en train ou une traversée en ferry, l'utilisateur bénéficie d'un service officiel, fluide et fiable, pensé pour réserver en toute confiance.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {ADVANTAGES.map((item) => (
+                  <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15">
+                      <item.icon className="text-gold" size={20} />
+                    </div>
+                    <h3 className="font-medium text-white">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-gray-400">{item.text}</p>
+                  </div>
                 ))}
               </div>
             </div>
+
+            <div className="space-y-4">
+              {HOW_IT_WORKS.map((item) => (
+                <div key={item.title} className="rounded-[26px] border border-white/10 bg-white/[0.03] p-5">
+                  <div className="mb-4 flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15">
+                      <item.icon className="text-gold" size={20} />
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.22em] text-gold">{item.label}</p>
+                      <h3 className="mt-1 font-unbounded text-xl text-white">{item.title}</h3>
+                    </div>
+                  </div>
+                  <p className="text-sm leading-6 text-gray-400">{item.text}</p>
+                </div>
+              ))}
+              <div className="rounded-[26px] border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-xs uppercase tracking-[0.22em] text-gold">LIENS UTILES</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {HOME_LINKS.map((link) => (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-gray-200 transition-colors hover:border-gold/30 hover:text-white"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Advantages Section - Desktop Only */}
-      <section className="hidden lg:block py-16 px-4 bg-gradient-to-b from-transparent via-gold/5 to-transparent">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="font-unbounded text-3xl text-white mb-4">Pourquoi choisir D-BILLEH?</h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
-              La première plateforme de billetterie 100% djiboutienne, conçue pour simplifier votre accès aux événements
+      <section className="px-4 py-12">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-8 text-center">
+            <div className="inline-flex rounded-full border border-gold/20 bg-gold/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-gold">
+              TÉMOIGNAGES
+            </div>
+            <h2 className="mt-4 font-unbounded text-3xl text-white">Ils réservent avec confiance sur D-BILLET</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-gray-400">
+              Des utilisateurs choisissent déjà D-BILLET pour réserver plus vite, payer sereinement et présenter leur billet sans friction.
             </p>
           </div>
-          
-          <div className="grid grid-cols-4 gap-6">
-            {ADVANTAGES.map((adv, idx) => (
-              <div 
-                key={idx}
-                className="glass p-6 rounded-2xl text-center hover:border-gold/30 transition-all group"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-gold/20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <adv.icon className="text-gold" size={32} />
+          <div className="grid gap-4 md:grid-cols-3">
+            {testimonials.slice(0, 3).map((testimonial, index) => (
+              <div key={`${testimonial.author}-${index}`} className="rounded-[28px] border border-white/10 bg-[#0B0B10] p-6 shadow-[0_14px_40px_rgba(0,0,0,0.22)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <Quote className="text-gold" size={22} />
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.max(1, Math.min(5, Number(testimonial.rating) || 5)) }).map((_, starIndex) => (
+                      <Star key={starIndex} size={14} className="fill-gold text-gold" />
+                    ))}
+                  </div>
                 </div>
-                <h3 className="font-unbounded text-white text-lg mb-2">{adv.title}</h3>
-                <p className="text-gray-400 text-sm">{adv.description}</p>
+                <p className="text-sm leading-7 text-gray-300">{testimonial.content}</p>
+                <div className="mt-6 border-t border-white/10 pt-4">
+                  <p className="font-medium text-white">{testimonial.author}</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-gold">{testimonial.role || 'Client D-BILLET'}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
-      {testimonials.length > 0 && (
-        <section className="py-12 px-4">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="font-unbounded text-xl text-white mb-6 flex items-center gap-2">
-              <Star className="text-gold" size={24} />
-              Témoignages
+      <section className="px-4 py-12">
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-8 text-center">
+            <h2 className="flex items-center justify-center gap-2 font-unbounded text-2xl text-white">
+              <HelpCircle className="text-gold" size={26} />
+              Questions fréquentes
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {testimonials.slice(0, 3).map((test, idx) => (
-                <div key={idx} className="glass p-6 rounded-2xl">
-                  <Quote className="text-gold/30 mb-4" size={32} />
-                  <p className="text-gray-300 mb-4 italic">"{test.content}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
-                      <User className="text-gold" size={20} />
-                    </div>
-                    <div>
-                      <p className="text-white font-semibold">{test.author}</p>
-                      <p className="text-gray-500 text-sm">{test.role}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="mt-2 text-gray-400">Tout ce que vous devez savoir avant de réserver sur D-BILLET.</p>
           </div>
-        </section>
-      )}
-
-      {/* News */}
-      {news.length > 0 && (
-        <section className="py-12 px-4">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="font-unbounded text-xl text-white mb-6 flex items-center gap-2">
-              <Newspaper className="text-gold" size={24} />
-              Actualités
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {news.slice(0, 2).map((item, idx) => (
-                <div key={idx} className="glass p-6 rounded-2xl flex gap-4 hover:border-gold/30 transition-all">
-                  {item.image_url && (
-                    <img src={item.image_url} alt={item.title} className="w-24 h-24 rounded-xl object-cover" />
-                  )}
-                  <div>
-                    <h3 className="font-unbounded text-white mb-2">{item.title}</h3>
-                    <p className="text-gray-400 text-sm line-clamp-2">{item.excerpt}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {events.length > 0 && (
-        <section className="py-12 px-4 border-t border-white/5">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-end justify-between gap-4 mb-6">
-              <div>
-                <h2 className="font-unbounded text-2xl text-white mb-2">Agenda complet des evenements</h2>
-                <p className="text-gray-400 max-w-3xl">
-                  Cette section regroupe les pages evenement publiques pour faciliter la navigation,
-                  la decouverte des sorties a Djibouti et le pre-rendu des fiches importantes.
-                </p>
-              </div>
-              <span className="text-xs uppercase tracking-[0.18em] text-gold">
-                {events.length} pages publiques
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {events.map((event) => {
-                const eventPath = `/events/${event.id}/${event.slug || slugify(event.title)}`;
-
-                return (
-                  <Link
-                    key={event.id}
-                    to={eventPath}
-                    className="glass rounded-2xl p-4 border border-white/5 hover:border-gold/30 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-medium text-white line-clamp-2">{event.title}</h3>
-                        <p className="text-sm text-gray-400 mt-1 line-clamp-1">{event.venue}</p>
-                      </div>
-                      <ChevronRight className="text-gold flex-shrink-0" size={18} />
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
-                      <span>{event.date}</span>
-                      <span>{event.min_price > 0 ? `${event.min_price} DJF` : 'Gratuit'}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* FAQ Section */}
-      <section className="py-12 px-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="font-unbounded text-2xl text-white mb-2 flex items-center justify-center gap-2">
-              <HelpCircle className="text-gold" size={28} />
-              Questions Fréquentes
-            </h2>
-            <p className="text-gray-400">Tout ce que vous devez savoir sur D-BILLEH</p>
-          </div>
-          
           <div className="space-y-3">
-            {FAQ_DATA.map((faq, idx) => (
-              <div 
-                key={idx}
-                className="glass rounded-xl overflow-hidden"
-              >
+            {FAQ_DATA.map((faq, index) => (
+              <div key={faq.question} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
                 <button
-                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                  className="w-full p-5 flex items-center justify-between text-left hover:bg-white/5 transition-colors"
+                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                  className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-white/[0.03]"
                 >
-                  <span className="text-white font-medium pr-4">{faq.question}</span>
-                  {openFaq === idx ? (
-                    <Minus className="text-gold flex-shrink-0" size={20} />
+                  <span className="pr-4 font-medium text-white">{faq.question}</span>
+                  {openFaq === index ? (
+                    <Minus className="flex-shrink-0 text-gold" size={18} />
                   ) : (
-                    <Plus className="text-gold flex-shrink-0" size={20} />
+                    <Plus className="flex-shrink-0 text-gold" size={18} />
                   )}
                 </button>
-                {openFaq === idx && (
-                  <div className="px-5 pb-5 text-gray-400 border-t border-white/10 pt-4">
-                    {faq.answer}
-                  </div>
+                {openFaq === index && (
+                  <div className="border-t border-white/10 px-5 pb-5 pt-4 text-gray-400">{faq.answer}</div>
                 )}
               </div>
             ))}
@@ -648,92 +561,55 @@ const HomePage = () => {
   );
 };
 
+const TransportCard = ({ to, title, subtitle, icon: Icon, color, border }) => (
+  <Link
+    to={to}
+    className={`group flex items-center gap-4 rounded-[28px] border border-white/10 bg-[#0B0B10] p-6 shadow-[0_14px_40px_rgba(0,0,0,0.28)] transition-all ${border}`}
+  >
+    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.04]">
+      <Icon className={`${color} transition-transform group-hover:scale-110`} size={32} />
+    </div>
+    <div className="flex-1">
+      <p className={`text-xs uppercase tracking-[0.22em] ${color}`}>Transport</p>
+      <h2 className="mt-2 font-unbounded text-xl text-white">{title}</h2>
+      <p className="mt-1 text-sm text-gray-400">{subtitle}</p>
+    </div>
+    <ChevronRight className="text-gray-500 transition-colors group-hover:text-white" size={22} />
+  </Link>
+);
+
 const EventCard = ({ event }) => {
   const eventPath = `/events/${event.id}/${event.slug || slugify(event.title)}`;
-  
-  const getCategoryColor = (category) => {
-    const colors = {
-      cinema: '#FF0055',
-      football: '#D4AF37',
-      concerts: '#7000FF',
-      conferences: '#FF5C00',
-    };
-    return colors[category] || '#D4AF37';
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';
-  };
-
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-  };
-
-  const categoryColor = getCategoryColor(event.category);
   const minPrice = event.min_price || event.price || 0;
 
   return (
-    <Link
-      to={eventPath}
-      className="group relative overflow-hidden rounded-2xl bg-card border border-white/5 
-        hover:border-gold/30 transition-all duration-300 cursor-pointer h-64 block"
-      data-testid={`event-card-${event.id}`}
-    >
-      {/* Image */}
-      <div className="absolute inset-0">
-        <img
-          src={event.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?crop=entropy&cs=srgb&fm=jpg&q=85'}
-          alt={event.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-      </div>
-
-      {/* Low Stock Badge */}
-      {event.low_stock && (
-        <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-red-500 text-white text-xs font-bold flex items-center gap-1 animate-pulse">
-          <AlertTriangle size={12} />
-          Plus que {event.low_stock_count} places!
-        </div>
-      )}
-
-      {/* Category Badge */}
-      <div 
-        className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold uppercase"
-        style={{ backgroundColor: categoryColor, color: '#000' }}
-      >
-        {event.category}
-      </div>
-
-      {/* Content */}
-      <div className="absolute bottom-0 left-0 right-0 p-5">
-        <h3 className="font-unbounded font-semibold text-white mb-2 line-clamp-2 text-lg group-hover:-translate-y-1 transition-transform">
-          {event.title}
-        </h3>
-        <div className="flex items-center gap-4 text-gray-300 text-sm mb-3">
-          <span className="flex items-center gap-1">
-            <Calendar size={14} />
-            {formatDate(event.date)}
-          </span>
-          <span className="flex items-center gap-1">
-            <MapPin size={14} />
-            {event.venue?.split(' - ')[0]}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-mono font-bold text-gold text-lg">
-            {minPrice > 0 ? `À partir de ${formatPrice(minPrice)}` : 'Gratuit'}
-          </span>
-          <span className="text-xs text-gray-400">
-            {event.available_tickets || 0} places
-          </span>
+    <Link to={eventPath} className="group block overflow-hidden rounded-[30px] border border-white/10 bg-[#0B0B10] transition-all hover:-translate-y-1 hover:border-gold/30">
+      <div className="relative h-56 overflow-hidden">
+        <img src={event.image_url || '/images/dbillet-logo.png'} alt={event.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+        <div className="absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold text-black" style={{ backgroundColor: getCategoryColor(event.category) }}>
+          {getCategoryLabel(event.category)}
         </div>
       </div>
 
-      {/* Hover Arrow */}
-      <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-gold/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-        <ChevronRight className="text-gold" size={20} />
+      <div className="space-y-4 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="line-clamp-2 font-unbounded text-lg leading-6 text-white">{event.title}</h3>
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-400">{event.description}</p>
+          </div>
+          <ChevronRight className="mt-1 flex-shrink-0 text-gold" size={18} />
+        </div>
+        <div className="grid gap-2 text-sm text-gray-400">
+          <div className="flex items-center gap-2">
+            <Calendar size={16} className="text-gold" />
+            <span>{formatDate(event.date)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Ticket size={16} className="text-gold" />
+            <span>{minPrice > 0 ? formatPrice(minPrice) : 'Gratuit'}</span>
+          </div>
+        </div>
       </div>
     </Link>
   );

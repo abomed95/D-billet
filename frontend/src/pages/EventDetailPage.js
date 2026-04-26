@@ -1,7 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { Calendar, Clock, MapPin, Users, Minus, Plus, ShoppingCart, ArrowLeft, Ticket, AlertTriangle, Tag, Check } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Calendar,
+  Check,
+  Clock,
+  MapPin,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Tag,
+  Ticket,
+  Users,
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
@@ -22,13 +35,20 @@ const CATEGORY_COLORS = {
   conferences: '#FF5C00',
 };
 
+const CATEGORY_LABELS = {
+  cinema: 'Cinéma',
+  football: 'Football',
+  concerts: 'Concerts',
+  conferences: 'Conférences',
+};
+
 const EventDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { addToCart } = useCart();
-  
+
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTicketType, setSelectedTicketType] = useState(null);
@@ -44,9 +64,9 @@ const EventDetailPage = () => {
         : (await axios.get(`${API}/events/${id}`)).data;
 
       setEvent(eventData);
-      // Select first available ticket type
+
       const availableTypes = eventData.ticket_types?.filter(
-        (tt) => tt.quantity - (tt.sold || 0) > 0
+        (ticketType) => ticketType.quantity - (ticketType.sold || 0) > 0
       );
       if (availableTypes?.length > 0) {
         setSelectedTicketType(availableTypes[0]);
@@ -64,27 +84,27 @@ const EventDetailPage = () => {
     fetchEvent();
   }, [fetchEvent]);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';
-  };
+  const formatPrice = (price) => `${new Intl.NumberFormat('fr-DJ').format(price)} DJF`;
 
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', { 
-      weekday: 'long', 
-      day: 'numeric', 
+  const formatDate = (dateStr) =>
+    new Date(dateStr).toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
       month: 'long',
-      year: 'numeric'
+      year: 'numeric',
     });
-  };
 
   const validatePromoCode = async () => {
     if (!promoCode.trim()) return;
-    
+
     try {
       const response = await axios.get(`${API}/promo-codes/${promoCode}/validate?event_id=${id}`);
       setPromoValid(response.data);
-      toast.success(`Code promo valide! -${response.data.discount_value}${response.data.discount_type === 'percentage' ? '%' : ' DJF'}`);
+      toast.success(
+        `Code avantage appliqué : -${response.data.discount_value}${
+          response.data.discount_type === 'percentage' ? '%' : ' DJF'
+        }`
+      );
     } catch (error) {
       setPromoValid(null);
       toast.error(error.response?.data?.detail || 'Code promo invalide');
@@ -93,43 +113,44 @@ const EventDetailPage = () => {
 
   const calculateTotal = () => {
     if (!selectedTicketType) return 0;
+
     let total = selectedTicketType.price * quantity;
-    
+
     if (promoValid) {
       if (promoValid.discount_type === 'percentage') {
-        total = total - (total * promoValid.discount_value / 100);
+        total -= (total * promoValid.discount_value) / 100;
       } else {
         total = Math.max(0, total - promoValid.discount_value);
       }
     }
-    
+
     return Math.round(total);
   };
 
   const handleAddToCart = async () => {
     if (!user) {
-      toast.error('Veuillez vous connecter');
+      toast.error('Veuillez vous connecter pour continuer');
       navigate('/auth');
       return;
     }
 
     if (!selectedTicketType) {
-      toast.error('Veuillez sélectionner un type de billet');
+      toast.error('Veuillez choisir un billet');
       return;
     }
 
     const available = selectedTicketType.quantity - (selectedTicketType.sold || 0);
     if (quantity > available) {
-      toast.error('Pas assez de places disponibles');
+      toast.error('Le nombre de places disponibles est insuffisant');
       return;
     }
 
     setAdding(true);
     try {
       await addToCart(event.id, selectedTicketType.id, quantity, promoValid?.code);
-      toast.success(`${quantity} billet(s) ${selectedTicketType.name} ajouté(s)`);
+      toast.success(`${quantity} billet(s) ${selectedTicketType.name} ajouté(s) au panier`);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erreur');
+      toast.error(error.response?.data?.detail || 'Une erreur est survenue');
     } finally {
       setAdding(false);
     }
@@ -137,8 +158,13 @@ const EventDetailPage = () => {
 
   const handleBuyNow = async () => {
     if (!user) {
-      toast.error('Veuillez vous connecter');
+      toast.error('Veuillez vous connecter pour continuer');
       navigate('/auth');
+      return;
+    }
+
+    if (!selectedTicketType) {
+      toast.error('Veuillez choisir un billet');
       return;
     }
 
@@ -147,19 +173,17 @@ const EventDetailPage = () => {
       await addToCart(event.id, selectedTicketType.id, quantity, promoValid?.code);
       navigate('/cart');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erreur');
+      toast.error(error.response?.data?.detail || 'Une erreur est survenue');
     } finally {
       setAdding(false);
     }
   };
 
-  const eventSlug = event ? (event.slug || slugify(event.title)) : '';
+  const eventSlug = event ? event.slug || slugify(event.title) : '';
   const canonicalPath = event ? `/events/${event.id}/${eventSlug}` : location.pathname;
 
   useEffect(() => {
-    if (!event) {
-      return;
-    }
+    if (!event) return;
 
     const currentPath = location.pathname.replace(/\/+$/, '');
     const desiredPath = canonicalPath.replace(/\/+$/, '');
@@ -172,7 +196,7 @@ const EventDetailPage = () => {
     return (
       <div className="min-h-screen">
         <Skeleton className="h-[50vh] w-full" />
-        <div className="max-w-4xl mx-auto p-6 space-y-4">
+        <div className="mx-auto max-w-4xl space-y-4 p-6">
           <Skeleton className="h-10 w-3/4" />
           <Skeleton className="h-6 w-1/2" />
           <Skeleton className="h-32 w-full" />
@@ -184,7 +208,9 @@ const EventDetailPage = () => {
   if (!event) return null;
 
   const categoryColor = CATEGORY_COLORS[event.category] || '#7000FF';
+  const categoryLabel = CATEGORY_LABELS[event.category] || 'Événement';
   const eventDateTime = event.time ? `${event.date}T${event.time}` : event.date;
+
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Event',
@@ -213,7 +239,7 @@ const EventDetailPage = () => {
       priceCurrency: 'DJF',
       price: ticketType.price,
       availability:
-        (ticketType.quantity - (ticketType.sold || 0)) > 0
+        ticketType.quantity - (ticketType.sold || 0) > 0
           ? 'https://schema.org/InStock'
           : 'https://schema.org/SoldOut',
       url: absoluteUrl(canonicalPath),
@@ -224,154 +250,142 @@ const EventDetailPage = () => {
   return (
     <div className="min-h-screen pb-40">
       <Seo
-        title={`${event.title} a Djibouti`}
-        description={event.description || `Reservez vos billets pour ${event.title} sur D-Billet.`}
+        title={`${event.title} | D-BILLET`}
+        description={event.description || `Réservez vos billets officiels pour ${event.title} sur D-BILLET.`}
         path={canonicalPath}
         image={event.image_url || '/images/dbillet-logo.png'}
         type="event"
         structuredData={structuredData}
       />
-      {/* Hero Image */}
+
       <div className="relative h-[50vh] md:h-[60vh]">
         <img
           src={event.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?crop=entropy&cs=srgb&fm=jpg&q=85'}
           alt={event.title}
-          className="w-full h-full object-cover"
+          className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/50 to-transparent" />
-        
-        {/* Back Button */}
+
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-4 left-4 w-10 h-10 rounded-full glass flex items-center justify-center"
+          className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full glass"
           data-testid="back-btn"
         >
           <ArrowLeft size={20} />
         </button>
 
-        {/* Category Badge */}
         <div
-          className="absolute top-4 right-4 px-4 py-2 rounded-full font-bold uppercase tracking-wider text-sm"
-          style={{ backgroundColor: categoryColor, color: '#fff' }}
+          className="absolute right-4 top-4 rounded-full px-4 py-2 text-sm font-bold uppercase tracking-wider text-white"
+          style={{ backgroundColor: categoryColor }}
         >
-          {event.category}
+          {categoryLabel}
         </div>
 
-        {/* Low Stock Warning */}
         {event.low_stock && (
-          <div className="absolute bottom-4 right-4 px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold flex items-center gap-2 animate-pulse">
+          <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white animate-pulse">
             <AlertTriangle size={16} />
-            Plus que {event.low_stock_count} places!
+            Dernières places : plus que {event.low_stock_count} disponibles
           </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 -mt-20 relative z-10">
-        <div className="glass p-6 md:p-8 rounded-2xl space-y-6">
-          {/* Title */}
+      <div className="relative z-10 mx-auto -mt-20 max-w-4xl px-4">
+        <div className="glass space-y-6 rounded-2xl p-6 md:p-8">
           <div>
-            <h1 className="font-unbounded font-bold text-2xl md:text-3xl text-white mb-2" data-testid="event-title">
+            <h1 className="mb-2 font-unbounded text-2xl font-bold text-white md:text-3xl" data-testid="event-title">
               {event.title}
             </h1>
-            <div 
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm"
+            <div
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm"
               style={{ backgroundColor: `${categoryColor}20`, color: categoryColor }}
             >
               <Users size={16} />
-              <span>{event.available_tickets} places disponibles</span>
+              <span>{event.available_tickets} places encore disponibles</span>
             </div>
           </div>
 
-          {/* Details */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="glass p-4 rounded-xl">
-              <Calendar className="text-green-400 mb-2" size={20} />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="glass rounded-xl p-4">
+              <Calendar className="mb-2 text-green-400" size={20} />
               <p className="text-xs text-gray-400">Date</p>
               <p className="font-medium text-white">{formatDate(event.date)}</p>
             </div>
-            <div className="glass p-4 rounded-xl">
-              <Clock className="text-green-400 mb-2" size={20} />
+            <div className="glass rounded-xl p-4">
+              <Clock className="mb-2 text-green-400" size={20} />
               <p className="text-xs text-gray-400">Heure</p>
               <p className="font-medium text-white">{event.time}</p>
             </div>
-            <div className="glass p-4 rounded-xl">
-              <MapPin className="text-green-400 mb-2" size={20} />
+            <div className="glass rounded-xl p-4">
+              <MapPin className="mb-2 text-green-400" size={20} />
               <p className="text-xs text-gray-400">Lieu</p>
               <p className="font-medium text-white">{event.venue}</p>
             </div>
           </div>
 
-          {/* Description */}
           <div>
-            <h3 className="font-unbounded font-semibold text-lg text-white mb-3">Description</h3>
-            <p className="text-gray-300 leading-relaxed">{event.description}</p>
+            <h3 className="mb-3 font-unbounded text-lg font-semibold text-white">À propos de cet événement</h3>
+            <p className="leading-relaxed text-gray-300">{event.description}</p>
           </div>
 
-          {/* Ticket Types */}
           <div>
-            <h3 className="font-unbounded font-semibold text-lg text-white mb-4">Types de billets</h3>
+            <h3 className="mb-4 font-unbounded text-lg font-semibold text-white">Choisissez votre billet</h3>
             <div className="grid gap-3">
-              {event.ticket_types?.map((tt) => {
-                const available = tt.quantity - (tt.sold || 0);
-                const isSelected = selectedTicketType?.id === tt.id;
+              {event.ticket_types?.map((ticketType) => {
+                const available = ticketType.quantity - (ticketType.sold || 0);
+                const isSelected = selectedTicketType?.id === ticketType.id;
                 const isSoldOut = available <= 0;
-                const lowStock = available > 0 && available <= tt.quantity * 0.1;
-                
+                const lowStock = available > 0 && available <= ticketType.quantity * 0.1;
+
                 return (
                   <button
-                    key={tt.id}
-                    onClick={() => !isSoldOut && setSelectedTicketType(tt)}
+                    key={ticketType.id}
+                    onClick={() => !isSoldOut && setSelectedTicketType(ticketType)}
                     disabled={isSoldOut}
-                    className={`glass p-4 rounded-xl text-left transition-all ${
-                      isSelected 
-                        ? 'border-2 border-green-500 bg-green-500/10' 
-                        : isSoldOut 
-                          ? 'opacity-50 cursor-not-allowed' 
+                    className={`glass rounded-xl p-4 text-left transition-all ${
+                      isSelected
+                        ? 'border-2 border-green-500 bg-green-500/10'
+                        : isSoldOut
+                          ? 'cursor-not-allowed opacity-50'
                           : 'hover:border-white/30'
                     }`}
-                    data-testid={`ticket-type-${tt.id}`}
+                    data-testid={`ticket-type-${ticketType.id}`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-white">{tt.name}</h4>
-                          {tt.group_size > 1 && (
-                            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
-                              {tt.group_size} pers.
+                          <h4 className="font-semibold text-white">{ticketType.name}</h4>
+                          {ticketType.group_size > 1 && (
+                            <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-xs text-purple-400">
+                              Pack {ticketType.group_size} pers.
                             </span>
                           )}
                           {lowStock && (
-                            <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full animate-pulse">
-                              Plus que {available}!
+                            <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs text-red-400 animate-pulse">
+                              Dernières places
                             </span>
                           )}
                           {isSoldOut && (
-                            <span className="px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full">
+                            <span className="rounded-full bg-gray-500/20 px-2 py-0.5 text-xs text-gray-400">
                               Épuisé
                             </span>
                           )}
                         </div>
-                        {tt.description && (
-                          <p className="text-gray-400 text-sm mt-1">{tt.description}</p>
+                        {ticketType.description && (
+                          <p className="mt-1 text-sm text-gray-400">{ticketType.description}</p>
                         )}
-                        <p className="text-gray-500 text-xs mt-1">
-                          {available} / {tt.quantity} disponibles • Max {tt.max_per_order}/commande
+                        <p className="mt-1 text-xs text-gray-500">
+                          {available} / {ticketType.quantity} disponibles • Max {ticketType.max_per_order} par commande
                         </p>
                       </div>
-                      <div className="text-right ml-4">
-                        <p className="font-mono font-bold text-xl text-green-400">
-                          {formatPrice(tt.price)}
-                        </p>
-                        {tt.group_size > 1 && (
+                      <div className="ml-4 text-right">
+                        <p className="font-mono text-xl font-bold text-green-400">{formatPrice(ticketType.price)}</p>
+                        {ticketType.group_size > 1 && (
                           <p className="text-xs text-gray-500">
-                            soit {formatPrice(Math.round(tt.price / tt.group_size))}/pers.
+                            soit {formatPrice(Math.round(ticketType.price / ticketType.group_size))}/pers.
                           </p>
                         )}
                       </div>
-                      {isSelected && (
-                        <Check className="text-green-500 ml-3" size={24} />
-                      )}
+                      {isSelected && <Check className="ml-3 text-green-500" size={24} />}
                     </div>
                   </button>
                 );
@@ -379,79 +393,75 @@ const EventDetailPage = () => {
             </div>
           </div>
 
-          {/* Promo Code */}
-          <div className="glass p-4 rounded-xl">
-            <label className="text-sm text-gray-400 mb-2 block flex items-center gap-2">
+          <div className="glass rounded-xl p-4">
+            <label className="mb-2 flex items-center gap-2 text-sm text-gray-400">
               <Tag size={16} />
-              Code promo (optionnel)
+              Code avantage (optionnel)
             </label>
             <div className="flex gap-2">
               <Input
                 type="text"
                 value={promoCode}
                 onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                placeholder="Ex: DJIB20"
-                className="bg-white/5 border-white/10 text-white uppercase"
+                placeholder="Ex : DJIB20"
+                className="border-white/10 bg-white/5 uppercase text-white"
                 data-testid="promo-input"
               />
-              <Button 
-                onClick={validatePromoCode}
-                variant="outline"
-                className="border-green-500 text-green-400"
-              >
+              <Button onClick={validatePromoCode} variant="outline" className="border-green-500 text-green-400">
                 Appliquer
               </Button>
             </div>
             {promoValid && (
-              <p className="text-green-400 text-sm mt-2 flex items-center gap-1">
+              <p className="mt-2 flex items-center gap-1 text-sm text-green-400">
                 <Check size={14} />
-                {promoValid.discount_type === 'percentage' 
-                  ? `-${promoValid.discount_value}%` 
-                  : `-${promoValid.discount_value} DJF`} appliqué!
+                {promoValid.discount_type === 'percentage'
+                  ? `-${promoValid.discount_value}%`
+                  : `-${promoValid.discount_value} DJF`}{' '}
+                appliqué !
               </p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Fixed Bottom Bar */}
       {selectedTicketType && (
-        <div className="fixed bottom-24 left-0 right-0 glass border-t border-white/10 p-4 z-30">
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-            {/* Quantity Selector */}
+        <div className="fixed bottom-24 left-0 right-0 z-30 border-t border-white/10 glass p-4">
+          <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-10 h-10 rounded-full glass flex items-center justify-center hover:bg-white/10"
+                className="flex h-10 w-10 items-center justify-center rounded-full glass hover:bg-white/10"
                 disabled={quantity <= 1}
                 data-testid="decrease-qty"
               >
                 <Minus size={18} />
               </button>
-              <span className="font-mono font-bold text-xl w-8 text-center" data-testid="quantity">
+              <span className="w-8 text-center font-mono text-xl font-bold" data-testid="quantity">
                 {quantity}
               </span>
               <button
-                onClick={() => setQuantity(Math.min(selectedTicketType.max_per_order, selectedTicketType.quantity - (selectedTicketType.sold || 0), quantity + 1))}
-                className="w-10 h-10 rounded-full glass flex items-center justify-center hover:bg-white/10"
+                onClick={() =>
+                  setQuantity(
+                    Math.min(
+                      selectedTicketType.max_per_order,
+                      selectedTicketType.quantity - (selectedTicketType.sold || 0),
+                      quantity + 1
+                    )
+                  )
+                }
+                className="flex h-10 w-10 items-center justify-center rounded-full glass hover:bg-white/10"
                 data-testid="increase-qty"
               >
                 <Plus size={18} />
               </button>
             </div>
 
-            {/* Total */}
-            <div className="text-center hidden sm:block">
-              <p className="text-gray-400 text-xs">Total</p>
-              <p className="font-mono font-bold text-lg text-white">
-                {formatPrice(calculateTotal())}
-              </p>
-              {promoValid && (
-                <p className="text-green-400 text-xs">Promo appliquée</p>
-              )}
+            <div className="hidden text-center sm:block">
+              <p className="text-xs text-gray-400">Total</p>
+              <p className="font-mono text-lg font-bold text-white">{formatPrice(calculateTotal())}</p>
+              {promoValid && <p className="text-xs text-green-400">Offre appliquée</p>}
             </div>
 
-            {/* Actions */}
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -468,7 +478,7 @@ const EventDetailPage = () => {
                 size="lg"
                 onClick={handleBuyNow}
                 disabled={adding}
-                className="bg-green-500 hover:bg-green-600 text-black gap-2"
+                className="gap-2 bg-green-500 text-black hover:bg-green-600"
                 data-testid="buy-now-btn"
               >
                 <Ticket size={18} />

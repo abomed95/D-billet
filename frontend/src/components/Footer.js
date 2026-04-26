@@ -3,105 +3,97 @@ import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
-    <footer className="bg-[#0A0A0F] border-t border-white/5">
-      {/* Main Footer Content */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Brand Section */}
+    <footer className="border-t border-white/5 bg-[#0A0A0F]">
+      <div className="mx-auto max-w-7xl px-4 py-12">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <img 
-                src="/images/dbillet-icon.png" 
-                alt="D-Billet" 
-                className="w-10 h-10 rounded-lg object-cover"
-              />
+            <Link to="/" className="mb-4 flex items-center gap-2">
+              <img src="/images/dbillet-mark.svg" alt="D-Billet" className="h-10 w-10 object-contain" />
               <span className="font-unbounded text-xl font-bold text-gold">D-BILLET</span>
             </Link>
-            <p className="text-gray-400 text-sm mb-4">
-              La plateforme officielle de billetterie de Djibouti pour vos événements, train et ferry.
+            <p className="mb-4 text-sm leading-6 text-gray-400">
+              Réservez vos événements, vos trajets en train et vos traversées en ferry sur la plateforme officielle D-BILLET à Djibouti.
             </p>
             <div className="flex items-center gap-3">
-              <a 
-                href="https://facebook.com/dbillet" 
-                target="_blank" 
+              <a
+                href="https://facebook.com/dbillet"
+                target="_blank"
                 rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-gold/20 transition-colors"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 transition-colors hover:bg-gold/20"
               >
                 <Facebook size={18} className="text-gray-400 hover:text-gold" />
               </a>
-              <a 
-                href="https://instagram.com/dbillet" 
-                target="_blank" 
+              <a
+                href="https://instagram.com/dbillet"
+                target="_blank"
                 rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-gold/20 transition-colors"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 transition-colors hover:bg-gold/20"
               >
                 <Instagram size={18} className="text-gray-400 hover:text-gold" />
               </a>
             </div>
           </div>
 
-          {/* Quick Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Navigation</h3>
+            <h3 className="mb-4 font-semibold text-white">Navigation</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-gray-400 hover:text-gold transition-colors text-sm">
+                <Link to="/" className="text-sm text-gray-400 transition-colors hover:text-gold">
                   Accueil
                 </Link>
               </li>
               <li>
-                <Link to="/train" className="text-gray-400 hover:text-gold transition-colors text-sm flex items-center gap-2">
+                <Link to="/train" className="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-gold">
                   <Train size={14} /> Train
                 </Link>
               </li>
               <li>
-                <Link to="/ferry" className="text-gray-400 hover:text-gold transition-colors text-sm flex items-center gap-2">
+                <Link to="/ferry" className="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-gold">
                   <Ship size={14} /> Ferry
                 </Link>
               </li>
               <li>
-                <Link to="/my-tickets" className="text-gray-400 hover:text-gold transition-colors text-sm">
-                  Mes Billets
+                <Link to="/my-tickets" className="text-sm text-gray-400 transition-colors hover:text-gold">
+                  Mes billets
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Services */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Services</h3>
+            <h3 className="mb-4 font-semibold text-white">Services</h3>
             <ul className="space-y-2">
-              <li className="text-gray-400 text-sm">Billetterie Événements</li>
-              <li className="text-gray-400 text-sm">Réservation Train</li>
-              <li className="text-gray-400 text-sm">Réservation Ferry</li>
-              <li className="text-gray-400 text-sm">Billets PDF avec QR Code</li>
+              <li className="text-sm text-gray-400">Billetterie événementielle</li>
+              <li className="text-sm text-gray-400">Réservation train</li>
+              <li className="text-sm text-gray-400">Réservation ferry</li>
+              <li className="text-sm text-gray-400">Billet numérique avec QR code</li>
+              <li className="text-sm text-gray-400">Paiement local sécurisé</li>
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Contact</h3>
+            <h3 className="mb-4 font-semibold text-white">Contact</h3>
             <ul className="space-y-3">
               <li>
-                <a 
-                  href="tel:+25377694812" 
-                  className="text-gray-400 hover:text-gold transition-colors text-sm flex items-center gap-2"
+                <a
+                  href="tel:+25377694812"
+                  className="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-gold"
                 >
                   <Phone size={14} className="text-gold" />
                   +253 77 69 48 12
                 </a>
               </li>
               <li>
-                <a 
-                  href="mailto:contact@d-billet.com" 
-                  className="text-gray-400 hover:text-gold transition-colors text-sm flex items-center gap-2"
+                <a
+                  href="mailto:contact@d-billet.com"
+                  className="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-gold"
                 >
                   <Mail size={14} className="text-gold" />
                   contact@d-billet.com
                 </a>
               </li>
-              <li className="text-gray-400 text-sm flex items-start gap-2">
-                <MapPin size={14} className="text-gold mt-0.5" />
+              <li className="flex items-start gap-2 text-sm text-gray-400">
+                <MapPin size={14} className="mt-0.5 text-gold" />
                 <span>Djibouti-Ville, République de Djibouti</span>
               </li>
             </ul>
@@ -109,18 +101,17 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* Bottom Bar */}
       <div className="border-t border-white/5 py-6">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm text-center md:text-left">
-            © {new Date().getFullYear()} D-Billet. Tous droits réservés.
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 md:flex-row">
+          <p className="text-center text-sm text-gray-500 md:text-left">
+            © {new Date().getFullYear()} D-BILLET. Plateforme officielle de réservation à Djibouti.
           </p>
           <div className="flex items-center gap-6 text-sm">
-            <Link to="/terms" className="text-gray-500 hover:text-gold transition-colors">
+            <Link to="/terms" className="text-gray-500 transition-colors hover:text-gold">
               Conditions d'utilisation
             </Link>
-            <Link to="/legal/privacy" className="text-gray-500 hover:text-gold transition-colors">
-              Confidentialité
+            <Link to="/legal/privacy" className="text-gray-500 transition-colors hover:text-gold">
+              Politique de confidentialité
             </Link>
           </div>
         </div>

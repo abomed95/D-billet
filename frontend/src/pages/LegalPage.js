@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, FileText, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, FileText, Headphones, ShieldCheck } from 'lucide-react';
 import { Skeleton } from '../components/ui/skeleton';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
@@ -10,20 +10,51 @@ import { loadPrerenderLegalPage } from '../lib/prerender';
 const API = API_BASE;
 
 const LEGAL_PAGES = {
-  mentions: { title: 'Mentions Légales', icon: FileText, endpoint: '/legal/mentions' },
-  cgv: { title: 'Conditions Générales de Vente', icon: FileText, endpoint: '/legal/cgv' },
-  privacy: { title: 'Politique de Confidentialité', icon: FileText, endpoint: '/legal/privacy' },
-  support: { title: 'Support Client', icon: Phone, endpoint: '/legal/support' },
+  mentions: {
+    title: 'Mentions légales',
+    icon: FileText,
+    endpoint: '/legal/mentions',
+    eyebrow: 'INFORMATIONS LÉGALES',
+    description:
+      "Retrouvez les informations d'édition, de responsabilité et de contact liées à la plateforme officielle D-BILLET.",
+  },
+  cgv: {
+    title: 'Conditions générales de vente',
+    icon: FileText,
+    endpoint: '/legal/cgv',
+    eyebrow: 'VENTE ET RÉSERVATION',
+    description:
+      'Consultez les règles applicables aux commandes, aux tarifs, à la validation des paiements et à la délivrance des billets D-BILLET.',
+  },
+  privacy: {
+    title: 'Politique de confidentialité',
+    icon: ShieldCheck,
+    endpoint: '/legal/privacy',
+    eyebrow: 'DONNÉES PERSONNELLES',
+    description:
+      'Prenez connaissance de la manière dont D-BILLET collecte, utilise et protège les données nécessaires à vos réservations.',
+  },
+  support: {
+    title: 'Support client',
+    icon: Headphones,
+    endpoint: '/legal/support',
+    eyebrow: 'ACCOMPAGNEMENT',
+    description:
+      "Accédez aux informations de support pour vos billets, paiements, réservations et demandes d'assistance.",
+  },
 };
 
 const LegalPage = () => {
   const { page } = useParams();
+  const navigate = useNavigate();
   const [content, setContent] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const pageConfig = LEGAL_PAGES[page];
 
   const fetchContent = useCallback(async () => {
+    if (!pageConfig) return;
+
     setLoading(true);
     try {
       const legalData = isPrerender
@@ -39,17 +70,53 @@ const LegalPage = () => {
   }, [page, pageConfig]);
 
   useEffect(() => {
-    if (pageConfig) {
-      fetchContent();
+    fetchContent();
+  }, [fetchContent]);
+
+  const renderLine = (line, index) => {
+    if (line.startsWith('# ')) {
+      return (
+        <h1 key={index} className="mb-4 mt-8 font-unbounded text-2xl font-bold text-white first:mt-0">
+          {line.replace('# ', '')}
+        </h1>
+      );
     }
-  }, [fetchContent, pageConfig]);
+
+    if (line.startsWith('## ')) {
+      return (
+        <h2 key={index} className="mb-3 mt-8 font-unbounded text-xl font-semibold text-gold">
+          {line.replace('## ', '')}
+        </h2>
+      );
+    }
+
+    if (line.startsWith('- ')) {
+      return (
+        <li key={index} className="ml-5 list-disc text-gray-300">
+          {line.replace('- ', '')}
+        </li>
+      );
+    }
+
+    if (!line.trim()) {
+      return <div key={index} className="h-2" />;
+    }
+
+    return (
+      <p key={index} className="mb-2 leading-7 text-gray-300">
+        {line}
+      </p>
+    );
+  };
 
   if (!pageConfig) {
     return (
-      <div className="min-h-screen py-12 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="font-unbounded font-bold text-2xl text-white mb-4">Page non trouvée</h1>
-          <Link to="/" className="text-primary hover:underline">Retour à l'accueil</Link>
+      <div className="min-h-screen bg-[#050505] px-4 py-12">
+        <div className="mx-auto max-w-3xl text-center">
+          <h1 className="mb-4 font-unbounded text-2xl font-bold text-white">Page non trouvée</h1>
+          <Link to="/" className="text-gold hover:underline">
+            Retour à l'accueil
+          </Link>
         </div>
       </div>
     );
@@ -57,85 +124,80 @@ const LegalPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen py-12 px-4">
-        <div className="max-w-3xl mx-auto space-y-4">
-          <Skeleton className="h-10 w-64" />
+      <div className="min-h-screen bg-[#050505] px-4 py-12">
+        <div className="mx-auto max-w-4xl space-y-4">
+          <Skeleton className="h-10 w-72" />
           <Skeleton className="h-6 w-full" />
-          <Skeleton className="h-6 w-full" />
-          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-6 w-5/6" />
+          <Skeleton className="h-80 w-full" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-12 px-4">
+    <div className="min-h-screen bg-[#050505] px-4 py-8">
       <Seo
         title={content?.title || pageConfig.title}
-        description={`Informations legales D-Billet: ${content?.title || pageConfig.title}.`}
+        description={`D-BILLET - ${content?.title || pageConfig.title}.`}
         path={`/legal/${page}`}
       />
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <Link 
-            to="/" 
-            className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-4"
-          >
-            <ArrowLeft size={20} />
-            Retour
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-              <pageConfig.icon className="text-primary" size={24} />
+
+      <div className="mx-auto max-w-4xl">
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-8 flex items-center gap-2 text-gray-400 transition-colors hover:text-white"
+        >
+          <ArrowLeft size={20} />
+          Retour
+        </button>
+
+        <div className="mb-8 rounded-[32px] border border-white/10 bg-[#0B0B10] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)] md:p-8">
+          <div className="flex items-start gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/15">
+              <pageConfig.icon className="text-gold" size={24} />
             </div>
-            <h1 className="font-unbounded font-bold text-2xl md:text-3xl text-white">
-              {content?.title || pageConfig.title}
-            </h1>
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-gold">{pageConfig.eyebrow}</p>
+              <h1 className="mt-2 font-unbounded text-3xl text-white">{content?.title || pageConfig.title}</h1>
+              <p className="mt-4 max-w-2xl leading-7 text-gray-300">{pageConfig.description}</p>
+              {content?.last_updated && (
+                <p className="mt-3 text-sm text-gray-500">Dernière mise à jour : {content.last_updated}</p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="glass-card p-6 md:p-8">
-          <div className="prose prose-invert prose-lg max-w-none">
-            {content?.content && (
-              <div 
-                className="text-gray-300 leading-relaxed space-y-4"
-                style={{ whiteSpace: 'pre-wrap' }}
-              >
-                {content.content.split('\n').map((line, index) => {
-                  if (line.startsWith('# ')) {
-                    return <h1 key={index} className="font-unbounded font-bold text-2xl text-white mt-6 mb-4">{line.slice(2)}</h1>;
-                  }
-                  if (line.startsWith('## ')) {
-                    return <h2 key={index} className="font-unbounded font-semibold text-xl text-white mt-6 mb-3">{line.slice(3)}</h2>;
-                  }
-                  if (line.startsWith('**') && line.endsWith('**')) {
-                    return <p key={index} className="font-semibold text-white">{line.slice(2, -2)}</p>;
-                  }
-                  if (line.trim() === '') {
-                    return <br key={index} />;
-                  }
-                  return <p key={index} className="text-gray-300">{line}</p>;
-                })}
-              </div>
-            )}
-          </div>
+        <div className="glass rounded-[28px] p-6 md:p-8">
+          {(content?.content || '').split('\n').map((line, index) => renderLine(line, index))}
         </div>
 
-        {/* Footer Navigation */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Object.entries(LEGAL_PAGES).map(([key, config]) => (
-            <Link
-              key={key}
-              to={`/legal/${key}`}
-              className={`glass-card p-4 text-center transition-all hover:border-primary/30
-                ${page === key ? 'border-primary/50' : ''}`}
-            >
-              <config.icon className="mx-auto mb-2 text-gray-400" size={20} />
-              <span className="text-sm text-gray-300">{config.title}</span>
-            </Link>
-          ))}
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-gold">ASSISTANCE</p>
+            <h2 className="mt-2 font-unbounded text-lg text-white">Une question sur vos réservations ?</h2>
+            <p className="mt-3 text-sm leading-6 text-gray-400">
+              Notre équipe vous accompagne pour les billets, paiements, commandes et accès aux services D-BILLET.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-gold/15 bg-gold/10 p-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-gold">LIENS RAPIDES</p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {Object.entries(LEGAL_PAGES).map(([key, config]) => (
+                <Link
+                  key={key}
+                  to={`/legal/${key}`}
+                  className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                    page === key
+                      ? 'border-gold bg-black/20 text-white'
+                      : 'border-white/10 bg-white/[0.04] text-gray-200 hover:border-gold/30 hover:text-white'
+                  }`}
+                >
+                  {config.title}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

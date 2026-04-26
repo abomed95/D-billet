@@ -10,14 +10,20 @@ const outputDir = path.join(__dirname, "..", "public", "prerender-data");
 const DEFAULT_TESTIMONIALS = [
   {
     author: "Amina H.",
-    role: "Cliente D-Billet",
-    content: "J'ai reserve mon billet en quelques minutes et le QR code a fonctionne sans attente.",
+    role: "Cliente D-BILLET",
+    content: "J'ai reserve mon billet en quelques minutes et tout s'est deroule sans attente a l'entree.",
     rating: 5,
   },
   {
     author: "Moussa A.",
     role: "Voyageur ferry",
-    content: "La reservation en ligne m'a permis d'organiser mon depart pour Tadjoura plus facilement.",
+    content: "La reservation en ligne m'a permis d'organiser mon depart plus sereinement, avec mon billet deja pret.",
+    rating: 5,
+  },
+  {
+    author: "Noura S.",
+    role: "Participante evenement",
+    content: "Le paiement etait simple, les informations etaient claires et le QR code a ete recu immediatement.",
     rating: 5,
   },
 ];
@@ -34,50 +40,72 @@ const DEFAULT_NEWS = [
 const DEFAULT_TERMS = {
   title: "Conditions d'utilisation",
   content: `# Conditions d'utilisation
-## Objet
-D-Billet facilite la reservation de billets pour les evenements, le train et le ferry a Djibouti.
+## 1. Objet
+D-Billet est la plateforme officielle de reservation en ligne pour les evenements, le train et le ferry a Djibouti.
 
-## Reservation
-Une reservation est confirmee apres validation du paiement et emission d'un billet ou d'un QR code.
+## 2. Acces a la plateforme
+L'acces a certains services peut necessiter la creation d'un compte ou l'identification de l'utilisateur. L'utilisateur s'engage a fournir des informations exactes et a jour.
 
-## Contact
-Pour toute question, contactez contact@d-billet.com ou le +253 77 69 48 12.`,
+## 3. Reservation et disponibilite
+Les billets, places et traversees sont proposes sous reserve de disponibilite. Une reservation n'est consideree comme valide qu'apres confirmation du paiement et emission du billet.
+
+## 4. Paiement
+Le paiement s'effectue avec les moyens proposes sur la plateforme, notamment Waafi, D-Money et CAC Bank selon le service disponible.
+
+## 5. Billet numerique et QR code
+Chaque billet emis contient les informations essentielles de la reservation ainsi qu'un QR code unique. Le billet doit etre conserve et presente lors du controle ou de l'embarquement.
+
+## 6. Annulation, modification et remboursement
+Les conditions d'annulation, de modification ou de remboursement dependent du service reserve et des regles appliquees par l'organisateur ou l'operateur concerne.
+
+## 7. Support client
+Pour toute question relative a une reservation, un paiement ou un billet, contactez D-Billet a contact@d-billet.com ou au +253 77 69 48 12.`,
 };
 
 const DEFAULT_LEGAL_PAGES = {
   mentions: {
-    title: "Mentions legales",
-    content: `# Mentions legales
-## Editeur
-D-Billet opere une plateforme de billetterie et de reservation en ligne a Djibouti.
+    title: "Mentions légales",
+    content: `# Mentions légales
+## Éditeur
+D-Billet exploite une plateforme officielle de billetterie et de réservation en ligne à Djibouti.
 
 ## Contact
-Email: contact@d-billet.com
-Telephone: +253 77 69 48 12`,
+Email : contact@d-billet.com
+Téléphone : +253 77 69 48 12
+
+## Responsabilité
+D-Billet met en oeuvre les moyens raisonnables pour assurer la disponibilité du service et la fiabilité des informations publiées.`,
   },
   cgv: {
-    title: "Conditions generales de vente",
-    content: `# Conditions generales de vente
+    title: "Conditions générales de vente",
+    content: `# Conditions générales de vente
 ## Tarifs
-Les prix sont affiches avant confirmation de la commande.
+Les prix sont affichés avant confirmation de la commande.
 
 ## Confirmation
-Le billet est emis une fois le paiement valide.`,
+Le billet est émis une fois le paiement validé.
+
+## Contrôle
+Le billet et le justificatif d'identité peuvent être demandés lors du contrôle d'accès ou de l'embarquement.`,
   },
   privacy: {
-    title: "Politique de confidentialite",
-    content: `# Politique de confidentialite
-## Donnees
-Les donnees demandees servent a gerer la reservation, le billet et le support client.`,
+    title: "Politique de confidentialité",
+    content: `# Politique de confidentialité
+## Données collectées
+Les données demandées servent à gérer la réservation, le billet et le support client.
+
+## Finalités
+Les informations collectées permettent de confirmer la commande, sécuriser le paiement et assurer le suivi client.`,
   },
   support: {
     title: "Support client",
     content: `# Support client
 ## Assistance
-Le support D-Billet accompagne les clients pour les reservations, paiements et billets.
+Le support D-Billet accompagne les clients pour les réservations, paiements et billets.
 
-Email: contact@d-billet.com
-Telephone: +253 77 69 48 12`,
+## Coordonnées
+Email : contact@d-billet.com
+Téléphone : +253 77 69 48 12`,
   },
 };
 

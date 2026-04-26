@@ -120,9 +120,23 @@
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
-    .no-scrollbar {
+.no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
+    }
+
+    .input-date-gold::-webkit-calendar-picker-indicator {
+        filter: brightness(0) saturate(100%) invert(72%) sepia(58%) saturate(522%) hue-rotate(7deg) brightness(92%) contrast(88%);
+        opacity: 1;
+        cursor: pointer;
+    }
+
+    .input-date-gold::-webkit-datetime-edit,
+    .input-date-gold::-webkit-datetime-edit-text,
+    .input-date-gold::-webkit-datetime-edit-month-field,
+    .input-date-gold::-webkit-datetime-edit-day-field,
+    .input-date-gold::-webkit-datetime-edit-year-field {
+        color: #ffffff;
     }
 }
 

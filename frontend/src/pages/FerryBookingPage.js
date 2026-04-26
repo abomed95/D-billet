@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Ship, Calendar, Users, Plus, Minus, AlertCircle, CheckCircle, ArrowRight, User, Phone, CreditCard, Anchor, MapPin, X as XIcon, Car, Info, Baby } from 'lucide-react';
@@ -90,7 +90,7 @@ const FerryBookingPage = () => {
       }
     } catch (error) {
       console.error('Failed to fetch trips:', error);
-      toast.error('Erreur lors du chargement des trajets');
+      toast.error("Impossible de charger les traversées pour le moment");
     } finally {
       setLoading(false);
     }
@@ -163,18 +163,18 @@ const FerryBookingPage = () => {
     // Handle guest checkout
     if (!user && isGuestCheckout) {
       if (!guestPhone || !guestName) {
-        toast.error('Veuillez entrer votre nom et numero de telephone');
+        toast.error('Veuillez entrer votre nom et numéro de téléphone');
         return;
       }
       try {
         const guestData = await createGuestSession(guestPhone, guestName);
         authToken = guestData.token;
       } catch (error) {
-        toast.error('Erreur lors de la creation de session');
+        toast.error('Erreur lors de la création de session');
         return;
       }
     } else if (!user) {
-      toast.error('Veuillez vous connecter ou continuer en tant qu\'invite');
+      toast.error('Veuillez vous connecter ou continuer en tant qu\'invité');
       return;
     }
 
@@ -182,7 +182,7 @@ const FerryBookingPage = () => {
     for (let i = 0; i < passengers.length; i++) {
       const p = passengers[i];
       if (!p.full_name || !p.phone || !p.passport_or_cni) {
-        toast.error(`Veuillez remplir toutes les informations du passager ${i + 1}`);
+        toast.error(`Veuillez remplir toutes les informations du voyageur ${i + 1}`);
         return;
       }
     }
@@ -191,7 +191,7 @@ const FerryBookingPage = () => {
     for (let i = 0; i < vehicles.length; i++) {
       const v = vehicles[i];
       if (!v.vehicle_type || !v.plate_number) {
-        toast.error(`Veuillez remplir les informations du vehicule ${i + 1}`);
+        toast.error(`Veuillez remplir les informations du véhicule ${i + 1}`);
         return;
       }
     }
@@ -211,7 +211,7 @@ const FerryBookingPage = () => {
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
 
-      toast.success('Reservation confirmee!');
+      toast.success('Réservation confirmée !');
       
       if (response.data.tickets && response.data.tickets.length > 0) {
         navigate(`/ticket/${response.data.tickets[0].id}`);
@@ -220,7 +220,7 @@ const FerryBookingPage = () => {
       }
     } catch (error) {
       console.error('Booking failed:', error);
-      toast.error(error.response?.data?.detail || 'Erreur lors de la reservation');
+      toast.error(error.response?.data?.detail || 'Erreur lors de la réservation');
     } finally {
       setBooking(false);
     }
@@ -233,7 +233,7 @@ const FerryBookingPage = () => {
   };
 
   // Get unique destinations for the selected date
-  const getAvailableDestinations = () => {
+  const getAvailableDESTINATIONS = () => {
     const destinations = new Set();
     trips.forEach(trip => {
       if (trip.destination) destinations.add(trip.destination);
@@ -245,13 +245,13 @@ const FerryBookingPage = () => {
   return (
     <div className="min-h-screen bg-[#050505] py-8 px-4">
       <Seo
-        title="Reservation Ferry Djibouti"
-        description="Reservez votre ferry Djibouti, Tadjoura et Obock en ligne sur D-Billet. Horaires, tarifs et disponibilites."
+        title="Réservation Ferry Djibouti"
+        description="Réservez votre ferry Djibouti, Tadjoura et Obock en ligne sur la plateforme officielle D-Billet. Horaires, tarifs et disponibilités."
         path="/ferry"
         structuredData={{
           '@context': 'https://schema.org',
           '@type': 'Service',
-          name: 'Reservation Ferry D-Billet',
+          name: 'Réservation Ferry D-Billet',
           serviceType: 'Billetterie ferry',
           provider: {
             '@type': 'Organization',
@@ -272,9 +272,9 @@ const FerryBookingPage = () => {
             <Ship className="text-ferry" size={32} />
           </div>
           <h1 className="font-unbounded text-3xl font-bold text-white mb-2">
-            Reservation Ferry
+            Réservation Ferry
           </h1>
-          <p className="text-gray-400">Djibouti - Tadjoura - Obock</p>
+          <p className="text-gray-400">Service officiel de réservation ferry au départ de Djibouti</p>
         </div>
 
         {/* Price Info Banner */}
@@ -282,7 +282,7 @@ const FerryBookingPage = () => {
           <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <User size={16} className="text-ferry" />
-              <span className="text-white">Adulte: <strong className="text-ferry">{passengerPrice} FDJ</strong></span>
+              <span className="text-white">Voyageur adulte : <strong className="text-ferry">{passengerPrice} FDJ</strong></span>
             </div>
             <div className="flex items-center gap-2">
               <Baby size={16} className="text-green-400" />
@@ -293,15 +293,15 @@ const FerryBookingPage = () => {
 
         {/* Date Selection */}
         <div className="glass p-6 rounded-2xl mb-6">
-          <Label className="text-white mb-2 block">Selectionnez une date</Label>
+          <Label className="text-white mb-2 block">Choisissez votre date de traversée</Label>
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={20} />
             <Input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               min={getMinDate()}
-              className="pl-10 bg-white/5 border-white/10 text-white"
+              className="input-date-gold pl-10 bg-white/5 border-white/10 text-white"
               data-testid="ferry-date-input"
             />
           </div>
@@ -317,7 +317,7 @@ const FerryBookingPage = () => {
               <div className="flex items-center gap-3">
                 <AlertCircle className="text-red-400" size={24} />
                 <div>
-                  <p className="text-red-400 font-semibold">Pas de service</p>
+                  <p className="text-red-400 font-semibold">Traversée indisponible</p>
                   <p className="text-red-300 text-sm">{tripInfo.message}</p>
                 </div>
               </div>
@@ -326,18 +326,18 @@ const FerryBookingPage = () => {
                 <div className="flex items-center gap-3 mb-2">
                   <CheckCircle className="text-ferry" size={24} />
                   <div>
-                    <p className="text-ferry font-semibold">{tripInfo.day} - Service disponible</p>
+                    <p className="text-ferry font-semibold">{tripInfo.day} - Traversée disponible</p>
                   </div>
                 </div>
                 {tripInfo.capacity && (
                   <div className="flex flex-wrap gap-4 mt-3 text-sm">
                     <div className="flex items-center gap-2">
                       <Users size={16} className="text-white" />
-                      <span className="text-gray-300">Places passagers: <strong className="text-white">{tripInfo.capacity.passengers_remaining}</strong>/{tripInfo.capacity.max_passengers}</span>
+                      <span className="text-gray-300">Places passagers : <strong className="text-white">{tripInfo.capacity.passengers_remaining}</strong>/{tripInfo.capacity.max_passengers}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Car size={16} className="text-white" />
-                      <span className="text-gray-300">Places vehicules: <strong className="text-white">{tripInfo.capacity.vehicles_remaining}</strong>/{tripInfo.capacity.max_vehicles}</span>
+                      <span className="text-gray-300">Places véhicules : <strong className="text-white">{tripInfo.capacity.vehicles_remaining}</strong>/{tripInfo.capacity.max_vehicles}</span>
                     </div>
                   </div>
                 )}
@@ -350,11 +350,11 @@ const FerryBookingPage = () => {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin w-8 h-8 border-2 border-ferry border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-400">Chargement des trajets...</p>
+            <p className="text-gray-400">Chargement des traversées disponibles...</p>
           </div>
         ) : trips.length > 0 ? (
           <div className="space-y-4 mb-8">
-            <h2 className="font-unbounded text-xl text-white">Trajets disponibles</h2>
+            <h2 className="font-unbounded text-xl text-white">Traversées disponibles</h2>
             {trips.map((trip, index) => (
               <div
                 key={index}
@@ -383,7 +383,7 @@ const FerryBookingPage = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-ferry font-mono font-bold text-xl">{trip.price} FDJ</p>
-                    <p className="text-gray-400 text-sm">par adulte</p>
+                    <p className="text-gray-400 text-sm">tarif par adulte</p>
                   </div>
                 </div>
               </div>
@@ -391,7 +391,7 @@ const FerryBookingPage = () => {
           </div>
         ) : selectedDate && tripInfo?.has_service ? (
           <div className="text-center py-12 glass rounded-xl">
-            <p className="text-gray-400">Aucun trajet disponible pour cette date</p>
+            <p className="text-gray-400">Aucune traversée n'est disponible pour cette date.</p>
           </div>
         ) : null}
 
@@ -404,8 +404,8 @@ const FerryBookingPage = () => {
                 <div className="flex items-start gap-3">
                   <Info className="text-yellow-400 mt-1" size={20} />
                   <div className="flex-1">
-                    <p className="text-white font-semibold mb-2">Acheter sans compte</p>
-                    <p className="text-gray-400 text-sm mb-4">Entrez vos coordonnees pour recevoir votre billet</p>
+                    <p className="text-white font-semibold mb-2">Continuer sans compte</p>
+                    <p className="text-gray-400 text-sm mb-4">Renseignez vos coordonnées pour recevoir votre billet numérique en toute simplicité.</p>
                     
                     <div className="flex items-center gap-3 mb-4">
                       <Button
@@ -414,7 +414,7 @@ const FerryBookingPage = () => {
                         className={isGuestCheckout ? "bg-ferry text-black" : "border-white/20 text-white"}
                         size="sm"
                       >
-                        Continuer en invite
+                        Continuer en invité
                       </Button>
                       <Button
                         variant={!isGuestCheckout ? "default" : "outline"}
@@ -438,7 +438,7 @@ const FerryBookingPage = () => {
                           />
                         </div>
                         <div>
-                          <Label className="text-gray-400 mb-1 block">Votre telephone</Label>
+                          <Label className="text-gray-400 mb-1 block">Votre téléphone</Label>
                           <Input
                             value={guestPhone}
                             onChange={(e) => setGuestPhone(e.target.value)}
@@ -457,7 +457,7 @@ const FerryBookingPage = () => {
             <div className="flex items-center justify-between">
               <h2 className="font-unbounded text-xl text-white flex items-center gap-2">
                 <Users size={24} />
-                Passagers ({passengers.length})
+                Voyageurs ({passengers.length})
               </h2>
               <Button
                 variant="outline"
@@ -473,7 +473,7 @@ const FerryBookingPage = () => {
             {passengers.map((passenger, index) => (
               <div key={index} className="glass p-5 rounded-xl">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-white font-semibold">Passager {index + 1}</span>
+                  <span className="text-white font-semibold">Voyageur {index + 1}</span>
                   {passengers.length > 1 && (
                     <Button
                       variant="ghost"
@@ -502,7 +502,7 @@ const FerryBookingPage = () => {
                   <div>
                     <Label className="text-gray-400 mb-1 block">
                       <Phone size={14} className="inline mr-1" />
-                      Telephone
+                      Téléphone
                     </Label>
                     <Input
                       value={passenger.phone}
@@ -514,19 +514,19 @@ const FerryBookingPage = () => {
                   <div>
                     <Label className="text-gray-400 mb-1 block">
                       <CreditCard size={14} className="inline mr-1" />
-                      Passeport / CNI
+                      Pièce d'identité
                     </Label>
                     <Input
                       value={passenger.passport_or_cni}
                       onChange={(e) => updatePassenger(index, 'passport_or_cni', e.target.value)}
-                      placeholder="Numero de document"
+                      placeholder="Numéro de document"
                       className="bg-white/5 border-white/10 text-white"
                     />
                   </div>
                   <div>
                     <Label className="text-gray-400 mb-1 block">
                       <Baby size={14} className="inline mr-1" />
-                      Age (optionnel)
+                      Âge (optionnel)
                     </Label>
                     <Input
                       type="number"
@@ -538,7 +538,7 @@ const FerryBookingPage = () => {
                       className="bg-white/5 border-white/10 text-white"
                     />
                     {passenger.age && passenger.age < childFreeAge && (
-                      <p className="text-green-400 text-xs mt-1">Gratuit (enfant)</p>
+                      <p className="text-green-400 text-xs mt-1">Billet offert (enfant)</p>
                     )}
                   </div>
                 </div>
@@ -549,7 +549,7 @@ const FerryBookingPage = () => {
             <div className="flex items-center justify-between">
               <h2 className="font-unbounded text-xl text-white flex items-center gap-2">
                 <Car size={24} />
-                Vehicules ({vehicles.length})
+                Véhicules ({vehicles.length})
               </h2>
               <Button
                 variant="outline"
@@ -557,21 +557,21 @@ const FerryBookingPage = () => {
                 onClick={addVehicle}
                 className="border-ferry text-ferry hover:bg-ferry/20"
               >
-                <Plus size={16} className="mr-1" /> Ajouter un vehicule
+                <Plus size={16} className="mr-1" /> Ajouter un véhicule
               </Button>
             </div>
 
             {vehicles.length === 0 ? (
               <div className="glass p-4 rounded-xl text-center text-gray-400">
                 <Car size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Pas de vehicule ajoute</p>
-                <p className="text-xs text-gray-500">Cliquez sur "Ajouter un vehicule" si vous voyagez avec un vehicule</p>
+                <p className="text-sm">Aucun véhicule ajouté</p>
+                <p className="text-xs text-gray-500">Ajoutez un véhicule uniquement si vous voyagez avec un véhicule à bord.</p>
               </div>
             ) : (
               vehicles.map((vehicle, index) => (
                 <div key={index} className="glass p-5 rounded-xl">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-white font-semibold">Vehicule {index + 1}</span>
+                    <span className="text-white font-semibold">Véhicule {index + 1}</span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -584,16 +584,16 @@ const FerryBookingPage = () => {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-gray-400 mb-1 block">Type de vehicule</Label>
+                      <Label className="text-gray-400 mb-1 block">Type de véhicule</Label>
                       <select
                         value={vehicle.vehicle_type}
                         onChange={(e) => updateVehicle(index, 'vehicle_type', e.target.value)}
                         className="w-full bg-white/5 border border-white/10 text-white rounded-md p-2"
                       >
-                        <option value="">Selectionnez un type</option>
+                        <option value="">Sélectionnez un type</option>
                         {vehicleTypes.map((vt) => (
                           <option key={vt.type} value={vt.type}>
-                            {vt.name} {vt.price > 0 ? `- ${vt.price} FDJ` : '(Prix a confirmer)'}
+                            {vt.name} {vt.price > 0 ? `- ${vt.price} FDJ` : '(Tarif à confirmer)'}
                           </option>
                         ))}
                       </select>
@@ -614,7 +614,7 @@ const FerryBookingPage = () => {
 
             {/* Payment Method */}
             <div className="glass p-5 rounded-xl">
-              <h3 className="text-white font-semibold mb-4">Mode de paiement</h3>
+              <h3 className="text-white font-semibold mb-4">Sélectionnez votre moyen de paiement</h3>
               <div className="grid grid-cols-3 gap-3">
                 {[
                   { id: 'waafi', name: 'Waafi', logo: '/images/waafi-logo.png' },
@@ -643,7 +643,7 @@ const FerryBookingPage = () => {
             <div className="glass p-5 rounded-xl">
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-gray-400">
-                  <span>Passagers ({passengers.filter(p => !p.age || p.age >= childFreeAge).length} adultes)</span>
+                  <span>Voyageurs ({passengers.filter(p => !p.age || p.age >= childFreeAge).length} adultes)</span>
                   <span>{calculatePassengerTotal()} FDJ</span>
                 </div>
                 {passengers.some(p => p.age && p.age < childFreeAge) && (
@@ -654,7 +654,7 @@ const FerryBookingPage = () => {
                 )}
                 {vehicles.length > 0 && (
                   <div className="flex justify-between text-gray-400">
-                    <span>Vehicules ({vehicles.length})</span>
+                    <span>Véhicules ({vehicles.length})</span>
                     <span>{calculateVehicleTotal()} FDJ</span>
                   </div>
                 )}
@@ -672,12 +672,12 @@ const FerryBookingPage = () => {
                 {booking ? (
                   <span className="flex items-center gap-2">
                     <div className="animate-spin w-5 h-5 border-2 border-black border-t-transparent rounded-full"></div>
-                    Reservation en cours...
+                    Réservation en cours...
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
                     <Anchor size={20} />
-                    Confirmer la reservation
+                    Valider ma réservation
                   </span>
                 )}
               </Button>
@@ -692,8 +692,8 @@ const FerryBookingPage = () => {
               <Calendar className="text-ferry" size={20} />
             </div>
             <div>
-              <h3 className="text-ferry font-semibold text-lg">Planning Hebdomadaire</h3>
-              <p className="text-gray-500 text-sm">Horaires et destinations du ferry</p>
+              <h3 className="text-ferry font-semibold text-lg">Planning hebdomadaire</h3>
+              <p className="text-gray-500 text-sm">Horaires officiels et destinations disponibles</p>
             </div>
           </div>
           
@@ -708,7 +708,7 @@ const FerryBookingPage = () => {
                   <tr className="border-b border-white/10">
                     <th className="text-left py-2 text-gray-400">Jour</th>
                     <th className="text-left py-2 text-gray-400">Destination</th>
-                    <th className="text-center py-2 text-gray-400">Depart</th>
+                    <th className="text-center py-2 text-gray-400">Départ</th>
                     <th className="text-center py-2 text-gray-400">Retour</th>
                   </tr>
                 </thead>
@@ -739,7 +739,7 @@ const FerryBookingPage = () => {
                             <span className="text-ferry">{day.destination}</span>
                           ) : (
                             <span className="text-red-400 flex items-center gap-1">
-                              <XIcon size={14} /> Ferme
+                              <XIcon size={14} /> Fermé
                             </span>
                           )}
                         </td>
@@ -759,51 +759,51 @@ const FerryBookingPage = () => {
           
           {/* Rules */}
           <div className="mt-4 pt-4 border-t border-white/10 text-xs text-gray-500 space-y-1">
-            <p>- Presentez-vous <strong>1 heure avant le depart</strong> a l'escale</p>
-            <p>- Les tickets ne sont <strong>ni remboursables ni echangeables</strong></p>
-            <p>- Enfants de moins de {childFreeAge} ans: <strong className="text-green-400">Gratuit</strong> (accompagnes d'un adulte)</p>
+            <p>- Présentez-vous <strong>1 heure avant le départ</strong> à l'escale</p>
+            <p>- Les tickets ne sont <strong>ni remboursables ni échangeables</strong></p>
+            <p>- Enfants de moins de {childFreeAge} ans : <strong className="text-green-400">Gratuit</strong> (accompagnés d'un adulte)</p>
           </div>
         </div>
 
         <section className="mt-8 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
           <div className="glass p-6 rounded-2xl">
-            <h2 className="font-unbounded text-2xl text-white mb-4">Ferry Djibouti, Tadjoura et Obock</h2>
+            <h2 className="font-unbounded text-2xl text-white mb-4">Voyagez en ferry avec D-BILLET</h2>
             <div className="space-y-4 text-gray-300 leading-7">
               <p>
-                Cette page rassemble les informations utiles pour reserver un billet ferry au depart de
-                Djibouti, consulter le planning hebdomadaire et preparer le voyage vers Tadjoura ou Obock.
+                D-BILLET rassemble les informations essentielles pour réserver votre billet ferry au départ de
+                Djibouti, consulter le planning hebdomadaire et préparer votre traversée vers Tadjoura ou Obock.
               </p>
               <p>
-                Le service affiche les horaires, la capacite passagers, les vehicules acceptes et le tarif
-                adulte avant la validation. Les familles peuvent aussi verifier la regle de gratuit pour
-                les enfants en dessous de l&apos;age defini.
+                Le service affiche les horaires, les capacités passagers, les véhicules acceptés et les tarifs
+                avant validation, afin de réserver dans un cadre clair, fiable et adapté aux familles.
+                
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
             <div className="glass p-5 rounded-2xl">
-              <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">Destinations</p>
-              <h3 className="font-unbounded text-white text-lg mb-2">Routes hebdomadaires</h3>
+              <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">DESTINATIONS</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Rotations hebdomadaires</h3>
               <p className="text-gray-400 text-sm leading-6">
-                Le planning permet d&apos;identifier rapidement les jours de service et les rotations
+                Le planning vous permet d'identifier rapidement les jours de service et les rotations
                 disponibles selon la destination choisie.
               </p>
             </div>
             <div className="glass p-5 rounded-2xl">
-              <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">Reservation</p>
-              <h3 className="font-unbounded text-white text-lg mb-2">Passagers et vehicules</h3>
+              <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">RÉSERVATION</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Passagers et véhicules</h3>
               <p className="text-gray-400 text-sm leading-6">
-                La reservation peut inclure les passagers, les vehicules et les informations d&apos;identite
-                utiles pour le controle avant l&apos;embarquement.
+                La réservation peut inclure les passagers, les véhicules et les informations d'identité
+                utiles au contrôle avant l'embarquement.
               </p>
             </div>
             <div className="glass p-5 rounded-2xl">
-              <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">Depart</p>
-              <h3 className="font-unbounded text-white text-lg mb-2">Arrivee a l&apos;escale</h3>
+              <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">EMBARQUEMENT</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Arrivée à l'escale</h3>
               <p className="text-gray-400 text-sm leading-6">
-                Les voyageurs sont invites a se presenter en avance avec leur billet numerique afin de
-                faciliter l&apos;acces a bord.
+                Les voyageurs sont invités à se présenter en avance avec leur billet numérique afin de
+                faciliter l'accès à bord.
               </p>
             </div>
           </div>
@@ -811,7 +811,7 @@ const FerryBookingPage = () => {
 
         {/* Contact Info */}
         <div className="mt-6 text-center text-gray-500 text-sm">
-          <p>Besoin d'aide? Contactez-nous:</p>
+          <p>Notre équipe vous accompagne pour vos traversées et réservations :</p>
           <p className="text-ferry font-medium">+253 77 69 48 12 | contact@d-billet.com</p>
         </div>
       </div>
@@ -820,3 +820,4 @@ const FerryBookingPage = () => {
 };
 
 export default FerryBookingPage;
+

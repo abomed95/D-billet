@@ -52,7 +52,7 @@ const ProtectedRoute = ({ children, adminOnly = false, organizerOnly = false }) 
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
         <div className="text-center">
-          <div className="font-unbounded font-bold text-3xl bg-gradient-to-r from-gold to-yellow-300 bg-clip-text text-transparent mb-2">D-BILLEH</div>
+          <div className="font-unbounded font-bold text-3xl bg-gradient-to-r from-gold to-yellow-300 bg-clip-text text-transparent mb-2">D-BILLET</div>
           <div className="animate-pulse text-gray-400">Chargement...</div>
         </div>
       </div>

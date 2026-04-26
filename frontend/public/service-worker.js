@@ -1,9 +1,10 @@
-const CACHE_NAME = 'dbillet-cache-v2';
+const CACHE_NAME = 'dbillet-cache-v3';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/images/dbilleh-logo.png',
-  '/images/dbilleh-icon.png',
+  '/images/dbillet-logo.png',
+  '/images/dbillet-icon.png',
+  '/images/dbillet-mark.svg',
   '/manifest.json'
 ];
 
@@ -12,11 +13,11 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('D-BILLEH: Cache opened');
+        console.log('D-BILLET: Cache opened');
         return cache.addAll(urlsToCache);
       })
       .catch((err) => {
-        console.log('D-BILLEH: Cache failed', err);
+        console.log('D-BILLET: Cache failed', err);
       })
   );
   self.skipWaiting();
@@ -52,7 +53,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('D-BILLEH: Deleting old cache', cacheName);
+            console.log('D-BILLET: Deleting old cache', cacheName);
             return caches.delete(cacheName);
           }
         })

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { Home, Ticket, ShoppingCart, User, Train, Ship, LogOut, X } from 'lucide-react';
+import { Home, Ticket, User, Train, Ship, LogOut } from 'lucide-react';
 import Footer from '../components/Footer';
 
 const MainLayout = () => {
@@ -16,7 +16,6 @@ const MainLayout = () => {
     { path: '/', icon: Home, label: 'Accueil' },
     { path: '/train', icon: Train, label: 'Train' },
     { path: '/ferry', icon: Ship, label: 'Ferry' },
-    { path: '/auth', icon: User, label: 'Connexion', hideIfAuth: true },
   ];
 
   const handleLogout = () => {
@@ -93,16 +92,14 @@ const MainLayout = () => {
       )}
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-4 left-4 right-4 h-16 bg-black/80 backdrop-blur-lg border border-gold/20 rounded-full flex items-center justify-around z-50 shadow-2xl">
+      <nav className="fixed bottom-4 left-1/2 z-50 grid h-16 w-[min(92vw,720px)] -translate-x-1/2 grid-cols-4 items-center rounded-full border border-gold/20 bg-black/80 px-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         {navItems.map((item) => {
-          // Hide login link if user is authenticated
-          if (item.hideIfAuth && user) return null;
           const isActive = location.pathname === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`relative flex flex-col items-center justify-center w-14 h-full transition-all
+              className={`relative flex h-full flex-col items-center justify-center rounded-full transition-all
                 ${isActive ? 'text-gold' : 'text-gray-500 hover:text-white'}`}
               data-testid={`nav-${item.label.toLowerCase()}`}
             >
@@ -131,12 +128,12 @@ const MainLayout = () => {
         ) : (
           <Link
             to="/auth"
-            className={`flex flex-col items-center justify-center w-14 h-full transition-all
+            className={`flex h-full flex-col items-center justify-center rounded-full transition-all
               ${location.pathname === '/auth' ? 'text-gold' : 'text-gray-500 hover:text-white'}`}
             data-testid="nav-login"
           >
             <User size={22} />
-            <span className="text-[10px] mt-1">Connexion</span>
+            <span className="text-[10px] mt-1">Compte</span>
           </Link>
         )}
       </nav>

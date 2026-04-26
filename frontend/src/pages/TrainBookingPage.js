@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Train, Calendar, Users, Plus, Minus, AlertCircle, CheckCircle, ArrowRight, User, Phone, CreditCard } from 'lucide-react';
@@ -46,7 +46,7 @@ const TrainBookingPage = () => {
       setSelectedTrip(null);
     } catch (error) {
       console.error('Failed to fetch trips:', error);
-      toast.error('Erreur lors du chargement des trajets');
+      toast.error("Impossible de charger les départs pour le moment");
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ const TrainBookingPage = () => {
     for (let i = 0; i < passengers.length; i++) {
       const p = passengers[i];
       if (!p.full_name || !p.phone || !p.passport_or_cni) {
-        toast.error(`Veuillez remplir toutes les informations du passager ${i + 1}`);
+        toast.error(`Veuillez remplir toutes les informations du voyageur ${i + 1}`);
         return;
       }
     }
@@ -111,7 +111,7 @@ const TrainBookingPage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast.success('Réservation confirmée!');
+      toast.success('Réservation confirmée !');
       
       // Navigate to first ticket
       if (response.data.tickets && response.data.tickets.length > 0) {
@@ -130,13 +130,13 @@ const TrainBookingPage = () => {
   return (
     <div className="min-h-screen bg-[#050505] py-8 px-4">
       <Seo
-        title="Reservation Train Djibouti"
-        description="Consultez les trajets ferroviaires et reservez votre billet de train depuis Djibouti sur D-Billet."
+        title="Réservation Train Djibouti"
+        description="Consultez les trajets ferroviaires et réservez votre billet de train depuis Djibouti sur la plateforme officielle D-Billet."
         path="/train"
         structuredData={{
           '@context': 'https://schema.org',
           '@type': 'Service',
-          name: 'Reservation Train D-Billet',
+          name: 'Réservation Train D-Billet',
           serviceType: 'Billetterie train',
           provider: {
             '@type': 'Organization',
@@ -159,20 +159,20 @@ const TrainBookingPage = () => {
           <h1 className="font-unbounded text-3xl font-bold text-white mb-2">
             Réservation Train
           </h1>
-          <p className="text-gray-400">Djibouti - Éthiopie</p>
+          <p className="text-gray-400">Service officiel de réservation train au départ de Djibouti</p>
         </div>
 
         {/* Date Selection */}
         <div className="glass p-6 rounded-2xl mb-6">
-          <Label className="text-white mb-2 block">Sélectionnez une date</Label>
+          <Label className="text-white mb-2 block">Sélectionnez votre date de voyage</Label>
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={20} />
             <Input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               min={getMinDate()}
-              className="pl-10 bg-white/5 border-white/10 text-white"
+              className="input-date-gold pl-10 bg-white/5 border-white/10 text-white"
               data-testid="train-date-input"
             />
           </div>
@@ -185,7 +185,7 @@ const TrainBookingPage = () => {
               <div className="flex items-center gap-3">
                 <AlertCircle className="text-red-400" size={24} />
                 <div>
-                  <p className="text-red-400 font-semibold">Jour férié</p>
+                  <p className="text-red-400 font-semibold">Service indisponible</p>
                   <p className="text-red-300 text-sm">{tripInfo.message}</p>
                 </div>
               </div>
@@ -193,9 +193,9 @@ const TrainBookingPage = () => {
               <div className="flex items-center gap-3">
                 <CheckCircle className="text-train" size={24} />
                 <div>
-                  <p className="text-train font-semibold">Direction: {tripInfo.direction}</p>
+                  <p className="text-train font-semibold">Direction du jour : {tripInfo.direction}</p>
                   <p className="text-yellow-200 text-sm">
-                    {tripInfo.is_even_day ? "Jour pair - Départs de Nagad" : "Jour impair - Départs d'Ali-Sabieh"}
+                    {tripInfo.is_even_day ? "Jour pair - départs au départ de Nagad" : "Jour impair - départs au départ d'Ali-Sabieh"}
                   </p>
                 </div>
               </div>
@@ -207,11 +207,11 @@ const TrainBookingPage = () => {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin w-8 h-8 border-2 border-train border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-400">Chargement des trajets...</p>
+            <p className="text-gray-400">Chargement des départs disponibles...</p>
           </div>
         ) : trips.length > 0 ? (
           <div className="space-y-4 mb-8">
-            <h2 className="font-unbounded text-xl text-white">Trajets disponibles</h2>
+            <h2 className="font-unbounded text-xl text-white">Départs disponibles</h2>
             {trips.map((trip, index) => (
               <div
                 key={index}
@@ -236,7 +236,7 @@ const TrainBookingPage = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-train font-mono font-bold text-xl">{trip.price} DJF</p>
-                    <p className="text-gray-400 text-sm">par personne</p>
+                    <p className="text-gray-400 text-sm">tarif par voyageur</p>
                   </div>
                 </div>
               </div>
@@ -244,7 +244,7 @@ const TrainBookingPage = () => {
           </div>
         ) : selectedDate && !tripInfo?.is_holiday ? (
           <div className="text-center py-12 glass rounded-xl">
-            <p className="text-gray-400">Aucun trajet disponible pour cette date</p>
+            <p className="text-gray-400">Aucun départ n'est disponible pour cette date.</p>
           </div>
         ) : null}
 
@@ -254,7 +254,7 @@ const TrainBookingPage = () => {
             <div className="flex items-center justify-between">
               <h2 className="font-unbounded text-xl text-white flex items-center gap-2">
                 <Users size={24} />
-                Passagers ({passengers.length})
+                Voyageurs ({passengers.length})
               </h2>
               <Button
                 variant="outline"
@@ -270,7 +270,7 @@ const TrainBookingPage = () => {
             {passengers.map((passenger, index) => (
               <div key={index} className="glass p-5 rounded-xl">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-white font-semibold">Passager {index + 1}</span>
+                  <span className="text-white font-semibold">Voyageur {index + 1}</span>
                   {passengers.length > 1 && (
                     <Button
                       variant="ghost"
@@ -313,7 +313,7 @@ const TrainBookingPage = () => {
                   <div>
                     <Label className="text-gray-400 mb-1 block">
                       <CreditCard size={14} className="inline mr-1" />
-                      Passeport / CNI
+                      Pièce d'identité
                     </Label>
                     <Input
                       value={passenger.passport_or_cni}
@@ -329,7 +329,7 @@ const TrainBookingPage = () => {
 
             {/* Payment Method */}
             <div className="glass p-5 rounded-xl">
-              <h3 className="text-white font-semibold mb-4">Mode de paiement</h3>
+              <h3 className="text-white font-semibold mb-4">Sélectionnez votre moyen de paiement</h3>
               <div className="grid grid-cols-3 gap-3">
                 {[
                   { id: 'waafi', name: 'Waafi', logo: '/images/waafi-logo.png' },
@@ -360,7 +360,7 @@ const TrainBookingPage = () => {
             {/* Total & Book Button */}
             <div className="glass p-5 rounded-xl">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-gray-400">Total ({passengers.length} passager{passengers.length > 1 ? 's' : ''})</span>
+                <span className="text-gray-400">Total ({passengers.length} voyageur{passengers.length > 1 ? 's' : ''})</span>
                 <span className="text-train font-mono font-bold text-2xl">{calculateTotal()} DJF</span>
               </div>
               <Button
@@ -377,7 +377,7 @@ const TrainBookingPage = () => {
                 ) : (
                   <span className="flex items-center gap-2">
                     <Train size={20} />
-                    Confirmer la réservation
+                    Valider ma réservation
                   </span>
                 )}
               </Button>
@@ -387,54 +387,54 @@ const TrainBookingPage = () => {
 
         {/* Info Box */}
         <div className="mt-8 glass p-5 rounded-xl border border-train/30">
-          <h3 className="text-train font-semibold mb-3">Informations importantes</h3>
+          <h3 className="text-train font-semibold mb-3">Avant votre départ</h3>
           <ul className="text-gray-400 text-sm space-y-2">
-            <li>• <strong className="text-white">Jours pairs:</strong> Départs de Nagad vers l'Est (Holl-Holl, Ali-Sabieh, Dire-Dawa)</li>
-            <li>• <strong className="text-white">Jours impairs:</strong> Départs d'Ali-Sabieh vers l'Ouest (Holl-Holl, Nagad)</li>
-            <li>• <strong className="text-white">1er du mois:</strong> Jour férié - Pas de service</li>
-            <li>• Présentez votre billet avec QR code et votre pièce d'identité à l'embarquement</li>
+            <li>• <strong className="text-white">Jours pairs :</strong> départs de Nagad vers l'Est (Holl-Holl, Ali-Sabieh, Dire-Dawa)</li>
+            <li>• <strong className="text-white">Jours impairs :</strong> départs d'Ali-Sabieh vers l'Ouest (Holl-Holl, Nagad)</li>
+            <li>• <strong className="text-white">1er du mois :</strong> jour férié, service indisponible</li>
+            <li>• Présentez votre billet avec QR code et votre pièce d'identité lors de l'embarquement</li>
           </ul>
         </div>
 
         <section className="mt-8 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
           <div className="glass p-6 rounded-2xl">
-            <h2 className="font-unbounded text-2xl text-white mb-4">Voyager en train depuis Djibouti</h2>
+            <h2 className="font-unbounded text-2xl text-white mb-4">Voyagez en train avec D-BILLET</h2>
             <div className="space-y-4 text-gray-300 leading-7">
               <p>
-                D-Billet rassemble les informations utiles pour reserver un billet train a Djibouti,
-                verifier le sens du trajet du jour et preparer l&apos;embarquement avant le depart.
+                D-BILLET centralise les informations utiles pour réserver votre billet de train depuis Djibouti,
+                consulter le sens de circulation du jour et préparer votre départ en toute sérénité.
               </p>
               <p>
-                La circulation alterne selon le jour du mois. Les jours impairs, le train part de
-                Djibouti vers Ali Sabieh. Les jours pairs, le trajet inverse est propose pour organiser
-                facilement son voyage et consulter le tarif avant paiement.
+                La circulation alterne selon le jour du mois. Vous visualisez rapidement la direction du service,
+                les étapes du trajet et le tarif applicable avant de confirmer
+                votre réservation.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
             <div className="glass p-5 rounded-2xl">
-              <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">Trajet</p>
-              <h3 className="font-unbounded text-white text-lg mb-2">Direction du jour</h3>
+              <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">SERVICE</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Direction du service</h3>
               <p className="text-gray-400 text-sm leading-6">
-                La page affiche le sens de circulation du train a partir de la date choisie, sans
-                ambiguite sur le depart et l&apos;arrivee.
+                La page affiche clairement le sens de circulation du train à partir de la date choisie, avec
+                un départ et une arrivée faciles à identifier.
               </p>
             </div>
             <div className="glass p-5 rounded-2xl">
-              <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">Reservation</p>
-              <h3 className="font-unbounded text-white text-lg mb-2">Paiement et billet</h3>
+              <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">RÉSERVATION</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Billet immédiat</h3>
               <p className="text-gray-400 text-sm leading-6">
-                Le voyageur renseigne les passagers, choisit son mode de paiement puis recoit son billet
-                numerique avec QR code.
+                Le voyageur renseigne ses informations, choisit son mode de paiement puis reçoit son billet
+                numérique avec QR code après confirmation.
               </p>
             </div>
             <div className="glass p-5 rounded-2xl">
-              <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">Depart</p>
-              <h3 className="font-unbounded text-white text-lg mb-2">Controle rapide</h3>
+              <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">EMBARQUEMENT</p>
+              <h3 className="font-unbounded text-white text-lg mb-2">Contrôle rapide</h3>
               <p className="text-gray-400 text-sm leading-6">
-                Le QR code du billet et une piece d&apos;identite permettent de fluidifier l&apos;acces a
-                l&apos;embarquement le jour du depart.
+                Le QR code du billet et une pièce d'identité facilitent l'accès à
+                l'embarquement le jour du départ.
               </p>
             </div>
           </div>
@@ -445,3 +445,4 @@ const TrainBookingPage = () => {
 };
 
 export default TrainBookingPage;
+
