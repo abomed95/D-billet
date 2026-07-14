@@ -69,6 +69,7 @@
     "source": "build",
     "include": [
       "/",
+      "/events",
       "/train",
       "/ferry",
       "/terms",

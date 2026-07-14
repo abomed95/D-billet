@@ -474,20 +474,6 @@ const AuthPage = () => {
                     )}
                   </Button>
 
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-gray-400">
-                    <p className="text-white">Comptes demo</p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <p className="text-gray-500">Admin</p>
-                        <p className="font-mono text-white">admin@dbillet.dj</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Organisateur</p>
-                        <p className="font-mono text-white">organizer@dbillet.dj</p>
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="text-center">
                     <button
                       type="button"

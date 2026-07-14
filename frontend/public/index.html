@@ -33,21 +33,36 @@
                     {
                         "@type": "Organization",
                         "name": "D-Billet",
+                        "alternateName": "D-BILLET Djibouti",
                         "url": "https://d-billet.com/",
                         "logo": "https://d-billet.com/images/dbillet-logo.png",
+                        "areaServed": "DJ",
+                        "sameAs": [
+                            "https://facebook.com/dbillet",
+                            "https://instagram.com/dbillet"
+                        ],
                         "contactPoint": {
                             "@type": "ContactPoint",
                             "contactType": "customer support",
                             "telephone": "+25377694812",
                             "email": "contact@d-billet.com",
-                            "areaServed": "DJ"
+                            "areaServed": "DJ",
+                            "availableLanguage": ["fr"]
                         }
                     },
                     {
                         "@type": "WebSite",
                         "name": "D-Billet",
                         "url": "https://d-billet.com/",
-                        "inLanguage": "fr-DJ"
+                        "inLanguage": "fr-DJ",
+                        "potentialAction": {
+                            "@type": "SearchAction",
+                            "target": {
+                                "@type": "EntryPoint",
+                                "urlTemplate": "https://d-billet.com/events?q={search_term_string}"
+                            },
+                            "query-input": "required name=search_term_string"
+                        }
                     }
                 ]
             }

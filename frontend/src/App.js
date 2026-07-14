@@ -7,6 +7,7 @@ import Seo from "./components/Seo";
 
 // Pages
 import HomePage from "./pages/HomePage";
+import EventsPage from "./pages/EventsPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
@@ -108,6 +109,7 @@ function AppRoutes() {
         {/* Public Routes */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="events" element={<EventsPage />} />
           <Route path="event/:id" element={<EventDetailPage />} />
           <Route path="events/:id/:slug" element={<EventDetailPage />} />
           <Route path="auth" element={<AuthPage />} />

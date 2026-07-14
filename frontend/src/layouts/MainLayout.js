@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { Home, Ticket, User, Train, Ship, LogOut } from 'lucide-react';
+import { Home, Ticket, User, Train, Ship, LogOut, CalendarDays } from 'lucide-react';
 import Footer from '../components/Footer';
+import PWAInstallPrompt from '../components/PWAInstallPrompt';
 
 const MainLayout = () => {
   const { user, isAdmin, isOrganizer, logout } = useAuth();
@@ -24,6 +25,7 @@ const MainLayout = () => {
 
   const navItems = [
     { path: '/', icon: Home, label: 'Accueil' },
+    { path: '/events', icon: CalendarDays, label: 'Événements' },
     { path: '/train', icon: Train, label: 'Train' },
     { path: '/ferry', icon: Ship, label: 'Ferry' },
   ];
@@ -43,6 +45,9 @@ const MainLayout = () => {
 
       {/* Footer - Always visible */}
       <Footer />
+
+      {/* PWA install invitation */}
+      <PWAInstallPrompt />
 
       {/* User Menu Popup */}
       {showUserMenu && user && (
@@ -108,7 +113,7 @@ const MainLayout = () => {
       )}
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-4 left-1/2 z-50 grid h-16 w-[min(92vw,720px)] -translate-x-1/2 grid-cols-4 items-center rounded-full border border-gold/20 bg-black/80 px-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <nav className="fixed bottom-4 left-1/2 z-50 grid h-16 w-[min(94vw,760px)] -translate-x-1/2 grid-cols-5 items-center rounded-full border border-gold/20 bg-black/80 px-2 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -119,8 +124,8 @@ const MainLayout = () => {
                 ${isActive ? 'text-gold' : 'text-gray-500 hover:text-white'}`}
               data-testid={`nav-${item.label.toLowerCase()}`}
             >
-              <item.icon size={22} className={isActive ? 'drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]' : ''} />
-              <span className="text-[10px] mt-1">{item.label}</span>
+              <item.icon size={21} className={isActive ? 'drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]' : ''} />
+              <span className="mt-1 whitespace-nowrap text-[9px] leading-none sm:text-[10px]">{item.label}</span>
             </Link>
           );
         })}
@@ -137,7 +142,7 @@ const MainLayout = () => {
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold to-gold-dark flex items-center justify-center text-black font-bold text-xs">
               {user.full_name?.charAt(0).toUpperCase() || 'U'}
             </div>
-            <span className="text-[10px] mt-1">
+            <span className="mt-1 whitespace-nowrap text-[9px] leading-none sm:text-[10px]">
               {isAdmin ? 'Admin' : isOrganizer ? 'Espace' : 'Profil'}
             </span>
           </button>
@@ -148,8 +153,8 @@ const MainLayout = () => {
               ${location.pathname === '/auth' ? 'text-gold' : 'text-gray-500 hover:text-white'}`}
             data-testid="nav-login"
           >
-            <User size={22} />
-            <span className="text-[10px] mt-1">Compte</span>
+            <User size={21} />
+            <span className="mt-1 whitespace-nowrap text-[9px] leading-none sm:text-[10px]">Compte</span>
           </Link>
         )}
       </nav>

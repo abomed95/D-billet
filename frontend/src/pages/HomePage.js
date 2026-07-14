@@ -411,9 +411,13 @@ const HomePage = () => {
         <div className="mx-auto max-w-6xl">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="font-unbounded text-xl text-white">Événements</h2>
-            <Button variant="ghost" onClick={fetchData} className="text-gold hover:bg-gold/10 hover:text-gold-light">
+            <Link
+              to="/events"
+              className="inline-flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-medium text-gold transition-colors hover:bg-gold/10 hover:text-gold-light"
+            >
               Voir tout
-            </Button>
+              <ChevronRight size={16} />
+            </Link>
           </div>
           {loading ? (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
