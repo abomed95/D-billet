@@ -15,7 +15,7 @@ echo "==> pip install"
 
 echo "==> frontend build"
 cd "$APP_DIR/frontend"
-npm ci --no-audit --no-fund
+npm ci --no-audit --no-fund --legacy-peer-deps
 NODE_OPTIONS="--max-old-space-size=2048" npm run build
 cd - >/dev/null
 
