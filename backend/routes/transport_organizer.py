@@ -735,7 +735,7 @@ async def create_transport_announcement(
         "created_at": now,
         "updated_at": now,
     }
-    await db.transport_announcements.insert_one(announcement)
+    await db.transport_announcements.insert_one({**announcement})
     return announcement
 
 
@@ -826,7 +826,7 @@ async def create_transport_agency(
         "created_at": now,
         "updated_at": now,
     }
-    await db.transport_agencies.insert_one(agency)
+    await db.transport_agencies.insert_one({**agency})
     return agency
 
 
@@ -1071,7 +1071,7 @@ async def create_transport_promo_code(
         "created_at": now,
         "updated_at": now,
     }
-    await db.promo_codes.insert_one(promo_doc)
+    await db.promo_codes.insert_one({**promo_doc})
     return promo_doc
 
 

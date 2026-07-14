@@ -93,8 +93,8 @@ async def create_organizer(data: OrganizerCreate, admin: dict = Depends(get_admi
         "role": "organizer",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.users.insert_one(org_doc)
-    
+    await db.users.insert_one({**org_doc})
+
     return OrganizerResponse(**{k: v for k, v in org_doc.items() if k != "hashed_password"})
 
 
@@ -336,7 +336,7 @@ async def get_platform_settings(admin: dict = Depends(get_admin_user)):
             "banner_active": False,
             "categories": ["Concert", "Cinema", "Football", "Theatre", "Conference", "Soiree"]
         }
-        await db.settings.insert_one(settings)
+        await db.settings.insert_one({**settings})
 
     if "terms_content" not in settings:
         settings["terms_content"] = settings.get("terms", "")
@@ -440,8 +440,8 @@ async def get_transport_settings(admin: dict = Depends(get_admin_user)):
                 }
             }
         }
-        await db.settings.insert_one(settings)
-    
+        await db.settings.insert_one({**settings})
+
     return settings
 
 

@@ -108,7 +108,7 @@ async def _upsert_google_user(email: str, name: str, picture: Optional[str]):
             "auth_provider": "google",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.users.insert_one(user)
+        await db.users.insert_one({**user})
         return user
 
     updates = {}

@@ -106,8 +106,8 @@ async def create_event(event_data: EventCreate, user: dict = Depends(get_organiz
         "created_at": now,
         "updated_at": now
     }
-    await db.events.insert_one(event_doc)
-    
+    await db.events.insert_one({**event_doc})
+
     return {**event_doc, "total_tickets": sum(tt["quantity"] for tt in ticket_types), "sold_tickets": 0}
 
 
@@ -200,8 +200,8 @@ async def create_promo_code(data: PromoCodeCreate, user: dict = Depends(get_orga
         "total_sales": 0,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.promo_codes.insert_one(promo_doc)
-    
+    await db.promo_codes.insert_one({**promo_doc})
+
     return PromoCodeResponse(**promo_doc)
 
 
