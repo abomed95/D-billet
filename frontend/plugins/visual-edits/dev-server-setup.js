@@ -4,6 +4,10 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const { execSync } = require("child_process");
+const EXTRA_ALLOWED_ORIGINS = (process.env.VISUAL_EDIT_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 // 🔍 Read Supervisor code-server password from conf.d
 function getCodeServerPassword() {
@@ -38,18 +42,8 @@ function setupDevServer(config) {
         return true;
       }
 
-      // Allow all emergent.sh subdomains
-      if (origin.match(/^https:\/\/([a-zA-Z0-9-]+\.)*emergent\.sh$/)) {
-        return true;
-      }
-
-      // Allow all emergentagent.com subdomains
-      if (origin.match(/^https:\/\/([a-zA-Z0-9-]+\.)*emergentagent\.com$/)) {
-        return true;
-      }
-
-      // Allow all appspot.com subdomains (for App Engine)
-      if (origin.match(/^https:\/\/([a-zA-Z0-9-]+\.)*appspot\.com$/)) {
+      // Allow explicit extra origins when visual edits are intentionally enabled.
+      if (EXTRA_ALLOWED_ORIGINS.includes(origin)) {
         return true;
       }
 

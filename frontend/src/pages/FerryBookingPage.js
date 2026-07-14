@@ -48,6 +48,10 @@ const FerryBookingPage = () => {
   
   const [paymentMethod, setPaymentMethod] = useState('waafi');
   const [booking, setBooking] = useState(false);
+  const [publicAnnouncements, setPublicAnnouncements] = useState([]);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDetails, setPromoDetails] = useState(null);
+  const [validatingPromo, setValidatingPromo] = useState(false);
 
   useEffect(() => {
     fetchWeeklySchedule();
@@ -84,6 +88,7 @@ const FerryBookingPage = () => {
       const response = await axios.get(url);
       setTripInfo(response.data);
       setTrips(response.data.trips || []);
+      setPublicAnnouncements(response.data.announcements || (response.data.announcement ? [response.data.announcement] : []));
       setSelectedTrip(null);
       if (response.data.vehicle_types) {
         setVehicleTypes(response.data.vehicle_types);
@@ -157,6 +162,39 @@ const FerryBookingPage = () => {
     return calculatePassengerTotal() + calculateVehicleTotal();
   };
 
+  const calculatePromoDiscount = () => {
+    if (!promoDetails) return 0;
+    const total = calculateTotal();
+    if (promoDetails.discount_type === 'percentage') {
+      return Math.floor(total * promoDetails.discount_value / 100);
+    }
+    return Math.min(total, promoDetails.discount_value || 0);
+  };
+
+  const finalTotal = Math.max(0, calculateTotal() - calculatePromoDiscount());
+
+  const validatePromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoDetails(null);
+      return;
+    }
+
+    setValidatingPromo(true);
+    try {
+      const response = await axios.get(
+        `${API}/transport/promo-codes/${promoCode.trim().toUpperCase()}/validate?transport_type=ferry`
+      );
+      setPromoDetails(response.data);
+      setPromoCode(response.data.code);
+      toast.success('Code promo applique');
+    } catch (error) {
+      setPromoDetails(null);
+      toast.error(error.response?.data?.detail || 'Code promo invalide');
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
+
   const handleBooking = async () => {
     let authToken = token;
     
@@ -207,6 +245,8 @@ const FerryBookingPage = () => {
           passengers: passengers,
           vehicles: vehicles,
           payment_method: paymentMethod
+          ,
+          promo_code: promoDetails?.code || null
         },
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
@@ -343,6 +383,21 @@ const FerryBookingPage = () => {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {publicAnnouncements.length > 0 && (
+          <div className="space-y-3 mb-6">
+            {publicAnnouncements.map((announcement) => (
+              <div key={announcement.id} className="p-4 rounded-xl border border-yellow-500/40 bg-yellow-500/10">
+                <p className="text-yellow-300 font-semibold">{announcement.title}</p>
+                <p className="text-gray-300 text-sm mt-1">{announcement.message}</p>
+                <p className="text-gray-500 text-xs mt-2">
+                  {announcement.travel_date || 'Annonce generale'}
+                  {announcement.destination ? ` • ${announcement.destination}` : ''}
+                </p>
+              </div>
+            ))}
           </div>
         )}
 
@@ -614,6 +669,37 @@ const FerryBookingPage = () => {
 
             {/* Payment Method */}
             <div className="glass p-5 rounded-xl">
+              <div className="mb-5">
+                <Label className="text-gray-400 mb-2 block">Code promo (optionnel)</Label>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <Input
+                    value={promoCode}
+                    onChange={(e) => {
+                      setPromoCode(e.target.value.toUpperCase());
+                      setPromoDetails(null);
+                    }}
+                    placeholder="FERRY10"
+                    className="bg-white/5 border-white/10 text-white font-mono uppercase"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={validatePromoCode}
+                    disabled={validatingPromo}
+                    className="border-ferry text-ferry hover:bg-ferry/20"
+                  >
+                    {validatingPromo ? 'Verification...' : 'Appliquer'}
+                  </Button>
+                </div>
+                {promoDetails && (
+                  <p className="text-green-400 text-sm mt-2">
+                    Code {promoDetails.code} actif: {promoDetails.discount_type === 'percentage'
+                      ? `-${promoDetails.discount_value}%`
+                      : `-${promoDetails.discount_value} DJF`}
+                  </p>
+                )}
+              </div>
+
               <h3 className="text-white font-semibold mb-4">Sélectionnez votre moyen de paiement</h3>
               <div className="grid grid-cols-3 gap-3">
                 {[
@@ -658,9 +744,15 @@ const FerryBookingPage = () => {
                     <span>{calculateVehicleTotal()} FDJ</span>
                   </div>
                 )}
+                {promoDetails && (
+                  <div className="flex justify-between text-green-400">
+                    <span>Reduction ({promoDetails.code})</span>
+                    <span>-{calculatePromoDiscount()} FDJ</span>
+                  </div>
+                )}
                 <div className="border-t border-white/10 pt-2 flex justify-between">
                   <span className="text-white font-semibold">Total</span>
-                  <span className="text-ferry font-mono font-bold text-2xl">{calculateTotal()} FDJ</span>
+                  <span className="text-ferry font-mono font-bold text-2xl">{finalTotal} FDJ</span>
                 </div>
               </div>
               <Button

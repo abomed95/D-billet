@@ -1,7 +1,8 @@
 """
 Organizer routes (Dashboard, Stats, Live Dashboard)
 """
-from fastapi import APIRouter, HTTPException, Depends, File, UploadFile
+import importlib.util
+from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 import uuid
@@ -9,10 +10,17 @@ import base64
 import os
 from pathlib import Path
 
+try:
+    from fastapi import File, UploadFile
+except ImportError:
+    File = None
+    UploadFile = None
+
 from config import db, UPLOAD_DIR
 from services import get_organizer_user
 
 router = APIRouter(prefix="/organizer", tags=["Organizer"])
+MULTIPART_AVAILABLE = importlib.util.find_spec("multipart") is not None and File is not None and UploadFile is not None
 
 
 @router.get("/stats")
@@ -273,27 +281,35 @@ async def get_event_guestlist(event_id: str, organizer: dict = Depends(get_organ
 
 # ============== IMAGE UPLOAD ==============
 
-@router.post("/events/upload-image")
-async def upload_event_image(file: UploadFile = File(...), organizer: dict = Depends(get_organizer_user)):
-    """Upload an image for an event"""
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Le fichier doit etre une image")
-    
-    content = await file.read()
-    if len(content) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="L'image ne doit pas depasser 5MB")
-    
-    ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
-    filename = f"{uuid.uuid4()}.{ext}"
-    
-    file_path = UPLOAD_DIR / filename
-    with open(file_path, 'wb') as f:
-        f.write(content)
-    
-    image_url = f"/uploads/{filename}"
-    
-    return {
-        "message": "Image uploadee avec succes",
-        "image_url": image_url,
-        "filename": filename
-    }
+if MULTIPART_AVAILABLE:
+    @router.post("/events/upload-image")
+    async def upload_event_image(file: UploadFile = File(...), organizer: dict = Depends(get_organizer_user)):
+        """Upload an image for an event"""
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="Le fichier doit etre une image")
+
+        content = await file.read()
+        if len(content) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="L'image ne doit pas depasser 5MB")
+
+        ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+        filename = f"{uuid.uuid4()}.{ext}"
+
+        file_path = UPLOAD_DIR / filename
+        with open(file_path, 'wb') as f:
+            f.write(content)
+
+        image_url = f"/uploads/{filename}"
+
+        return {
+            "message": "Image uploadee avec succes",
+            "image_url": image_url,
+            "filename": filename
+        }
+else:
+    @router.post("/events/upload-image")
+    async def upload_event_image_unavailable(organizer: dict = Depends(get_organizer_user)):
+        raise HTTPException(
+            status_code=503,
+            detail="Upload d'image indisponible localement: python-multipart n'est pas installe",
+        )

@@ -1,0 +1,37 @@
+[Unit]
+Description=D-Billet FastAPI API
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/dbillet/backend
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/var/www/dbillet/backend/.env
+ExecStart=/var/www/dbillet/.venv/bin/python -m uvicorn main:app \
+    --host 127.0.0.1 \
+    --port 8001 \
+    --workers 2 \
+    --proxy-headers \
+    --forwarded-allow-ips=127.0.0.1
+Restart=always
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+# Allow writes only to the persistent uploads dir
+ReadWritePaths=/var/www/dbillet/shared/uploads
+
+[Install]
+WantedBy=multi-user.target

@@ -19,7 +19,9 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 async def get_admin_stats(admin: dict = Depends(get_admin_user)):
     """Get platform-wide statistics"""
     total_users = await db.users.count_documents({})
-    total_organizers = await db.users.count_documents({"role": "organizer"})
+    total_organizers = await db.users.count_documents(
+        {"role": {"$in": ["organizer", "ferry_organizer", "train_organizer"]}}
+    )
     total_events = await db.events.count_documents({})
     
     # Only fetch ticket_types field for revenue calculation (optimized projection)
@@ -33,10 +35,14 @@ async def get_admin_stats(admin: dict = Depends(get_admin_user)):
             total_tickets_sold += sold
             total_revenue += sold * tt.get("price", 0)
     
-    commission_rate = 8
+    commission_rate = 8.0
     settings = await db.settings.find_one({"type": "platform"}, {"_id": 0})
     if settings:
-        commission_rate = settings.get("commission_rate", 8)
+        raw_commission_rate = settings.get("commission_rate", 8)
+        try:
+            commission_rate = float(raw_commission_rate)
+        except (TypeError, ValueError):
+            commission_rate = 8.0
     
     platform_revenue = int(total_revenue * commission_rate / 100)
     
@@ -46,6 +52,7 @@ async def get_admin_stats(admin: dict = Depends(get_admin_user)):
         "total_events": total_events,
         "total_revenue": total_revenue,
         "platform_revenue": platform_revenue,
+        "commission": platform_revenue,
         "commission_rate": commission_rate,
         "total_tickets_sold": total_tickets_sold
     }

@@ -82,8 +82,11 @@ export const AuthProvider = ({ children }) => {
   }, [token, logout]);
 
   useEffect(() => {
-    // CRITICAL: If returning from OAuth callback, skip the /me check
-    if (window.location.hash?.includes('session_id=')) {
+    // Wait for the auth page to consume OAuth callback fragments first.
+    if (
+      window.location.hash?.includes('token=') ||
+      window.location.hash?.includes('google_error=')
+    ) {
       setLoading(false);
       return;
     }
@@ -128,15 +131,23 @@ export const AuthProvider = ({ children }) => {
     return userData;
   }, []);
 
-  const googleLogin = useCallback(async (sessionId) => {
-    const response = await axios.post(`${API}/auth/google/session`, {
-      session_id: sessionId
-    }, { withCredentials: true });
-    const { token: accessToken, user: userData } = response.data;
+  const completeOAuthLogin = useCallback(async (accessToken) => {
     storeToken(accessToken);
     setToken(accessToken);
-    setUser(userData);
-    return userData;
+
+    try {
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        withCredentials: true
+      });
+      setUser(response.data);
+      return response.data;
+    } catch (error) {
+      clearStoredToken();
+      setToken(null);
+      setUser(null);
+      throw error;
+    }
   }, []);
 
   const createGuestSession = useCallback(async (phone, fullName) => {
@@ -172,11 +183,11 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     phoneLogin,
-    googleLogin,
+    completeOAuthLogin,
     createGuestSession,
     getAuthHeaders,
     ...authState
-  }), [user, token, loading, register, login, logout, phoneLogin, googleLogin, createGuestSession, getAuthHeaders, authState]);
+  }), [user, token, loading, register, login, logout, phoneLogin, completeOAuthLogin, createGuestSession, getAuthHeaders, authState]);
 
   return (
     <AuthContext.Provider value={contextValue}>

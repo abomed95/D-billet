@@ -4,10 +4,9 @@ Tickets routes
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
-import uuid
-import qrcode
 import base64
 from io import BytesIO
+from urllib.parse import quote
 
 from config import APP_URL, db
 from services import get_current_user, generate_ticket_pdf
@@ -37,24 +36,30 @@ async def get_ticket_view(ticket_id: str):
     ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
     if not ticket:
         raise HTTPException(status_code=404, detail="Billet non trouve")
-    
-    qr = qrcode.QRCode(version=1, box_size=10, border=4)
-    qr.add_data(ticket["qr_code_data"])
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="white", back_color="#0A0A0F")
-    
-    buffer = BytesIO()
-    qr_img.save(buffer, format="PNG")
-    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+    qr_data_uri = None
+    try:
+        import qrcode
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr.add_data(ticket["qr_code_data"])
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="white", back_color="#0A0A0F")
+
+        buffer = BytesIO()
+        qr_img.save(buffer, format="PNG")
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+        qr_data_uri = f"data:image/png;base64,{qr_base64}"
+    except ImportError:
+        qr_data_uri = None
     
     share_url = f"{APP_URL}/ticket/{ticket_id}"
     whatsapp_text = f"Mon billet D-Billet - {ticket['event_title']} - {ticket['event_date']} a {ticket['event_time']} - {ticket['event_venue']} - {share_url}"
-    encoded_text = whatsapp_text.replace(' ', '%20')
+    encoded_text = quote(whatsapp_text)
     whatsapp_url = f"https://wa.me/?text={encoded_text}"
     
     return {
         **ticket,
-        "qr_code_image": f"data:image/png;base64,{qr_base64}",
+        "qr_code_image": qr_data_uri,
         "share_url": share_url,
         "whatsapp_url": whatsapp_url
     }

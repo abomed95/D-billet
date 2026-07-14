@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
   AlertCircle,
   ArrowLeft,
@@ -21,7 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import Seo from '../components/Seo';
 import { toast } from 'sonner';
 
-// REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const TRUST_POINTS = [
   {
@@ -49,8 +50,10 @@ const AuthPage = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [googleStatusReady, setGoogleStatusReady] = useState(false);
 
-  const { login, register, googleLogin, user } = useAuth();
+  const { login, register, completeOAuthLogin, user } = useAuth();
   const navigate = useNavigate();
   const hasProcessed = useRef(false);
 
@@ -58,9 +61,9 @@ const AuthPage = () => {
     (userData) => {
       if (userData.role === 'admin') {
         navigate('/admin');
-      } else if (
-        ['organizer', 'ferry_organizer', 'train_organizer'].includes(userData.role)
-      ) {
+      } else if (['ferry_organizer', 'train_organizer'].includes(userData.role)) {
+        navigate('/transport-organizer');
+      } else if (userData.role === 'organizer') {
         navigate('/organizer');
       } else {
         navigate('/');
@@ -70,10 +73,10 @@ const AuthPage = () => {
   );
 
   const handleGoogleCallback = useCallback(
-    async (sessionId) => {
+    async (accessToken) => {
       setLoading(true);
       try {
-        const userData = await googleLogin(sessionId);
+        const userData = await completeOAuthLogin(accessToken);
         toast.success('Connexion Google réussie !');
         window.history.replaceState(null, '', window.location.pathname);
         redirectByRole(userData);
@@ -85,21 +88,56 @@ const AuthPage = () => {
         setLoading(false);
       }
     },
-    [googleLogin, redirectByRole]
+    [completeOAuthLogin, redirectByRole]
   );
 
   useEffect(() => {
     if (hasProcessed.current) return;
 
-    const hash = window.location.hash;
-    if (hash && hash.includes('session_id=')) {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const accessToken = hashParams.get('token');
+    const googleError = hashParams.get('google_error');
+
+    if (accessToken) {
       hasProcessed.current = true;
-      const sessionId = hash.split('session_id=')[1]?.split('&')[0];
-      if (sessionId) {
-        handleGoogleCallback(sessionId);
-      }
+      handleGoogleCallback(accessToken);
+      return;
+    }
+
+    if (googleError) {
+      hasProcessed.current = true;
+      toast.error('Erreur de connexion Google');
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, [handleGoogleCallback]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadGoogleStatus = async () => {
+      try {
+        const response = await axios.get(`${API}/auth/google/status`);
+        if (isMounted) {
+          setGoogleEnabled(Boolean(response.data?.enabled));
+        }
+      } catch (error) {
+        console.error('Google auth status error:', error);
+        if (isMounted) {
+          setGoogleEnabled(false);
+        }
+      } finally {
+        if (isMounted) {
+          setGoogleStatusReady(true);
+        }
+      }
+    };
+
+    loadGoogleStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -108,8 +146,13 @@ const AuthPage = () => {
   }, [redirectByRole, user]);
 
   const handleGoogleLogin = () => {
+    if (!googleEnabled) {
+      toast.error('Connexion Google indisponible sur cet environnement');
+      return;
+    }
+
     const redirectUrl = `${window.location.origin}/auth`;
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = `${API}/auth/google/login?redirect_to=${encodeURIComponent(redirectUrl)}`;
   };
 
   const handleEmailSubmit = async (event) => {
@@ -140,7 +183,7 @@ const AuthPage = () => {
     }
   };
 
-  if (loading && window.location.hash?.includes('session_id=')) {
+  if (loading && window.location.hash?.includes('token=')) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
         <div className="text-center">
@@ -255,14 +298,24 @@ const AuthPage = () => {
 
               <Button
                 onClick={handleGoogleLogin}
-                disabled={loading}
+                disabled={loading || !googleStatusReady || !googleEnabled}
                 variant="outline"
                 className="mb-6 h-14 w-full rounded-2xl border-0 bg-white text-black hover:bg-gray-100"
                 data-testid="google-login-btn"
               >
                 <Chrome className="mr-2" size={18} />
-                Continuer avec Google
+                {!googleStatusReady
+                  ? 'Vérification Google...'
+                  : googleEnabled
+                    ? 'Continuer avec Google'
+                    : 'Google indisponible'}
               </Button>
+
+              {!googleEnabled && googleStatusReady && (
+                <p className="mb-6 text-sm text-amber-300/90">
+                  La connexion Google n&apos;est pas activée sur cet environnement pour le moment.
+                </p>
+              )}
 
               <div className="relative mb-6">
                 <div className="absolute inset-0 flex items-center">
@@ -317,15 +370,16 @@ const AuthPage = () => {
                   <p className="mt-4 text-sm leading-6 text-gray-400">
                     La connexion et l'inscription par numéro de téléphone seront proposées
                     prochainement. Pour l'instant, veuillez utiliser
-                    Google ou votre adresse email.
+                    {googleEnabled ? ' Google ou votre adresse email.' : ' votre adresse email.'}
                   </p>
                   <div className="mt-6 space-y-3">
                     <Button
                       type="button"
                       onClick={handleGoogleLogin}
+                      disabled={!googleEnabled}
                       className="h-12 w-full rounded-2xl bg-gold text-black hover:bg-gold-light"
                     >
-                      Continuer avec Google
+                      {googleEnabled ? 'Continuer avec Google' : 'Google indisponible'}
                     </Button>
                     <Button
                       type="button"

@@ -9,7 +9,8 @@ const isDevServer = process.env.NODE_ENV !== "production";
 // Environment variable overrides
 const config = {
   enableHealthCheck: process.env.ENABLE_HEALTH_CHECK === "true",
-  enableVisualEdits: isDevServer, // Only enable during dev server
+  enableVisualEdits:
+    isDevServer && process.env.ENABLE_VISUAL_EDITS === "true",
 };
 
 // Conditionally load visual edits modules only in dev mode
@@ -65,6 +66,28 @@ const webpackConfig = {
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);
       }
+
+      // Strip console.* and debugger statements from production bundles.
+      // Keeps console.error and console.warn so real errors still surface in monitoring.
+      if (!isDevServer && webpackConfig.optimization && webpackConfig.optimization.minimizer) {
+        webpackConfig.optimization.minimizer.forEach((plugin) => {
+          if (plugin.constructor && plugin.constructor.name === "TerserPlugin") {
+            plugin.options = plugin.options || {};
+            plugin.options.terserOptions = plugin.options.terserOptions || {};
+            plugin.options.terserOptions.compress = {
+              ...(plugin.options.terserOptions.compress || {}),
+              drop_debugger: true,
+              pure_funcs: [
+                "console.log",
+                "console.debug",
+                "console.info",
+                "console.trace",
+              ],
+            };
+          }
+        });
+      }
+
       return webpackConfig;
     },
   },

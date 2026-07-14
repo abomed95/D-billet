@@ -11,6 +11,16 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const isTransportOrganizer = ['ferry_organizer', 'train_organizer'].includes(user?.role);
+  const dashboardPath = isAdmin
+    ? '/admin'
+    : isTransportOrganizer
+      ? '/transport-organizer'
+      : '/organizer';
+  const isDashboardActive =
+    location.pathname.includes('/admin') ||
+    location.pathname.includes('/organizer') ||
+    location.pathname.includes('/transport-organizer');
 
   const navItems = [
     { path: '/', icon: Home, label: 'Accueil' },
@@ -66,12 +76,18 @@ const MainLayout = () => {
               
               {(isAdmin || isOrganizer) && (
                 <Link
-                  to={isAdmin ? '/admin' : '/organizer'}
+                  to={dashboardPath}
                   onClick={() => setShowUserMenu(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-all"
                 >
                   <User size={20} />
-                  <span>{isAdmin ? 'Tableau de bord Admin' : 'Espace Organisateur'}</span>
+                  <span>
+                    {isAdmin
+                      ? 'Tableau de bord Admin'
+                      : isTransportOrganizer
+                        ? 'Dashboard Transport'
+                        : 'Espace Organisateur'}
+                  </span>
                 </Link>
               )}
             </div>
@@ -114,7 +130,7 @@ const MainLayout = () => {
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
             className={`flex flex-col items-center justify-center w-14 h-full transition-all
-              ${showUserMenu || location.pathname.includes('/admin') || location.pathname.includes('/organizer') 
+              ${showUserMenu || isDashboardActive
                 ? 'text-gold' : 'text-gray-500 hover:text-white'}`}
             data-testid="nav-profile"
           >

@@ -29,6 +29,10 @@ const TrainBookingPage = () => {
   
   const [paymentMethod, setPaymentMethod] = useState('waafi');
   const [booking, setBooking] = useState(false);
+  const [publicAnnouncements, setPublicAnnouncements] = useState([]);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDetails, setPromoDetails] = useState(null);
+  const [validatingPromo, setValidatingPromo] = useState(false);
 
   // Get min date (today)
   const getMinDate = () => {
@@ -43,6 +47,7 @@ const TrainBookingPage = () => {
       const response = await axios.get(`${API}/train/trips?date=${date}`);
       setTripInfo(response.data);
       setTrips(response.data.trips || []);
+      setPublicAnnouncements(response.data.announcements || (response.data.announcement ? [response.data.announcement] : []));
       setSelectedTrip(null);
     } catch (error) {
       console.error('Failed to fetch trips:', error);
@@ -81,6 +86,39 @@ const TrainBookingPage = () => {
     return selectedTrip.price * passengers.length;
   };
 
+  const calculatePromoDiscount = () => {
+    if (!promoDetails) return 0;
+    const total = calculateTotal();
+    if (promoDetails.discount_type === 'percentage') {
+      return Math.floor(total * promoDetails.discount_value / 100);
+    }
+    return Math.min(total, promoDetails.discount_value || 0);
+  };
+
+  const finalTotal = Math.max(0, calculateTotal() - calculatePromoDiscount());
+
+  const validatePromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoDetails(null);
+      return;
+    }
+
+    setValidatingPromo(true);
+    try {
+      const response = await axios.get(
+        `${API}/transport/promo-codes/${promoCode.trim().toUpperCase()}/validate?transport_type=train`
+      );
+      setPromoDetails(response.data);
+      setPromoCode(response.data.code);
+      toast.success('Code promo applique');
+    } catch (error) {
+      setPromoDetails(null);
+      toast.error(error.response?.data?.detail || 'Code promo invalide');
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
+
   const handleBooking = async () => {
     if (!user) {
       toast.error('Veuillez vous connecter pour réserver');
@@ -106,7 +144,8 @@ const TrainBookingPage = () => {
           departure: selectedTrip.departure,
           arrival: selectedTrip.arrival,
           passengers: passengers,
-          payment_method: paymentMethod
+          payment_method: paymentMethod,
+          promo_code: promoDetails?.code || null
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -200,6 +239,18 @@ const TrainBookingPage = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {publicAnnouncements.length > 0 && (
+          <div className="space-y-3 mb-6">
+            {publicAnnouncements.map((announcement) => (
+              <div key={announcement.id} className="p-4 rounded-xl border border-yellow-500/40 bg-yellow-500/10">
+                <p className="text-yellow-300 font-semibold">{announcement.title}</p>
+                <p className="text-gray-300 text-sm mt-1">{announcement.message}</p>
+                <p className="text-gray-500 text-xs mt-2">{announcement.travel_date || 'Annonce generale'}</p>
+              </div>
+            ))}
           </div>
         )}
 
@@ -329,6 +380,37 @@ const TrainBookingPage = () => {
 
             {/* Payment Method */}
             <div className="glass p-5 rounded-xl">
+              <div className="mb-5">
+                <Label className="text-gray-400 mb-2 block">Code promo (optionnel)</Label>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <Input
+                    value={promoCode}
+                    onChange={(e) => {
+                      setPromoCode(e.target.value.toUpperCase());
+                      setPromoDetails(null);
+                    }}
+                    placeholder="TRAIN10"
+                    className="bg-white/5 border-white/10 text-white font-mono uppercase"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={validatePromoCode}
+                    disabled={validatingPromo}
+                    className="border-train text-train hover:bg-train/20"
+                  >
+                    {validatingPromo ? 'Verification...' : 'Appliquer'}
+                  </Button>
+                </div>
+                {promoDetails && (
+                  <p className="text-green-400 text-sm mt-2">
+                    Code {promoDetails.code} actif: {promoDetails.discount_type === 'percentage'
+                      ? `-${promoDetails.discount_value}%`
+                      : `-${promoDetails.discount_value} DJF`}
+                  </p>
+                )}
+              </div>
+
               <h3 className="text-white font-semibold mb-4">Sélectionnez votre moyen de paiement</h3>
               <div className="grid grid-cols-3 gap-3">
                 {[
@@ -359,9 +441,21 @@ const TrainBookingPage = () => {
 
             {/* Total & Book Button */}
             <div className="glass p-5 rounded-xl">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-gray-400">Total ({passengers.length} voyageur{passengers.length > 1 ? 's' : ''})</span>
-                <span className="text-train font-mono font-bold text-2xl">{calculateTotal()} DJF</span>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Sous-total ({passengers.length} voyageur{passengers.length > 1 ? 's' : ''})</span>
+                  <span className="text-white font-mono font-bold">{calculateTotal()} DJF</span>
+                </div>
+                {promoDetails && (
+                  <div className="flex items-center justify-between text-green-400">
+                    <span>Reduction ({promoDetails.code})</span>
+                    <span>-{calculatePromoDiscount()} DJF</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between border-t border-white/10 pt-2">
+                  <span className="text-gray-300">Total a payer</span>
+                  <span className="text-train font-mono font-bold text-2xl">{finalTotal} DJF</span>
+                </div>
               </div>
               <Button
                 onClick={handleBooking}

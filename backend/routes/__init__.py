@@ -11,6 +11,7 @@ from .organizer import router as organizer_router
 from .admin import router as admin_router
 from .content import router as content_router
 from .seo import router as seo_router
+from .setup import router as setup_router
 
 __all__ = [
     'auth_router',
@@ -22,5 +23,6 @@ __all__ = [
     'organizer_router',
     'admin_router',
     'content_router',
-    'seo_router'
+    'seo_router',
+    'setup_router'
 ]

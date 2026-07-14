@@ -2,7 +2,6 @@
 PDF generation services
 """
 from io import BytesIO
-import qrcode
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
@@ -12,6 +11,11 @@ from reportlab.lib.units import mm
 
 def generate_ticket_pdf(ticket: dict) -> BytesIO:
     """Generate a PDF ticket with QR code"""
+    try:
+        import qrcode
+    except ImportError:
+        qrcode = None
+
     buffer = BytesIO()
     ticket_width = 100 * mm
     ticket_height = 200 * mm
@@ -102,18 +106,24 @@ def generate_ticket_pdf(ticket: dict) -> BytesIO:
     p.drawCentredString(ticket_width/2, qr_y + 38*mm, "Scan to verify")
     
     # QR Code
-    qr = qrcode.QRCode(version=1, box_size=8, border=2)
-    qr.add_data(ticket["qr_code_data"])
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white")
-    
-    qr_buffer = BytesIO()
-    qr_img.save(qr_buffer, format="PNG")
-    qr_buffer.seek(0)
-    
-    qr_image = ImageReader(qr_buffer)
     qr_size = 30*mm
-    p.drawImage(qr_image, (ticket_width - qr_size)/2, qr_y, qr_size, qr_size)
+    if qrcode is not None:
+        qr = qrcode.QRCode(version=1, box_size=8, border=2)
+        qr.add_data(ticket["qr_code_data"])
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+
+        qr_buffer = BytesIO()
+        qr_img.save(qr_buffer, format="PNG")
+        qr_buffer.seek(0)
+
+        qr_image = ImageReader(qr_buffer)
+        p.drawImage(qr_image, (ticket_width - qr_size)/2, qr_y, qr_size, qr_size)
+    else:
+        p.setStrokeColor(HexColor("#222222"))
+        p.rect((ticket_width - qr_size)/2, qr_y, qr_size, qr_size, fill=False, stroke=True)
+        p.setFont("Helvetica", 7)
+        p.drawCentredString(ticket_width/2, qr_y + qr_size/2, "QR indisponible")
     
     # "Scan QR Code" instruction
     p.setFillColor(text_dark)

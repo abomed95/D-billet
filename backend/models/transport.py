@@ -17,6 +17,7 @@ class TrainBookingRequest(BaseModel):
     arrival: str
     passengers: List[TrainPassenger]
     payment_method: str
+    promo_code: Optional[str] = None
 
 
 class FerryPassenger(BaseModel):
@@ -32,6 +33,7 @@ class FerryBookingRequest(BaseModel):
     trip_type: str
     passengers: List[FerryPassenger]
     payment_method: str
+    promo_code: Optional[str] = None
 
 
 class FerryDaySchedule(BaseModel):

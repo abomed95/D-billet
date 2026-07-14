@@ -9,7 +9,12 @@ import os
 # These are TEST-ONLY credentials, not for production
 class TestConfig:
     # API URL
-    API_URL = os.environ.get('TEST_API_URL', 'https://dbillet-preview.preview.emergentagent.com/api')
+    _backend_base_url = (
+        os.environ.get('TEST_BACKEND_URL')
+        or os.environ.get('REACT_APP_BACKEND_URL')
+        or 'http://127.0.0.1:8001'
+    ).rstrip('/')
+    API_URL = os.environ.get('TEST_API_URL', f'{_backend_base_url}/api')
     
     # Test user credentials (use env vars in CI/CD)
     ADMIN_EMAIL = os.environ.get('TEST_ADMIN_EMAIL', 'admin@dbillet.dj')

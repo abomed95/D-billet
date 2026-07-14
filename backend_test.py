@@ -9,9 +9,17 @@ import sys
 import json
 from datetime import datetime
 import uuid
+import os
 
 class DBilletAPITester:
-    def __init__(self, base_url="https://dbillet-preview.preview.emergentagent.com/api"):
+    def __init__(self, base_url=None):
+        if base_url is None:
+            backend_base = (
+                os.environ.get("TEST_BACKEND_URL")
+                or os.environ.get("REACT_APP_BACKEND_URL")
+                or "http://127.0.0.1:8001"
+            ).rstrip("/")
+            base_url = f"{backend_base}/api"
         self.base_url = base_url
         self.admin_token = None
         self.user_token = None

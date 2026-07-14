@@ -18,6 +18,40 @@ FERRY_PASSENGER_PRICE = 1100
 CHILD_FREE_AGE = 10
 
 
+def _get_default_ferry_schedule():
+    return [
+        {"day": "monday", "day_label": "Lundi", "active": False, "destination": None},
+        {"day": "tuesday", "day_label": "Mardi", "active": True, "destination": "Tadjoura", "departure_time": "08:00", "return_time": "12:00"},
+        {"day": "wednesday", "day_label": "Mercredi", "active": False, "destination": None},
+        {
+            "day": "thursday",
+            "day_label": "Jeudi",
+            "active": True,
+            "destination": "Tadjoura/Obock",
+            "departure_time": "09:00",
+            "return_time": "14:00",
+            "routes": [
+                {"destination": "Tadjoura", "departure_time": "13:00", "return_time": "15:00"},
+                {"destination": "Obock", "departure_time": "09:00", "return_time": "14:00"},
+            ],
+        },
+        {"day": "friday", "day_label": "Vendredi", "active": True, "destination": "Tadjoura", "departure_time": "08:00", "return_time": "13:00"},
+        {
+            "day": "saturday",
+            "day_label": "Samedi",
+            "active": True,
+            "destination": "Tadjoura/Obock",
+            "departure_time": "08:00",
+            "return_time": "12:00",
+            "routes": [
+                {"destination": "Tadjoura", "departure_time": "08:00", "return_time": "12:00"},
+                {"destination": "Obock", "departure_time": "08:00", "return_time": "13:00"},
+            ],
+        },
+        {"day": "sunday", "day_label": "Dimanche", "active": False, "destination": None},
+    ]
+
+
 # ============== FERRY MODELS ==============
 
 class FerryPassenger(BaseModel):
@@ -43,6 +77,91 @@ class FerryBookingRequest(BaseModel):
     promo_code: Optional[str] = None
 
 
+def _parse_valid_until(value: Optional[str]):
+    if not value:
+        return None
+    normalized = value.replace("Z", "+00:00")
+    if "T" not in normalized:
+        normalized = f"{normalized}T23:59:59+00:00"
+    elif "+" not in normalized and not normalized.endswith("Z"):
+        normalized = f"{normalized}+00:00"
+    return datetime.fromisoformat(normalized)
+
+
+async def _list_public_transport_announcements(
+    transport_type: str,
+    date: Optional[str] = None,
+    destination: Optional[str] = None,
+):
+    announcements = await db.transport_announcements.find(
+        {
+            "transport_type": transport_type,
+            "active": True,
+        },
+        {"_id": 0},
+    ).sort("created_at", -1).to_list(200)
+
+    filtered = []
+    for announcement in announcements:
+        travel_date = announcement.get("travel_date")
+        if date and travel_date and travel_date != date:
+            continue
+        if destination and announcement.get("destination"):
+            if announcement["destination"].lower() != destination.lower():
+                continue
+        filtered.append(announcement)
+    return filtered
+
+
+async def _find_transport_cancellation(
+    transport_type: str,
+    date: str,
+    destination: Optional[str] = None,
+):
+    announcements = await _list_public_transport_announcements(transport_type, date, destination)
+    for announcement in announcements:
+        if announcement.get("announcement_type") == "cancellation":
+            return announcement
+    return None
+
+
+def _calculate_discount_amount(total_price: int, promo: dict) -> int:
+    if promo.get("discount_type") == "percentage":
+        return int(total_price * int(promo.get("discount_value", 0) or 0) / 100)
+    return min(int(promo.get("discount_value", 0) or 0), total_price)
+
+
+async def _get_transport_promo(code: str, transport_type: str):
+    promo = await db.promo_codes.find_one({"code": code.upper()}, {"_id": 0})
+    if not promo:
+        raise HTTPException(status_code=404, detail="Code promo invalide")
+    if promo.get("scope") != "transport" or promo.get("transport_type") != transport_type:
+        raise HTTPException(status_code=400, detail="Code promo non valide pour ce transport")
+    if not promo.get("active", True):
+        raise HTTPException(status_code=400, detail="Code promo inactif")
+    if int(promo.get("uses", 0) or 0) >= int(promo.get("max_uses", 0) or 0):
+        raise HTTPException(status_code=400, detail="Code promo epuise")
+    if promo.get("valid_until"):
+        valid_until = _parse_valid_until(promo.get("valid_until"))
+        if valid_until and datetime.now(timezone.utc) > valid_until:
+            raise HTTPException(status_code=400, detail="Code promo expire")
+    return promo
+
+
+async def _record_transport_promo_usage(promo: dict, final_total: int):
+    await db.promo_codes.update_one(
+        {"id": promo["id"]},
+        {
+            "$set": {
+                "uses": int(promo.get("uses", 0) or 0) + 1,
+                "bookings_count": int(promo.get("bookings_count", 0) or 0) + 1,
+                "total_sales": int(promo.get("total_sales", 0) or 0) + int(final_total or 0),
+                "last_used_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
+
+
 # ============== FERRY HELPER ==============
 
 async def get_ferry_settings():
@@ -63,14 +182,8 @@ async def get_ferry_settings():
 async def get_dynamic_ferry_schedule():
     """Get ferry schedule from database"""
     settings = await db.settings.find_one({"type": "transport"}, {"_id": 0})
-    if not settings or "ferry" not in settings:
-        return None, None
-    
-    ferry = settings.get("ferry", {})
-    detailed_schedule = ferry.get("detailed_schedule")
-    
-    if not detailed_schedule:
-        return None, None
+    ferry = settings.get("ferry", {}) if settings else {}
+    detailed_schedule = ferry.get("detailed_schedule") or _get_default_ferry_schedule()
     
     schedule_by_weekday = {}
     for day_info in detailed_schedule:
@@ -98,32 +211,52 @@ async def get_public_ferry_schedule():
             "vehicle_types": ferry_settings.get("vehicle_types", []),
             "source": "database"
         }
-    
-    # Fallback schedule
-    fallback_schedule = [
-        {"day": "monday", "day_label": "Lundi", "active": False, "destination": None},
-        {"day": "tuesday", "day_label": "Mardi", "active": True, "destination": "Tadjoura", "departure_time": "08:00", "return_time": "12:00"},
-        {"day": "wednesday", "day_label": "Mercredi", "active": False, "destination": None},
-        {"day": "thursday", "day_label": "Jeudi", "active": True, "destination": "Tadjoura/Obock", "departure_time": "09:00", "return_time": "14:00",
-         "routes": [
-             {"destination": "Tadjoura", "departure_time": "13:00", "return_time": "15:00"},
-             {"destination": "Obock", "departure_time": "09:00", "return_time": "14:00"}
-         ]},
-        {"day": "friday", "day_label": "Vendredi", "active": True, "destination": "Tadjoura", "departure_time": "08:00", "return_time": "13:00"},
-        {"day": "saturday", "day_label": "Samedi", "active": True, "destination": "Tadjoura/Obock", "departure_time": "08:00", "return_time": "12:00",
-         "routes": [
-             {"destination": "Tadjoura", "departure_time": "08:00", "return_time": "12:00"},
-             {"destination": "Obock", "departure_time": "08:00", "return_time": "13:00"}
-         ]},
-        {"day": "sunday", "day_label": "Dimanche", "active": False, "destination": None},
-    ]
-    
+
+    fallback_schedule = _get_default_ferry_schedule()
     return {
         "schedule": fallback_schedule,
         "passenger_price": FERRY_PASSENGER_PRICE,
         "child_free_age": CHILD_FREE_AGE,
         "vehicle_types": [],
         "source": "default"
+    }
+
+
+@router.get("/transport/announcements")
+async def get_public_transport_announcements(
+    transport_type: str = Query(...),
+    date: Optional[str] = None,
+    destination: Optional[str] = None,
+):
+    """Public endpoint for transport announcements and cancellations"""
+    normalized_transport_type = transport_type.lower().strip()
+    if normalized_transport_type not in {"ferry", "train"}:
+        raise HTTPException(status_code=400, detail="Type de transport invalide")
+
+    announcements = await _list_public_transport_announcements(
+        normalized_transport_type,
+        date=date,
+        destination=destination,
+    )
+    return {"announcements": announcements, "total": len(announcements)}
+
+
+@router.get("/transport/promo-codes/{code}/validate")
+async def validate_transport_promo_code(code: str, transport_type: str = Query(...)):
+    """Validate a transport promo code"""
+    normalized_transport_type = transport_type.lower().strip()
+    if normalized_transport_type not in {"ferry", "train"}:
+        raise HTTPException(status_code=400, detail="Type de transport invalide")
+
+    promo = await _get_transport_promo(code, normalized_transport_type)
+    return {
+        "valid": True,
+        "code": promo["code"],
+        "title": promo.get("title"),
+        "discount_type": promo["discount_type"],
+        "discount_value": promo["discount_value"],
+        "agency_id": promo.get("agency_id"),
+        "staff_id": promo.get("staff_id"),
     }
 
 
@@ -147,6 +280,16 @@ async def get_ferry_trips(date: str, destination: Optional[str] = None):
     
     if not day_schedule.get("active"):
         return {"date": date, "has_service": False, "message": "Pas de service ce jour", "trips": []}
+
+    cancellation = await _find_transport_cancellation("ferry", date, destination)
+    if cancellation:
+        return {
+            "date": date,
+            "has_service": False,
+            "message": cancellation.get("message") or cancellation.get("title") or "Voyage annule",
+            "announcement": cancellation,
+            "trips": [],
+        }
     
     # Check if day has multiple routes (Tadjoura and Obock)
     routes = day_schedule.get("routes", [])
@@ -215,6 +358,7 @@ async def get_ferry_trips(date: str, destination: Optional[str] = None):
         "has_service": len(trips) > 0,
         "day": day_schedule.get("day_label"),
         "trips": trips,
+        "announcements": await _list_public_transport_announcements("ferry", date, destination),
         "capacity": {
             "passengers_remaining": max(0, max_passengers - booked_passengers),
             "vehicles_remaining": max(0, max_vehicles - booked_vehicles),
@@ -259,6 +403,13 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
     
     if booking.destination.lower() not in valid_destinations:
         raise HTTPException(status_code=400, detail=f"Destination non disponible ce jour. Disponibles: {', '.join(valid_destinations)}")
+
+    cancellation = await _find_transport_cancellation("ferry", booking.date, booking.destination)
+    if cancellation:
+        raise HTTPException(
+            status_code=400,
+            detail=cancellation.get("message") or cancellation.get("title") or "Cette traversee est annulee",
+        )
     
     # Get departure time for selected destination
     departure_time = day_schedule.get("departure_time", "08:00")
@@ -316,17 +467,10 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
     
     # Apply promo code if any
     discount = 0
+    promo = None
     if booking.promo_code:
-        promo = await db.promo_codes.find_one({"code": booking.promo_code.upper()})
-        if promo and promo["uses"] < promo["max_uses"]:
-            if promo["discount_type"] == "percentage":
-                discount = int(total_price * promo["discount_value"] / 100)
-            else:
-                discount = min(promo["discount_value"], total_price)
-            await db.promo_codes.update_one(
-                {"code": booking.promo_code.upper()},
-                {"$inc": {"uses": 1}}
-            )
+        promo = await _get_transport_promo(booking.promo_code, "ferry")
+        discount = _calculate_discount_amount(total_price, promo)
     
     final_total = total_price - discount
     
@@ -359,6 +503,8 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
             "status": "valid",
             "price": ticket_price,
             "payment_method": booking.payment_method,
+            "promo_code": promo.get("code") if promo else None,
+            "promo_discount_applied": discount,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.tickets.insert_one(ticket_doc)
@@ -390,6 +536,7 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
             "status": "valid",
             "price": vt.get("price", 0),
             "payment_method": booking.payment_method,
+            "promo_code": promo.get("code") if promo else None,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.ferry_vehicles.insert_one(vehicle_doc)
@@ -399,6 +546,9 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
             "plate": vehicle.plate_number,
             "price": vt.get("price", 0)
         })
+
+    if promo:
+        await _record_transport_promo_usage(promo, final_total)
     
     return {
         "message": "Reservation confirmee",
@@ -408,6 +558,7 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
         "vehicle_total": vehicle_total,
         "discount": discount,
         "final_total": final_total,
+        "promo_code": promo.get("code") if promo else None,
         "trip": {
             "date": booking.date,
             "destination": booking.destination,
@@ -449,6 +600,16 @@ async def get_train_trips(date: str):
     
     if not train_settings.get("active", True):
         return {"date": date, "has_service": False, "message": "Service train suspendu", "trips": []}
+
+    cancellation = await _find_transport_cancellation("train", date)
+    if cancellation:
+        return {
+            "date": date,
+            "has_service": False,
+            "message": cancellation.get("message") or cancellation.get("title") or "Voyage annule",
+            "announcement": cancellation,
+            "trips": [],
+        }
     
     departure_time = train_settings.get("departure_time", "06:00")
     price = train_settings.get("price", TRAIN_PRICE)
@@ -463,6 +624,7 @@ async def get_train_trips(date: str):
         "has_service": True,
         "direction": direction,
         "rule": "Jours impairs: Djibouti -> Ali Sabieh | Jours pairs: Ali Sabieh -> Djibouti",
+        "announcements": await _list_public_transport_announcements("train", date),
         "trips": trips
     }
 
@@ -485,6 +647,13 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
             status_code=400, 
             detail=f"Le {booking.date}, le train circule uniquement de {expected_departure} a {expected_arrival}"
         )
+
+    cancellation = await _find_transport_cancellation("train", booking.date)
+    if cancellation:
+        raise HTTPException(
+            status_code=400,
+            detail=cancellation.get("message") or cancellation.get("title") or "Ce voyage est annule",
+        )
     
     settings = await db.settings.find_one({"type": "transport"}, {"_id": 0})
     train_settings = settings.get("train", {}) if settings else {}
@@ -492,6 +661,12 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
     price = train_settings.get("price", TRAIN_PRICE)
     
     total_price = price * len(booking.passengers)
+    discount = 0
+    promo = None
+    if booking.promo_code:
+        promo = await _get_transport_promo(booking.promo_code, "train")
+        discount = _calculate_discount_amount(total_price, promo)
+    final_total = total_price - discount
     
     tickets_created = []
     for passenger in booking.passengers:
@@ -515,15 +690,23 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
             "status": "valid",
             "price": price,
             "payment_method": booking.payment_method,
+            "promo_code": promo.get("code") if promo else None,
+            "promo_discount_applied": discount,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.tickets.insert_one(ticket_doc)
         tickets_created.append({"id": ticket_id, "passenger": passenger.full_name})
+
+    if promo:
+        await _record_transport_promo_usage(promo, final_total)
     
     return {
         "message": "Reservation confirmee",
         "tickets": tickets_created,
-        "total": total_price,
+        "subtotal": total_price,
+        "discount": discount,
+        "total": final_total,
+        "promo_code": promo.get("code") if promo else None,
         "trip": {
             "date": booking.date,
             "departure": booking.departure,

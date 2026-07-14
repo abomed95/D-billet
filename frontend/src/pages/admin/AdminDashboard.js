@@ -38,8 +38,13 @@ const AdminDashboard = () => {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  const toSafeNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('fr-DJ').format(price) + ' DJF';
+    return new Intl.NumberFormat('fr-DJ').format(toSafeNumber(price)) + ' DJF';
   };
 
   if (loading) {
@@ -57,6 +62,9 @@ const AdminDashboard = () => {
 
   if (!stats) return null;
 
+  const platformRevenue = stats.platform_revenue ?? stats.commission ?? 0;
+  const commissionRate = toSafeNumber(stats.commission_rate) || 8;
+
   const mainStats = [
     {
       title: 'Chiffre d\'Affaires Global',
@@ -69,8 +77,8 @@ const AdminDashboard = () => {
     },
     {
       title: 'Revenus Plateforme',
-      value: formatPrice(stats.commission),
-      subtitle: 'Commission 8%',
+      value: formatPrice(platformRevenue),
+      subtitle: `Commission ${commissionRate}%`,
       icon: TrendingUp,
       color: 'from-yellow-500 to-orange-500',
       iconBg: 'bg-yellow-500/20',
