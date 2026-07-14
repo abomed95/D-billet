@@ -77,7 +77,10 @@ apt install -y -qq \
     python3 python3-venv python3-pip python3-dev \
     build-essential libffi-dev \
     nginx certbot python3-certbot-nginx \
-    git curl ufw fail2ban
+    git curl ufw fail2ban \
+    libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+    libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64 \
+    libpangocairo-1.0-0 libpango-1.0-0 libcairo2 libx11-xcb1 libxss1 fonts-liberation
 
 # Node.js LTS
 if ! command -v node >/dev/null || [[ "$(node -v | sed 's/v//;s/\..*//')" -lt "$NODE_MAJOR" ]]; then
