@@ -9,6 +9,8 @@ module.exports = {
         extend: {
             fontFamily: {
                 unbounded: ['Unbounded', 'sans-serif'],
+                display: ['Sora', 'Unbounded', 'sans-serif'],
+                sans: ['Plus Jakarta Sans', 'Manrope', 'system-ui', 'sans-serif'],
                 manrope: ['Manrope', 'sans-serif'],
                 mono: ['JetBrains Mono', 'monospace'],
             },
