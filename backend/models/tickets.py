@@ -15,6 +15,8 @@ class CartItemAdd(BaseModel):
 class CheckoutRequest(BaseModel):
     payment_method: str
     promo_code: Optional[str] = None
+    # Mobile-wallet account (phone number) required when payment_method == "waafi"
+    payment_account: Optional[str] = None
 
 
 class TicketResponse(BaseModel):

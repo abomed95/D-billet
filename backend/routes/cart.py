@@ -7,7 +7,7 @@ import uuid
 
 from config import db
 from models import CartItemAdd, CheckoutRequest
-from services import get_current_user
+from services import get_current_user, waafi
 
 router = APIRouter(tags=["Cart"])
 
@@ -150,6 +150,7 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
         if ticket_type:
             total += ticket_type["price"] * item["quantity"]
     
+    applied_promo_code = None
     if promo_code:
         promo = await db.promo_codes.find_one({"code": promo_code.upper()})
         if promo and promo["uses"] < promo["max_uses"]:
@@ -157,22 +158,67 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
                 discount = int(total * promo["discount_value"] / 100)
             else:
                 discount = min(promo["discount_value"], total)
-            await db.promo_codes.update_one(
-                {"code": promo_code.upper()},
-                {"$inc": {"uses": 1, "total_sales": total - discount}}
-            )
-    
+            # Defer the usage increment until the payment has succeeded.
+            applied_promo_code = promo_code.upper()
+
     final_total = total - discount
-    
+
+    # Verify availability before charging so we never take money we can't fulfil.
     for item in cart["items"]:
         event = await db.events.find_one({"id": item["event_id"]})
         if not event:
             continue
-        
         ticket_type = next((tt for tt in event.get("ticket_types", []) if tt["id"] == item["ticket_type_id"]), None)
         if not ticket_type:
             continue
-        
+        available = ticket_type["quantity"] - ticket_type.get("sold", 0)
+        if available < item["quantity"]:
+            raise HTTPException(status_code=400, detail=f"Pas assez de billets pour {event['title']} ({ticket_type['name']})")
+
+    # Process the WaafiPay mobile-wallet payment before issuing any ticket.
+    payment_reference = None
+    if checkout_data.payment_method == "waafi":
+        if not waafi.is_configured():
+            raise HTTPException(status_code=503, detail="Le paiement Waafi n'est pas configure")
+        if not checkout_data.payment_account:
+            raise HTTPException(status_code=400, detail="Numero de compte Waafi requis")
+        if final_total <= 0:
+            raise HTTPException(status_code=400, detail="Montant de paiement invalide")
+
+        reference_id = str(uuid.uuid4())[:12]
+        try:
+            payment = await waafi.purchase(
+                account_no=checkout_data.payment_account,
+                amount=final_total,
+                reference_id=reference_id,
+                description=f"D-Billet - {len(cart['items'])} article(s)",
+            )
+        except waafi.WaafiError as exc:
+            raise HTTPException(status_code=502, detail=f"Erreur de paiement Waafi: {exc}")
+
+        if not payment.get("success"):
+            raise HTTPException(
+                status_code=402,
+                detail=payment.get("message") or "Paiement Waafi refuse",
+            )
+        payment_reference = payment.get("transaction_id") or reference_id
+
+    # Payment succeeded (or method is simulated): now consume the promo code.
+    if applied_promo_code:
+        await db.promo_codes.update_one(
+            {"code": applied_promo_code},
+            {"$inc": {"uses": 1, "total_sales": final_total}}
+        )
+
+    for item in cart["items"]:
+        event = await db.events.find_one({"id": item["event_id"]})
+        if not event:
+            continue
+
+        ticket_type = next((tt for tt in event.get("ticket_types", []) if tt["id"] == item["ticket_type_id"]), None)
+        if not ticket_type:
+            continue
+
         available = ticket_type["quantity"] - ticket_type.get("sold", 0)
         if available < item["quantity"]:
             raise HTTPException(status_code=400, detail=f"Pas assez de billets pour {event['title']} ({ticket_type['name']})")
@@ -197,6 +243,7 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
                 "price": ticket_type["price"],
                 "promo_code": promo_code,
                 "payment_method": checkout_data.payment_method,
+                "payment_reference": payment_reference,
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await db.tickets.insert_one(ticket_doc)
@@ -217,5 +264,6 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
         "total": total,
         "discount": discount,
         "final_total": final_total,
-        "payment_method": checkout_data.payment_method
+        "payment_method": checkout_data.payment_method,
+        "payment_reference": payment_reference
     }

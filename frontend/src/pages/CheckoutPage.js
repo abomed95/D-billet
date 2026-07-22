@@ -40,6 +40,7 @@ const CheckoutPage = () => {
   
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState(null);
+  const [waafiAccount, setWaafiAccount] = useState('');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -53,16 +54,29 @@ const CheckoutPage = () => {
       return;
     }
 
+    const isWaafi = paymentMethod === 'waafi';
+    if (isWaafi && !waafiAccount.trim()) {
+      toast.error('Veuillez saisir votre numéro Waafi');
+      return;
+    }
+
     setStep(2);
     setProcessing(true);
 
     try {
-      // Simulate payment delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Waafi hits the real payment gateway; other methods are simulated.
+      if (!isWaafi) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      const payload = { payment_method: paymentMethod };
+      if (isWaafi) {
+        payload.payment_account = waafiAccount.trim();
+      }
 
       const response = await axios.post(
         `${API}/checkout`,
-        { payment_method: paymentMethod },
+        payload,
         { headers: getAuthHeaders() }
       );
 
@@ -136,6 +150,28 @@ const CheckoutPage = () => {
                 </button>
               ))}
             </div>
+
+            {/* Waafi account number */}
+            {paymentMethod === 'waafi' && (
+              <div className="glass p-5 rounded-xl animate-fade-in">
+                <label htmlFor="waafi-account" className="block font-unbounded font-semibold text-white mb-2">
+                  Numéro Waafi
+                </label>
+                <input
+                  id="waafi-account"
+                  type="tel"
+                  inputMode="numeric"
+                  value={waafiAccount}
+                  onChange={(e) => setWaafiAccount(e.target.value)}
+                  placeholder="Ex: 25377111111"
+                  className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                  data-testid="waafi-account-input"
+                />
+                <p className="text-sm text-gray-400 mt-2">
+                  Vous recevrez une demande de confirmation sur ce numéro.
+                </p>
+              </div>
+            )}
 
             {/* Order Summary */}
             <div className="glass p-6 rounded-xl">
