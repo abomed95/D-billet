@@ -9,7 +9,7 @@ import uuid
 
 from config import db, TRAIN_PRICE, DAY_TO_WEEKDAY
 from models import TrainBookingRequest
-from services import get_current_user, waafipay, start_waafi_payment
+from services import get_current_user, waafipay, start_waafi_payment, pay_with_waafi_wallet
 
 router = APIRouter(tags=["Transport"])
 
@@ -75,6 +75,7 @@ class FerryBookingRequest(BaseModel):
     vehicles: List[FerryVehicle] = []
     payment_method: str
     promo_code: Optional[str] = None
+    payer_phone: Optional[str] = None  # Waafi wallet number for direct debit
 
 
 def _parse_valid_until(value: Optional[str]):
@@ -474,12 +475,14 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
     
     final_total = total_price - discount
 
-    use_waafi = waafipay.is_configured() and booking.payment_method == "waafi"
-    if waafipay.is_configured() and booking.payment_method != "waafi":
+    use_waafi = waafipay.is_available() and booking.payment_method == "waafi"
+    if waafipay.is_available() and booking.payment_method != "waafi":
         raise HTTPException(
             status_code=400,
             detail="Seul le paiement WaafiPay est disponible actuellement. D-Money et CAC Pay arrivent bientot.",
         )
+    if use_waafi and waafipay.is_api_configured() and not (booking.payer_phone or user.get("phone")):
+        raise HTTPException(status_code=400, detail="Numero Waafi requis pour le paiement.")
     ticket_status = "pending" if use_waafi else "valid"
     payment_status = "pending" if use_waafi else "simulated"
     ticket_ids = []
@@ -563,13 +566,40 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
         })
 
     if use_waafi:
+        description = f"D-Billet Ferry Djibouti - {booking.destination}"
+        if waafipay.is_api_configured():
+            payment = await pay_with_waafi_wallet(
+                user=user,
+                source="ferry",
+                amount=final_total,
+                ticket_ids=ticket_ids,
+                vehicle_ids=vehicle_ids,
+                description=description,
+                account_no=booking.payer_phone or user.get("phone"),
+                promo_code=promo.get("code") if promo else None,
+            )
+            return {
+                "message": "Paiement Waafi reussi",
+                "requires_payment": False,
+                "paid": True,
+                "reference_id": payment["reference_id"],
+                "transaction_id": payment.get("transaction_id"),
+                "tickets": tickets_created,
+                "vehicles": vehicles_created,
+                "passenger_total": passenger_total,
+                "vehicle_total": vehicle_total,
+                "discount": discount,
+                "final_total": final_total,
+                "promo_code": promo.get("code") if promo else None,
+            }
+
         payment = await start_waafi_payment(
             user=user,
             source="ferry",
             amount=final_total,
             ticket_ids=ticket_ids,
             vehicle_ids=vehicle_ids,
-            description=f"D-Billet Ferry Djibouti - {booking.destination}",
+            description=description,
             promo_code=promo.get("code") if promo else None,
         )
         return {
@@ -708,12 +738,14 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
         discount = _calculate_discount_amount(total_price, promo)
     final_total = total_price - discount
 
-    use_waafi = waafipay.is_configured() and booking.payment_method == "waafi"
-    if waafipay.is_configured() and booking.payment_method != "waafi":
+    use_waafi = waafipay.is_available() and booking.payment_method == "waafi"
+    if waafipay.is_available() and booking.payment_method != "waafi":
         raise HTTPException(
             status_code=400,
             detail="Seul le paiement WaafiPay est disponible actuellement. D-Money et CAC Pay arrivent bientot.",
         )
+    if use_waafi and waafipay.is_api_configured() and not (booking.payer_phone or user.get("phone")):
+        raise HTTPException(status_code=400, detail="Numero Waafi requis pour le paiement.")
     ticket_status = "pending" if use_waafi else "valid"
     payment_status = "pending" if use_waafi else "simulated"
     ticket_ids = []
@@ -750,12 +782,36 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
         tickets_created.append({"id": ticket_id, "passenger": passenger.full_name})
 
     if use_waafi:
+        description = f"D-Billet Train {booking.departure} - {booking.arrival}"
+        if waafipay.is_api_configured():
+            payment = await pay_with_waafi_wallet(
+                user=user,
+                source="train",
+                amount=final_total,
+                ticket_ids=ticket_ids,
+                description=description,
+                account_no=booking.payer_phone or user.get("phone"),
+                promo_code=promo.get("code") if promo else None,
+            )
+            return {
+                "message": "Paiement Waafi reussi",
+                "requires_payment": False,
+                "paid": True,
+                "reference_id": payment["reference_id"],
+                "transaction_id": payment.get("transaction_id"),
+                "tickets": tickets_created,
+                "subtotal": total_price,
+                "discount": discount,
+                "total": final_total,
+                "promo_code": promo.get("code") if promo else None,
+            }
+
         payment = await start_waafi_payment(
             user=user,
             source="train",
             amount=final_total,
             ticket_ids=ticket_ids,
-            description=f"D-Billet Train {booking.departure} - {booking.arrival}",
+            description=description,
             promo_code=promo.get("code") if promo else None,
         )
         return {

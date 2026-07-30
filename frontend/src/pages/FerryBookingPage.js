@@ -47,6 +47,7 @@ const FerryBookingPage = () => {
   const [guestName, setGuestName] = useState('');
   
   const [paymentMethod, setPaymentMethod] = useState('waafi');
+  const [payerPhone, setPayerPhone] = useState('');
   const [booking, setBooking] = useState(false);
   const [publicAnnouncements, setPublicAnnouncements] = useState([]);
   const [promoCode, setPromoCode] = useState('');
@@ -234,6 +235,11 @@ const FerryBookingPage = () => {
       }
     }
 
+    if (paymentMethod === 'waafi' && !payerPhone.trim()) {
+      toast.error('Veuillez saisir votre numéro Waafi');
+      return;
+    }
+
     setBooking(true);
     try {
       const response = await axios.post(
@@ -244,8 +250,8 @@ const FerryBookingPage = () => {
           trip_type: selectedTrip.trip_type,
           passengers: passengers,
           vehicles: vehicles,
-          payment_method: paymentMethod
-          ,
+          payment_method: paymentMethod,
+          payer_phone: payerPhone.trim() || undefined,
           promo_code: promoDetails?.code || null
         },
         { headers: { Authorization: `Bearer ${authToken}` } }
@@ -737,6 +743,26 @@ const FerryBookingPage = () => {
                   </button>
                 ))}
               </div>
+
+              {paymentMethod === 'waafi' && (
+                <div className="mt-4 space-y-2">
+                  <label htmlFor="ferry-waafi-phone" className="block text-sm font-semibold text-white">
+                    Numéro Waafi à débiter
+                  </label>
+                  <input
+                    id="ferry-waafi-phone"
+                    type="tel"
+                    inputMode="tel"
+                    value={payerPhone}
+                    onChange={(e) => setPayerPhone(e.target.value)}
+                    placeholder="Ex: 77 12 34 56"
+                    className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-ferry focus:outline-none"
+                  />
+                  <p className="text-xs text-gray-400">
+                    Une demande de paiement sera envoyée sur votre téléphone. Validez avec votre code PIN Waafi.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Total & Book */}

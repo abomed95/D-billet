@@ -120,6 +120,12 @@ try:
     WAAFIPAY_TIMEOUT = int(os.environ.get('WAAFIPAY_TIMEOUT', '30'))
 except ValueError:
     WAAFIPAY_TIMEOUT = 30
+# Direct mobile-wallet purchase blocks until the customer approves on their
+# phone (PIN), so it needs a longer timeout than a normal API call.
+try:
+    WAAFIPAY_PURCHASE_TIMEOUT = int(os.environ.get('WAAFIPAY_PURCHASE_TIMEOUT', '55'))
+except ValueError:
+    WAAFIPAY_PURCHASE_TIMEOUT = 55
 # The frontend method id that routes through WaafiPay
 WAAFIPAY_PAYMENT_METHOD_ID = os.environ.get('WAAFIPAY_PAYMENT_METHOD_ID', 'waafi').strip()
 # WaafiPay payment method sent in the HPP request (mandatory for the gateway).

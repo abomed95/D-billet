@@ -116,6 +116,104 @@ async def start_waafi_payment(
     }
 
 
+async def pay_with_waafi_wallet(
+    *,
+    user: dict,
+    source: str,
+    amount: int,
+    ticket_ids: list,
+    description: str,
+    account_no: str,
+    currency: str = None,
+    vehicle_ids: list = None,
+    promo_code: str = None,
+    sold_adjustments: list = None,
+    clear_cart: bool = False,
+) -> dict:
+    """
+    Directly debit the customer's Waafi wallet (synchronous). The customer
+    approves on their phone; on approval the reserved tickets are confirmed,
+    otherwise the reservation is rolled back and an error is raised.
+    """
+    reference_id = _reference_id()
+    currency = currency or WAAFIPAY_CURRENCY
+
+    try:
+        result = await waafipay.api_purchase(
+            reference_id=reference_id,
+            amount=amount,
+            account_no=account_no,
+            description=description,
+            currency=currency,
+        )
+    except waafipay.WaafiPayError as exc:
+        await _rollback_reservation(ticket_ids, vehicle_ids, sold_adjustments)
+        logger.error("WaafiPay wallet debit failed (source=%s, user=%s): %s", source, user.get("id"), exc)
+        raise HTTPException(
+            status_code=502,
+            detail="Le paiement WaafiPay est momentanement indisponible. Merci de reessayer dans un instant.",
+        ) from exc
+
+    now = _now()
+    payment_doc = {
+        "id": str(uuid.uuid4()),
+        "reference_id": reference_id,
+        "provider": "waafipay",
+        "payment_method": "waafi",
+        "flow": "api_purchase",
+        "user_id": user["id"],
+        "source": source,
+        "amount": amount,
+        "currency": currency,
+        "ticket_ids": ticket_ids or [],
+        "vehicle_ids": vehicle_ids or [],
+        "promo_code": promo_code,
+        "sold_adjustments": sold_adjustments or [],
+        "transaction_id": result.get("transaction_id"),
+        "state": result.get("state"),
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    if not result["approved"]:
+        await _rollback_reservation(ticket_ids, vehicle_ids, sold_adjustments)
+        payment_doc["status"] = "failed"
+        await db.payments.insert_one(payment_doc)
+        message = result.get("message") or "Paiement refuse par WaafiPay"
+        logger.info("WaafiPay wallet debit declined (ref=%s): %s", reference_id, message)
+        raise HTTPException(status_code=402, detail=f"Paiement Waafi refuse: {message}")
+
+    # Approved: confirm the reserved tickets.
+    if ticket_ids:
+        await db.tickets.update_many(
+            {"id": {"$in": ticket_ids}},
+            {"$set": {"status": "valid", "payment_status": "paid",
+                      "payment_reference": reference_id, "paid_at": now}},
+        )
+    if vehicle_ids:
+        await db.ferry_vehicles.update_many(
+            {"id": {"$in": vehicle_ids}},
+            {"$set": {"status": "valid", "payment_status": "paid", "paid_at": now}},
+        )
+    await _record_promo_usage({"source": source, "promo_code": promo_code, "amount": amount})
+    if clear_cart:
+        await db.carts.delete_one({"user_id": user["id"]})
+
+    payment_doc["status"] = "paid"
+    payment_doc["paid_at"] = now
+    await db.payments.insert_one(payment_doc)
+    logger.info("WaafiPay wallet debit approved (ref=%s, tx=%s)", reference_id, result.get("transaction_id"))
+
+    return {
+        "requires_payment": False,
+        "paid": True,
+        "reference_id": reference_id,
+        "transaction_id": result.get("transaction_id"),
+        "amount": amount,
+        "currency": currency,
+    }
+
+
 async def _rollback_reservation(ticket_ids: list, vehicle_ids: list, sold_adjustments: list):
     """Undo a reservation when the payment could not even be created."""
     if ticket_ids:

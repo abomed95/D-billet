@@ -54,12 +54,42 @@ class WaafiPayNotConfigured(WaafiPayError):
 
 
 def is_configured() -> bool:
-    """True when the HPP credentials required to create a payment are present."""
+    """True when the HPP (redirect) credentials are present."""
     return bool(
         config.WAAFIPAY_MERCHANT_UID
         and config.WAAFIPAY_STORE_ID
         and config.WAAFIPAY_HPP_KEY
     )
+
+
+def is_api_configured() -> bool:
+    """True when the direct API (mobile-wallet debit) credentials are present."""
+    return bool(
+        config.WAAFIPAY_MERCHANT_UID
+        and config.WAAFIPAY_API_USER_ID
+        and config.WAAFIPAY_API_KEY
+    )
+
+
+def is_available() -> bool:
+    """True when any WaafiPay flow (direct wallet debit or HPP) is configured."""
+    return is_api_configured() or is_configured()
+
+
+def normalize_msisdn(phone: str) -> str:
+    """
+    Return a Waafi wallet number in international format (no '+'), for Djibouti.
+    Accepts local 8-digit numbers (77xxxxxx), 00253..., +253..., or 253...
+    """
+    digits = re.sub(r"\D", "", phone or "")
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if digits.startswith("253"):
+        return digits
+    # Local Djibouti mobile (8 digits, e.g. 77xxxxxx) -> prepend country code
+    if len(digits) == 8:
+        return "253" + digits
+    return digits.lstrip("0")
 
 
 def _timestamp() -> str:
@@ -78,9 +108,9 @@ def _normalize_phone(phone: str) -> str:
     return digits.lstrip("0")
 
 
-async def _post(payload: dict) -> dict:
+async def _post(payload: dict, timeout: int = None) -> dict:
     try:
-        async with httpx.AsyncClient(timeout=config.WAAFIPAY_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=timeout or config.WAAFIPAY_TIMEOUT) as client:
             response = await client.post(config.WAAFIPAY_BASE_URL, json=payload)
         response.raise_for_status()
         return response.json()
@@ -214,5 +244,64 @@ async def get_transaction_info(reference_id: str) -> dict:
         "response_code": str(data.get("responseCode", "")),
         "transaction_id": params.get("transactionId"),
         "amount": params.get("txAmount") or params.get("tranAmount") or params.get("amount"),
+        "raw": data,
+    }
+
+
+async def api_purchase(
+    *,
+    reference_id: str,
+    amount,
+    account_no: str,
+    description: str,
+    currency: str = None,
+    payment_method: str = None,
+) -> dict:
+    """
+    Directly debit a customer's Waafi mobile wallet (no redirect).
+
+    The customer receives a push/USSD prompt on their phone and approves with
+    their PIN; the call blocks until they respond. Returns a dict:
+    approved, state, response_code, message, transaction_id, raw.
+    Raises WaafiPayError on transport failure.
+    """
+    if not is_api_configured():
+        raise WaafiPayNotConfigured("Les identifiants API WaafiPay ne sont pas configures")
+
+    msisdn = normalize_msisdn(account_no)
+    payload = {
+        "schemaVersion": SCHEMA_VERSION,
+        "requestId": uuid.uuid4().hex,
+        "timestamp": _timestamp(),
+        "channelName": CHANNEL_NAME,
+        "serviceName": "API_PURCHASE",
+        "serviceParams": {
+            "merchantUid": config.WAAFIPAY_MERCHANT_UID,
+            "apiUserId": config.WAAFIPAY_API_USER_ID,
+            "apiKey": config.WAAFIPAY_API_KEY,
+            "paymentMethod": payment_method or config.WAAFIPAY_HPP_PAYMENT_METHOD,
+            "payerInfo": {"accountNo": msisdn},
+            "transactionInfo": {
+                "referenceId": reference_id,
+                "invoiceId": reference_id,
+                "amount": _format_amount(amount),
+                "currency": currency or config.WAAFIPAY_CURRENCY,
+                "description": (description or "D-Billet")[:255],
+            },
+        },
+    }
+
+    data = await _post(payload, timeout=config.WAAFIPAY_PURCHASE_TIMEOUT)
+    response_code = str(data.get("responseCode", ""))
+    params = data.get("params") or {}
+    state = str(params.get("state") or "").upper()
+    approved = response_code == SUCCESS_RESPONSE_CODE and state not in FAILED_STATES
+
+    return {
+        "approved": approved,
+        "state": state,
+        "response_code": response_code,
+        "message": data.get("responseMsg") or (params.get("description") if isinstance(params, dict) else None),
+        "transaction_id": params.get("transactionId"),
         "raw": data,
     }

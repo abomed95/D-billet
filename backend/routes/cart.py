@@ -7,7 +7,7 @@ import uuid
 
 from config import db
 from models import CartItemAdd, CheckoutRequest
-from services import get_current_user, waafipay, start_waafi_payment
+from services import get_current_user, waafipay, start_waafi_payment, pay_with_waafi_wallet
 
 router = APIRouter(tags=["Cart"])
 
@@ -146,16 +146,21 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
     # Any other method (or an unconfigured gateway) keeps the legacy behaviour
     # of issuing valid tickets immediately (simulated payment).
     use_waafi = (
-        waafipay.is_configured()
+        waafipay.is_available()
         and checkout_data.payment_method == "waafi"
     )
 
     # Only WaafiPay is live for now; D-Money and CAC Pay are not yet available.
-    if waafipay.is_configured() and checkout_data.payment_method != "waafi":
+    if waafipay.is_available() and checkout_data.payment_method != "waafi":
         raise HTTPException(
             status_code=400,
             detail="Seul le paiement WaafiPay est disponible actuellement. D-Money et CAC Pay arrivent bientot.",
         )
+
+    # Direct wallet debit requires the customer's Waafi number up front.
+    if use_waafi and waafipay.is_api_configured():
+        if not (checkout_data.payer_phone or user.get("phone")):
+            raise HTTPException(status_code=400, detail="Numero Waafi requis pour le paiement.")
 
     for item in cart["items"]:
         event = await db.events.find_one({"id": item["event_id"]})
@@ -242,14 +247,42 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
         })
 
     if use_waafi:
-        # Keep the cart until the payment is confirmed; return a redirect URL.
         event_titles = ", ".join(sorted({t["event_title"] for t in tickets_created}))
+        description = f"D-Billet - {event_titles}"[:255]
+
+        if waafipay.is_api_configured():
+            # Direct wallet debit: charge the customer's Waafi wallet now.
+            payment = await pay_with_waafi_wallet(
+                user=user,
+                source="event",
+                amount=final_total,
+                ticket_ids=ticket_ids,
+                description=description,
+                account_no=checkout_data.payer_phone or user.get("phone"),
+                promo_code=promo_code if promo else None,
+                sold_adjustments=sold_adjustments,
+                clear_cart=True,
+            )
+            return {
+                "message": "Paiement Waafi reussi",
+                "requires_payment": False,
+                "paid": True,
+                "reference_id": payment["reference_id"],
+                "transaction_id": payment.get("transaction_id"),
+                "tickets": [{"id": t["id"], "event_title": t["event_title"], "ticket_type": t["ticket_type"]} for t in tickets_created],
+                "total": total,
+                "discount": discount,
+                "final_total": final_total,
+                "payment_method": checkout_data.payment_method,
+            }
+
+        # Fallback: Hosted Payment Page redirect (keep cart until confirmed).
         payment = await start_waafi_payment(
             user=user,
             source="event",
             amount=final_total,
             ticket_ids=ticket_ids,
-            description=f"D-Billet - {event_titles}"[:255],
+            description=description,
             promo_code=promo_code if promo else None,
             sold_adjustments=sold_adjustments,
             clear_cart=True,
