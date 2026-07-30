@@ -415,8 +415,28 @@ class TestPaymentMethods:
         """Test booking with CAC Bank payment (SIMULATED)"""
         self._test_payment_method(auth_token, "cacbank")
     
+    def _waafi_gateway(self):
+        """Return the WaafiPay config from the live API (empty dict if off)."""
+        try:
+            r = requests.get(f"{BASE_URL}/api/payments/config", timeout=10)
+            if r.status_code == 200:
+                return r.json().get("waafi", {})
+        except requests.RequestException:
+            pass
+        return {}
+
     def _test_payment_method(self, token, payment_method):
-        """Helper to test a specific payment method"""
+        """Helper to test a specific payment method.
+
+        Behaviour depends on whether the real WaafiPay gateway is configured:
+        - gateway OFF  -> every method is simulated and returns 200.
+        - gateway ON   -> only "waafi" is accepted (others return 400), and the
+          waafi path triggers a REAL charge, so it is skipped here.
+        """
+        gateway_live = bool(self._waafi_gateway().get("enabled"))
+        if gateway_live and payment_method == "waafi":
+            pytest.skip("WaafiPay gateway is live: skipping to avoid a real charge")
+
         # Find valid ferry date
         test_date = None
         for days_ahead in range(1, 14):
@@ -450,8 +470,15 @@ class TestPaymentMethods:
             headers={"Authorization": f"Bearer {token}"}
         )
         
-        assert booking_response.status_code == 200, f"{payment_method} payment failed: {booking_response.text}"
-        print(f"✓ {payment_method.upper()} payment accepted (SIMULATED)")
+        if gateway_live:
+            # Only WaafiPay is available while the gateway is live.
+            assert booking_response.status_code == 400, (
+                f"{payment_method} should be unavailable (gateway live): {booking_response.text}"
+            )
+            print(f"✓ {payment_method.upper()} correctly rejected (gateway live, only WaafiPay)")
+        else:
+            assert booking_response.status_code == 200, f"{payment_method} payment failed: {booking_response.text}"
+            print(f"✓ {payment_method.upper()} payment accepted (SIMULATED)")
 
 
 if __name__ == "__main__":
