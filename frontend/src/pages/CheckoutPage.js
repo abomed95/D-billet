@@ -44,6 +44,7 @@ const CheckoutPage = () => {
   
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('waafi');
+  const [payerPhone, setPayerPhone] = useState('');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -57,13 +58,18 @@ const CheckoutPage = () => {
       return;
     }
 
+    if (paymentMethod === 'waafi' && !payerPhone.trim()) {
+      toast.error('Veuillez saisir votre numéro Waafi');
+      return;
+    }
+
     setStep(2);
     setProcessing(true);
 
     try {
       const response = await axios.post(
         `${API}/checkout`,
-        { payment_method: paymentMethod },
+        { payment_method: paymentMethod, payer_phone: payerPhone.trim() || undefined },
         { headers: getAuthHeaders() }
       );
 
@@ -179,6 +185,27 @@ const CheckoutPage = () => {
               </div>
             </div>
 
+            {paymentMethod === 'waafi' && (
+              <div className="glass p-5 rounded-xl space-y-2">
+                <label htmlFor="waafi-phone" className="block text-sm font-semibold text-white">
+                  Numéro Waafi à débiter
+                </label>
+                <input
+                  id="waafi-phone"
+                  type="tel"
+                  inputMode="tel"
+                  value={payerPhone}
+                  onChange={(e) => setPayerPhone(e.target.value)}
+                  placeholder="Ex: 77 12 34 56"
+                  className="w-full h-12 px-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+                  data-testid="waafi-phone-input"
+                />
+                <p className="text-xs text-gray-400">
+                  Vous recevrez une demande de paiement sur votre téléphone. Validez avec votre code PIN Waafi.
+                </p>
+              </div>
+            )}
+
             <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
               <Shield className="text-green-400 mt-0.5" size={20} />
               <p className="text-sm text-gray-300">
@@ -188,7 +215,7 @@ const CheckoutPage = () => {
 
             <Button
               onClick={handlePayment}
-              disabled={!paymentMethod}
+              disabled={!paymentMethod || (paymentMethod === 'waafi' && !payerPhone.trim())}
               className="w-full h-14 text-lg bg-green-500 hover:bg-green-600 text-black"
               data-testid="confirm-payment-btn"
             >
@@ -202,10 +229,11 @@ const CheckoutPage = () => {
           <div className="glass p-12 rounded-xl text-center animate-fade-in">
             <Loader2 className="w-16 h-16 mx-auto text-green-400 animate-spin mb-6" />
             <h2 className="font-unbounded font-bold text-2xl text-white mb-3">
-              Traitement en cours...
+              Confirmez sur votre téléphone
             </h2>
             <p className="text-gray-400">
-              Veuillez patienter pendant la validation de votre paiement
+              Une demande de paiement Waafi a été envoyée à votre téléphone.
+              Validez-la avec votre code PIN pour finaliser.
             </p>
           </div>
         )}

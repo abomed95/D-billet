@@ -15,6 +15,7 @@ class CartItemAdd(BaseModel):
 class CheckoutRequest(BaseModel):
     payment_method: str
     promo_code: Optional[str] = None
+    payer_phone: Optional[str] = None  # Waafi wallet number for direct debit
 
 
 class TicketResponse(BaseModel):

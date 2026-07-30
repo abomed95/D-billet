@@ -18,6 +18,7 @@ class TrainBookingRequest(BaseModel):
     passengers: List[TrainPassenger]
     payment_method: str
     promo_code: Optional[str] = None
+    payer_phone: Optional[str] = None  # Waafi wallet number for direct debit
 
 
 class FerryPassenger(BaseModel):

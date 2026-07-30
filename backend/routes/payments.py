@@ -33,9 +33,12 @@ async def payments_config():
     """Expose which payment providers are live so the UI can adapt."""
     return {
         "waafi": {
-            "enabled": waafipay.is_configured(),
+            "enabled": waafipay.is_available(),
             "provider": "waafipay",
             "method_id": WAAFIPAY_PAYMENT_METHOD_ID,
+            # "wallet" = direct debit (customer enters Waafi number),
+            # "redirect" = Hosted Payment Page.
+            "flow": "wallet" if waafipay.is_api_configured() else ("redirect" if waafipay.is_configured() else None),
         }
     }
 
