@@ -57,15 +57,20 @@ const CheckoutPage = () => {
     setProcessing(true);
 
     try {
-      // Simulate payment delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
       const response = await axios.post(
         `${API}/checkout`,
         { payment_method: paymentMethod },
         { headers: getAuthHeaders() }
       );
 
+      // Real payment gateway (WaafiPay): redirect to the hosted payment page.
+      if (response.data?.requires_payment && response.data?.payment_url) {
+        toast.info('Redirection vers WaafiPay...');
+        window.location.href = response.data.payment_url;
+        return;
+      }
+
+      // Simulated payment (other methods): show the confirmation immediately.
       setResult(response.data);
       setStep(3);
       toast.success('Paiement réussi !');

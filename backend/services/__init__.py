@@ -12,6 +12,8 @@ from .seed import seed_demo_data
 from .seo import slugify, generate_unique_event_slug, ensure_event_slug, event_public_url
 from .rate_limit import rate_limited
 from .indexes import ensure_indexes
+from . import waafipay
+from .payments import start_waafi_payment, resolve_waafi_payment
 
 __all__ = [
     'verify_password', 'hash_password', 'create_access_token', 'create_staff_token',
@@ -22,4 +24,6 @@ __all__ = [
     'slugify', 'generate_unique_event_slug', 'ensure_event_slug', 'event_public_url',
     'rate_limited',
     'ensure_indexes',
+    'waafipay',
+    'start_waafi_payment', 'resolve_waafi_payment',
 ]

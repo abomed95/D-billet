@@ -9,7 +9,7 @@ import uuid
 
 from config import db, TRAIN_PRICE, DAY_TO_WEEKDAY
 from models import TrainBookingRequest
-from services import get_current_user
+from services import get_current_user, waafipay, start_waafi_payment
 
 router = APIRouter(tags=["Transport"])
 
@@ -473,16 +473,22 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
         discount = _calculate_discount_amount(total_price, promo)
     
     final_total = total_price - discount
-    
+
+    use_waafi = waafipay.is_configured() and booking.payment_method == "waafi"
+    ticket_status = "pending" if use_waafi else "valid"
+    payment_status = "pending" if use_waafi else "simulated"
+    ticket_ids = []
+    vehicle_ids = []
+
     # Create tickets
     tickets_created = []
     for passenger in booking.passengers:
         ticket_id = str(uuid.uuid4())
         qr_data = f"FERRY-{ticket_id}"
-        
+
         is_child = passenger.age and passenger.age < child_free_age
         ticket_price = 0 if is_child else passenger_price
-        
+
         ticket_doc = {
             "id": ticket_id,
             "type": "ferry",
@@ -500,7 +506,8 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
             "passenger_age": passenger.age,
             "user_id": user["id"],
             "qr_code_data": qr_data,
-            "status": "valid",
+            "status": ticket_status,
+            "payment_status": payment_status,
             "price": ticket_price,
             "payment_method": booking.payment_method,
             "promo_code": promo.get("code") if promo else None,
@@ -508,20 +515,21 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.tickets.insert_one(ticket_doc)
+        ticket_ids.append(ticket_id)
         tickets_created.append({
             "id": ticket_id,
             "passenger": passenger.full_name,
             "type": "Enfant (Gratuit)" if is_child else "Adulte",
             "price": ticket_price
         })
-    
+
     # Create vehicle bookings
     vehicles_created = []
     for vehicle in booking.vehicles:
         vehicle_id = str(uuid.uuid4())
         qr_data = f"FERRY-VEH-{vehicle_id}"
         vt = vehicle_types.get(vehicle.vehicle_type, {})
-        
+
         vehicle_doc = {
             "id": vehicle_id,
             "date": booking.date,
@@ -533,13 +541,15 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
             "passenger_names": vehicle.passenger_names,
             "user_id": user["id"],
             "qr_code_data": qr_data,
-            "status": "valid",
+            "status": ticket_status,
+            "payment_status": payment_status,
             "price": vt.get("price", 0),
             "payment_method": booking.payment_method,
             "promo_code": promo.get("code") if promo else None,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.ferry_vehicles.insert_one(vehicle_doc)
+        vehicle_ids.append(vehicle_id)
         vehicles_created.append({
             "id": vehicle_id,
             "type": vt.get("name", vehicle.vehicle_type),
@@ -547,11 +557,36 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
             "price": vt.get("price", 0)
         })
 
+    if use_waafi:
+        payment = await start_waafi_payment(
+            user=user,
+            source="ferry",
+            amount=final_total,
+            ticket_ids=ticket_ids,
+            vehicle_ids=vehicle_ids,
+            description=f"D-Billet Ferry Djibouti - {booking.destination}",
+            promo_code=promo.get("code") if promo else None,
+        )
+        return {
+            "message": "Redirection vers le paiement WaafiPay",
+            "requires_payment": True,
+            "payment_url": payment["payment_url"],
+            "reference_id": payment["reference_id"],
+            "tickets": tickets_created,
+            "vehicles": vehicles_created,
+            "passenger_total": passenger_total,
+            "vehicle_total": vehicle_total,
+            "discount": discount,
+            "final_total": final_total,
+            "promo_code": promo.get("code") if promo else None,
+        }
+
     if promo:
         await _record_transport_promo_usage(promo, final_total)
-    
+
     return {
         "message": "Reservation confirmee",
+        "requires_payment": False,
         "tickets": tickets_created,
         "vehicles": vehicles_created,
         "passenger_total": passenger_total,
@@ -667,12 +702,17 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
         promo = await _get_transport_promo(booking.promo_code, "train")
         discount = _calculate_discount_amount(total_price, promo)
     final_total = total_price - discount
-    
+
+    use_waafi = waafipay.is_configured() and booking.payment_method == "waafi"
+    ticket_status = "pending" if use_waafi else "valid"
+    payment_status = "pending" if use_waafi else "simulated"
+    ticket_ids = []
+
     tickets_created = []
     for passenger in booking.passengers:
         ticket_id = str(uuid.uuid4())
         qr_data = f"TRAIN-{ticket_id}"
-        
+
         ticket_doc = {
             "id": ticket_id,
             "type": "train",
@@ -687,7 +727,8 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
             "passenger_id": passenger.passport_or_cni,
             "user_id": user["id"],
             "qr_code_data": qr_data,
-            "status": "valid",
+            "status": ticket_status,
+            "payment_status": payment_status,
             "price": price,
             "payment_method": booking.payment_method,
             "promo_code": promo.get("code") if promo else None,
@@ -695,13 +736,36 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.tickets.insert_one(ticket_doc)
+        ticket_ids.append(ticket_id)
         tickets_created.append({"id": ticket_id, "passenger": passenger.full_name})
+
+    if use_waafi:
+        payment = await start_waafi_payment(
+            user=user,
+            source="train",
+            amount=final_total,
+            ticket_ids=ticket_ids,
+            description=f"D-Billet Train {booking.departure} - {booking.arrival}",
+            promo_code=promo.get("code") if promo else None,
+        )
+        return {
+            "message": "Redirection vers le paiement WaafiPay",
+            "requires_payment": True,
+            "payment_url": payment["payment_url"],
+            "reference_id": payment["reference_id"],
+            "tickets": tickets_created,
+            "subtotal": total_price,
+            "discount": discount,
+            "total": final_total,
+            "promo_code": promo.get("code") if promo else None,
+        }
 
     if promo:
         await _record_transport_promo_usage(promo, final_total)
-    
+
     return {
         "message": "Reservation confirmee",
+        "requires_payment": False,
         "tickets": tickets_created,
         "subtotal": total_price,
         "discount": discount,

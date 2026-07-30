@@ -218,7 +218,12 @@ sudo systemctl reload nginx
 
 ## Notes importantes
 
-- **Paiements simules**: Waafi / D-Money / CAC Bank sont en mode simulation. Aucun debit reel n'est effectue. Le mode reel necessitera l'integration des PSP locaux.
+- **Paiement WaafiPay (reel)**: l'option **Waafi** est integree a l'API WaafiPay
+  (Hosted Payment Page). Elle s'active des que `WAAFIPAY_MERCHANT_UID`,
+  `WAAFIPAY_STORE_ID` et `WAAFIPAY_HPP_KEY` sont definies dans `backend/.env`
+  (cf. `backend/env.production.example`), puis `systemctl restart dbillet-api`.
+  Sans ces variables, le paiement reste simule. D-Money et CAC Bank restent
+  simules.
 - **Documentation OpenAPI**: `/api/docs` et `/api/redoc` sont **desactives en production** (`APP_ENV=production` masque ces routes).
 - **Backups**: configure les backups MongoDB depuis le panneau DigitalOcean. Snapshots Droplet hebdomadaires recommandes.
 - **App Platform plus tard**: necessitera la migration des uploads vers DO Spaces et un build CI/CD.

@@ -251,8 +251,15 @@ const FerryBookingPage = () => {
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
 
+      // Real payment gateway (WaafiPay): redirect to the hosted payment page.
+      if (response.data?.requires_payment && response.data?.payment_url) {
+        toast.info('Redirection vers WaafiPay...');
+        window.location.href = response.data.payment_url;
+        return;
+      }
+
       toast.success('Réservation confirmée !');
-      
+
       if (response.data.tickets && response.data.tickets.length > 0) {
         navigate(`/ticket/${response.data.tickets[0].id}`);
       } else {

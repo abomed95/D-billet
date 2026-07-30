@@ -158,6 +158,11 @@ def _apply_update(document: dict, update: dict) -> None:
                     _set_path(document, key, existing)
                     existing = _get_path(document, key)
                 existing.append(_deepcopy_jsonable(value))
+        elif operator == "$inc":
+            for key, value in payload.items():
+                existing = _get_path(document, key)
+                base = existing if isinstance(existing, (int, float)) else 0
+                _set_path(document, key, base + value)
         elif operator == "$addToSet":
             for key, value in payload.items():
                 existing = _get_path(document, key)
@@ -255,6 +260,29 @@ class LocalCollection:
                     documents[index] = updated
                     self._database._save()
                     return SimpleNamespace(matched_count=1, modified_count=1, upserted_id=None)
+
+            if upsert:
+                new_document = _extract_upsert_base(query)
+                _apply_update(new_document, update)
+                documents.append(new_document)
+                self._database._save()
+                return SimpleNamespace(matched_count=0, modified_count=0, upserted_id=new_document.get("id"))
+
+        return SimpleNamespace(matched_count=0, modified_count=0, upserted_id=None)
+
+    async def update_many(self, query: dict, update: dict, upsert: bool = False):
+        with self._database._lock:
+            documents = self._documents()
+            matched = 0
+            for index, document in enumerate(documents):
+                if _matches(document, query):
+                    updated = _deepcopy_jsonable(document)
+                    _apply_update(updated, update)
+                    documents[index] = updated
+                    matched += 1
+            if matched:
+                self._database._save()
+                return SimpleNamespace(matched_count=matched, modified_count=matched, upserted_id=None)
 
             if upsert:
                 new_document = _extract_upsert_base(query)

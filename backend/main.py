@@ -20,7 +20,8 @@ from routes import (
     admin_router,
     content_router,
     seo_router,
-    setup_router
+    setup_router,
+    payments_router,
 )
 from routes.transport_organizer import router as transport_organizer_router
 from config import (
@@ -69,6 +70,7 @@ API_TAGS = [
     {"name": "Authentication", "description": "Connexion, inscription, sessions"},
     {"name": "Events", "description": "Gestion des événements"},
     {"name": "Cart", "description": "Panier et checkout"},
+    {"name": "Payments", "description": "Paiement WaafiPay (Hosted Payment Page)"},
     {"name": "Tickets", "description": "Billets et scanner QR"},
     {"name": "Transport", "description": "Train et Ferry - Routes publiques"},
     {"name": "Transport Organizer", "description": "Dashboard organisateur transport"},
@@ -179,6 +181,7 @@ app.include_router(content_router, prefix="/api")
 app.include_router(transport_organizer_router, prefix="/api")
 app.include_router(seo_router, prefix="/api")
 app.include_router(setup_router, prefix="/api")
+app.include_router(payments_router, prefix="/api")
 
 
 @app.on_event("startup")

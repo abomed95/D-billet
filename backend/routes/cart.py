@@ -7,7 +7,7 @@ import uuid
 
 from config import db
 from models import CartItemAdd, CheckoutRequest
-from services import get_current_user
+from services import get_current_user, waafipay, start_waafi_payment
 
 router = APIRouter(tags=["Cart"])
 
@@ -141,7 +141,15 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
     total = 0
     discount = 0
     promo_code = cart.get("promo_code") or checkout_data.promo_code
-    
+
+    # Route "waafi" through the real WaafiPay gateway when it is configured.
+    # Any other method (or an unconfigured gateway) keeps the legacy behaviour
+    # of issuing valid tickets immediately (simulated payment).
+    use_waafi = (
+        waafipay.is_configured()
+        and checkout_data.payment_method == "waafi"
+    )
+
     for item in cart["items"]:
         event = await db.events.find_one({"id": item["event_id"]})
         if not event:
@@ -149,7 +157,8 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
         ticket_type = next((tt for tt in event.get("ticket_types", []) if tt["id"] == item["ticket_type_id"]), None)
         if ticket_type:
             total += ticket_type["price"] * item["quantity"]
-    
+
+    promo = None
     if promo_code:
         promo = await db.promo_codes.find_one({"code": promo_code.upper()})
         if promo and promo["uses"] < promo["max_uses"]:
@@ -157,30 +166,38 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
                 discount = int(total * promo["discount_value"] / 100)
             else:
                 discount = min(promo["discount_value"], total)
-            await db.promo_codes.update_one(
-                {"code": promo_code.upper()},
-                {"$inc": {"uses": 1, "total_sales": total - discount}}
-            )
-    
+            # For simulated payments the promo is consumed immediately; for the
+            # WaafiPay flow it is recorded only after the payment is confirmed.
+            if not use_waafi:
+                await db.promo_codes.update_one(
+                    {"code": promo_code.upper()},
+                    {"$inc": {"uses": 1, "total_sales": total - discount}}
+                )
+
     final_total = total - discount
-    
+
+    ticket_status = "pending" if use_waafi else "valid"
+    payment_status = "pending" if use_waafi else "simulated"
+    ticket_ids = []
+    sold_adjustments = []
+
     for item in cart["items"]:
         event = await db.events.find_one({"id": item["event_id"]})
         if not event:
             continue
-        
+
         ticket_type = next((tt for tt in event.get("ticket_types", []) if tt["id"] == item["ticket_type_id"]), None)
         if not ticket_type:
             continue
-        
+
         available = ticket_type["quantity"] - ticket_type.get("sold", 0)
         if available < item["quantity"]:
             raise HTTPException(status_code=400, detail=f"Pas assez de billets pour {event['title']} ({ticket_type['name']})")
-        
+
         for _ in range(item["quantity"]):
             ticket_id = str(uuid.uuid4())
             qr_data = f"DBILLET-{ticket_id}"
-            
+
             ticket_doc = {
                 "id": ticket_id,
                 "event_id": event["id"],
@@ -193,7 +210,8 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
                 "user_id": user["id"],
                 "organizer_id": event.get("organizer_id"),
                 "qr_code_data": qr_data,
-                "status": "valid",
+                "status": ticket_status,
+                "payment_status": payment_status,
                 "price": ticket_type["price"],
                 "promo_code": promo_code,
                 "payment_method": checkout_data.payment_method,
@@ -201,18 +219,51 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
             }
             await db.tickets.insert_one(ticket_doc)
             tickets_created.append(ticket_doc)
-        
+            ticket_ids.append(ticket_id)
+
+        # Reserve the seats now (released again if a WaafiPay payment fails).
         ticket_types = event.get("ticket_types", [])
         for tt in ticket_types:
             if tt["id"] == item["ticket_type_id"]:
                 tt["sold"] = tt.get("sold", 0) + item["quantity"]
                 break
         await db.events.update_one({"id": event["id"]}, {"$set": {"ticket_types": ticket_types}})
-    
+        sold_adjustments.append({
+            "event_id": event["id"],
+            "ticket_type_id": item["ticket_type_id"],
+            "quantity": item["quantity"],
+        })
+
+    if use_waafi:
+        # Keep the cart until the payment is confirmed; return a redirect URL.
+        event_titles = ", ".join(sorted({t["event_title"] for t in tickets_created}))
+        payment = await start_waafi_payment(
+            user=user,
+            source="event",
+            amount=final_total,
+            ticket_ids=ticket_ids,
+            description=f"D-Billet - {event_titles}"[:255],
+            promo_code=promo_code if promo else None,
+            sold_adjustments=sold_adjustments,
+            clear_cart=True,
+        )
+        return {
+            "message": "Redirection vers le paiement WaafiPay",
+            "requires_payment": True,
+            "payment_url": payment["payment_url"],
+            "reference_id": payment["reference_id"],
+            "tickets": [{"id": t["id"], "event_title": t["event_title"], "ticket_type": t["ticket_type"]} for t in tickets_created],
+            "total": total,
+            "discount": discount,
+            "final_total": final_total,
+            "payment_method": checkout_data.payment_method,
+        }
+
     await db.carts.delete_one({"user_id": user["id"]})
-    
+
     return {
         "message": "Paiement reussi",
+        "requires_payment": False,
         "tickets": [{"id": t["id"], "event_title": t["event_title"], "ticket_type": t["ticket_type"]} for t in tickets_created],
         "total": total,
         "discount": discount,

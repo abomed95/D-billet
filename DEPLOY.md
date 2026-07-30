@@ -215,8 +215,17 @@ sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log
 
 ## Notes importantes
 
-- **Paiements simules** : Waafi, D-Money, CAC Bank en mode demo. Aucune
-  vraie transaction. Les integrations PSP reelles necessiteront du dev en plus.
+- **Paiement WaafiPay (reel)** : l'option **Waafi** utilise l'API WaafiPay
+  (Hosted Payment Page) des que les variables `WAAFIPAY_MERCHANT_UID`,
+  `WAAFIPAY_STORE_ID` et `WAAFIPAY_HPP_KEY` sont renseignees dans
+  `backend/.env` (voir `backend/env.production.example`). Le client est
+  redirige vers la page de paiement WaafiPay, puis vers
+  `https://d-billet.com/api/payments/waafi/return/...` qui verifie la
+  transaction cote serveur avant de valider les billets. Tant que ces
+  variables sont vides, le paiement reste **simule**. D-Money et CAC Bank
+  restent simules.
+  > Apres avoir ajoute les cles WaafiPay au `.env` du Droplet, relancer
+  > `sudo systemctl restart dbillet-api`.
 - **Backups** : active les backups automatiques du Droplet (1$/mois) et
   configure des snapshots MongoDB depuis le panneau DO.
 - **Documentation API** : `/api/docs` est **desactive en production** par

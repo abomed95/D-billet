@@ -11,6 +11,7 @@ import EventsPage from "./pages/EventsPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import PaymentResultPage from "./pages/PaymentResultPage";
 import TicketViewPage from "./pages/TicketViewPage";
 import MyTicketsPage from "./pages/MyTicketsPage";
 import AuthPage from "./pages/AuthPage";
@@ -81,7 +82,7 @@ function RouteMetadata() {
   const location = useLocation();
   const pathname = location.pathname;
   const noIndexPrefixes = ["/admin", "/organizer", "/staff"];
-  const noIndexExact = ["/auth", "/cart", "/checkout", "/my-tickets", "/scan", "/transport-organizer"];
+  const noIndexExact = ["/auth", "/cart", "/checkout", "/payment/result", "/my-tickets", "/scan", "/transport-organizer"];
   const isNoIndex =
     noIndexExact.includes(pathname) ||
     noIndexPrefixes.some((prefix) => pathname.startsWith(prefix)) ||
@@ -116,6 +117,7 @@ function AppRoutes() {
           <Route path="train" element={<TrainBookingPage />} />
           <Route path="ferry" element={<FerryBookingPage />} />
           <Route path="ticket/:id" element={<TicketViewPage />} />
+          <Route path="payment/result" element={<PaymentResultPage />} />
           <Route path="terms" element={<TermsPage />} />
           <Route path="legal/:page" element={<LegalPage />} />
           <Route path="privacy" element={<Navigate to="/legal/privacy" replace />} />

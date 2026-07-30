@@ -150,8 +150,15 @@ const TrainBookingPage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      // Real payment gateway (WaafiPay): redirect to the hosted payment page.
+      if (response.data?.requires_payment && response.data?.payment_url) {
+        toast.info('Redirection vers WaafiPay...');
+        window.location.href = response.data.payment_url;
+        return;
+      }
+
       toast.success('Réservation confirmée !');
-      
+
       // Navigate to first ticket
       if (response.data.tickets && response.data.tickets.length > 0) {
         navigate(`/ticket/${response.data.tickets[0].id}`);

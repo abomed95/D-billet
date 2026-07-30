@@ -104,6 +104,25 @@ otp_storage = {}
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", str(ROOT_DIR / "uploads"))).resolve()
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+# ============== WaafiPay payment gateway ==============
+# Production endpoint: https://api.waafipay.net/asm
+# Sandbox endpoint:    https://sandbox.waafipay.com/asm
+WAAFIPAY_BASE_URL = os.environ.get(
+    'WAAFIPAY_BASE_URL', 'https://api.waafipay.net/asm'
+).strip().rstrip('/')
+WAAFIPAY_MERCHANT_UID = os.environ.get('WAAFIPAY_MERCHANT_UID', '').strip()
+WAAFIPAY_STORE_ID = os.environ.get('WAAFIPAY_STORE_ID', '').strip()
+WAAFIPAY_HPP_KEY = os.environ.get('WAAFIPAY_HPP_KEY', '').strip()
+WAAFIPAY_API_USER_ID = os.environ.get('WAAFIPAY_API_USER_ID', '').strip()
+WAAFIPAY_API_KEY = os.environ.get('WAAFIPAY_API_KEY', '').strip()
+WAAFIPAY_CURRENCY = os.environ.get('WAAFIPAY_CURRENCY', 'DJF').strip() or 'DJF'
+try:
+    WAAFIPAY_TIMEOUT = int(os.environ.get('WAAFIPAY_TIMEOUT', '30'))
+except ValueError:
+    WAAFIPAY_TIMEOUT = 30
+# The frontend method id that routes through WaafiPay
+WAAFIPAY_PAYMENT_METHOD_ID = os.environ.get('WAAFIPAY_PAYMENT_METHOD_ID', 'waafi').strip()
+
 # Transport constants
 FERRY_PRICE = 700
 TRAIN_PRICE = 500

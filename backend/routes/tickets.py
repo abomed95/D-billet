@@ -113,9 +113,29 @@ async def scanner_validate_ticket(qr_data: str = Query(...)):
             },
             "color": "red"
         }
-    
+
+    # Only a fully paid ("valid") ticket may pass the gate. This rejects
+    # pending (unpaid) WaafiPay reservations and cancelled tickets.
+    if ticket["status"] != "valid":
+        message = (
+            "Billet non paye" if ticket["status"] == "pending"
+            else "Billet annule" if ticket["status"] == "cancelled"
+            else "Billet invalide"
+        )
+        return {
+            "valid": False,
+            "status": ticket["status"],
+            "message": message,
+            "ticket": {
+                "id": ticket["id"],
+                "event_title": ticket.get("event_title"),
+                "ticket_type": ticket.get("ticket_type", "Standard"),
+            },
+            "color": "red"
+        }
+
     await db.tickets.update_one(
-        {"id": ticket_id}, 
+        {"id": ticket_id},
         {"$set": {"status": "used", "used_at": datetime.now(timezone.utc).isoformat()}}
     )
     

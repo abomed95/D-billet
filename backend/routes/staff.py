@@ -164,6 +164,28 @@ async def staff_scan_ticket(data: ScanRequest, staff: dict = Depends(get_current
             "vibration": "warning"
         }
     
+    if ticket.get("status") != "valid":
+        message = (
+            "Billet non paye" if ticket.get("status") == "pending"
+            else "Billet annule" if ticket.get("status") == "cancelled"
+            else "Billet invalide"
+        )
+        scan_log.update({
+            "ticket_id": ticket["id"],
+            "event_title": ticket.get("event_title", ""),
+            "client_name": ticket.get("passenger_name") or ticket.get("user_name", ""),
+            "ticket_type": ticket.get("ticket_type", ""),
+            "status": "invalid",
+            "message": message,
+        })
+        await db.scan_logs.insert_one(scan_log)
+        return {
+            "status": "invalid",
+            "message": message,
+            "details": "Ce billet n'est pas valide pour l'entree",
+            "vibration": "error"
+        }
+
     await db.tickets.update_one(
         {"id": ticket["id"]},
         {"$set": {
@@ -173,7 +195,7 @@ async def staff_scan_ticket(data: ScanRequest, staff: dict = Depends(get_current
             "scanned_by_name": staff["full_name"]
         }}
     )
-    
+
     client_name = ticket.get("passenger_name")
     if not client_name:
         user = await db.users.find_one({"id": ticket.get("user_id")}, {"full_name": 1})

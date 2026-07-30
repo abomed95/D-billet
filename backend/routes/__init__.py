@@ -12,6 +12,7 @@ from .admin import router as admin_router
 from .content import router as content_router
 from .seo import router as seo_router
 from .setup import router as setup_router
+from .payments import router as payments_router
 
 __all__ = [
     'auth_router',
@@ -24,5 +25,6 @@ __all__ = [
     'admin_router',
     'content_router',
     'seo_router',
-    'setup_router'
+    'setup_router',
+    'payments_router',
 ]
