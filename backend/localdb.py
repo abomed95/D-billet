@@ -303,6 +303,16 @@ class LocalCollection:
                     return SimpleNamespace(deleted_count=1)
         return SimpleNamespace(deleted_count=0)
 
+    async def delete_many(self, query: dict):
+        with self._database._lock:
+            documents = self._documents()
+            kept = [d for d in documents if not _matches(d, query)]
+            removed = len(documents) - len(kept)
+            if removed:
+                documents[:] = kept
+                self._database._save()
+            return SimpleNamespace(deleted_count=removed)
+
     async def count_documents(self, query: dict | None = None):
         with self._database._lock:
             return sum(1 for document in self._documents() if _matches(document, query))

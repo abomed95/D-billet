@@ -32,6 +32,18 @@ nginx -t
 systemctl reload nginx
 
 echo "==> health check"
-curl -fsS http://127.0.0.1:8001/health && echo "  OK"
+health_ok=0
+for _ in $(seq 1 15); do
+    if curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1; then
+        health_ok=1
+        echo "  OK"
+        break
+    fi
+    sleep 2
+done
+if [ "$health_ok" -ne 1 ]; then
+    echo "  WARN: le backend n'a pas repondu sur 127.0.0.1:8001 apres 30s"
+    journalctl -u dbillet-api -n 30 --no-pager || true
+fi
 
 echo "Mise a jour terminee."

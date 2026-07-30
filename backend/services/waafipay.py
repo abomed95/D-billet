@@ -136,8 +136,8 @@ async def create_hpp_purchase(
             },
         }
     )
-    if payment_method:
-        service_params["paymentMethod"] = payment_method
+    # paymentMethod is mandatory for the WaafiPay HPP API (error 5032 otherwise).
+    service_params["paymentMethod"] = payment_method or config.WAAFIPAY_HPP_PAYMENT_METHOD
     if payer_phone:
         normalized = _normalize_phone(payer_phone)
         if normalized:

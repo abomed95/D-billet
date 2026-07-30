@@ -122,6 +122,11 @@ except ValueError:
     WAAFIPAY_TIMEOUT = 30
 # The frontend method id that routes through WaafiPay
 WAAFIPAY_PAYMENT_METHOD_ID = os.environ.get('WAAFIPAY_PAYMENT_METHOD_ID', 'waafi').strip()
+# WaafiPay payment method sent in the HPP request (mandatory for the gateway).
+# MWALLET_ACCOUNT = mobile wallet (Waafi). This is required by the API.
+WAAFIPAY_HPP_PAYMENT_METHOD = os.environ.get(
+    'WAAFIPAY_HPP_PAYMENT_METHOD', 'MWALLET_ACCOUNT'
+).strip() or 'MWALLET_ACCOUNT'
 
 # Transport constants
 FERRY_PRICE = 700
