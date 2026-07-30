@@ -253,21 +253,34 @@ async def get_transactions(
         query["payment_method"] = payment_method
     
     tickets = await db.tickets.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    
-    # Group by payment method
+
+    # A ticket counts as real revenue only once it is paid. Reservations that
+    # are still awaiting a WaafiPay confirmation ("pending") or were released
+    # after a failed/aborted payment ("cancelled") must not inflate the totals.
+    def _is_paid(ticket):
+        return ticket.get("status") not in ("pending", "cancelled")
+
+    # Group by payment method (paid tickets only)
     by_method = {}
+    paid_total = 0
+    paid_count = 0
     for ticket in tickets:
+        if not _is_paid(ticket):
+            continue
         method = ticket.get("payment_method", "unknown")
         if method not in by_method:
             by_method[method] = {"count": 0, "total": 0}
         by_method[method]["count"] += 1
         by_method[method]["total"] += ticket.get("price", 0)
-    
+        paid_count += 1
+        paid_total += ticket.get("price", 0)
+
     return {
         "transactions": tickets,
         "summary": by_method,
-        "total_count": len(tickets),
-        "total_amount": sum(t.get("price", 0) for t in tickets)
+        "total_count": paid_count,
+        "total_amount": paid_total,
+        "pending_count": sum(1 for t in tickets if t.get("status") == "pending"),
     }
 
 

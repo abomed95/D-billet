@@ -260,3 +260,32 @@ def test_scanner_rejects_pending_ticket(monkeypatch):
         assert res["valid"] is False and res["status"] == "pending"
 
     asyncio.run(scenario())
+
+
+# --------------------------------------------------------------------------- #
+# Admin revenue totals must exclude unpaid (pending) / cancelled tickets
+# --------------------------------------------------------------------------- #
+
+def test_admin_transactions_only_counts_paid():
+    import routes.admin as admin_routes
+    from datetime import datetime, timezone
+
+    db = _fresh_db()
+    admin_routes.db = db
+    now = datetime.now(timezone.utc).isoformat()
+
+    async def scenario():
+        await db.tickets.insert_one({"id": "a", "payment_method": "waafi", "price": 1000,
+                                     "status": "valid", "created_at": now})
+        await db.tickets.insert_one({"id": "b", "payment_method": "waafi", "price": 1000,
+                                     "status": "pending", "created_at": now})
+        await db.tickets.insert_one({"id": "c", "payment_method": "waafi", "price": 1000,
+                                     "status": "cancelled", "created_at": now})
+        res = await admin_routes.get_transactions(admin={"id": "adm"}, payment_method=None, days=30)
+        # Only the one "valid" ticket is real revenue.
+        assert res["total_amount"] == 1000
+        assert res["total_count"] == 1
+        assert res["summary"]["waafi"]["total"] == 1000
+        assert res["pending_count"] == 1
+
+    asyncio.run(scenario())
