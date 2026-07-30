@@ -421,14 +421,14 @@ const TrainBookingPage = () => {
               <h3 className="text-white font-semibold mb-4">Sélectionnez votre moyen de paiement</h3>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { id: 'waafi', name: 'Waafi', logo: '/images/waafi-logo.png' },
+                  { id: 'waafi', name: 'WaafiPay', hint: 'Sécurisé', logo: '/images/waafi-logo.png' },
                   { id: 'dmoney', name: 'D-Money', logo: '/images/dmoney-logo.png' },
                   { id: 'cacbank', name: 'CAC Bank', logo: '/images/cac-bank-logo.webp' }
                 ].map((method) => (
                   <button
                     key={method.id}
                     onClick={() => setPaymentMethod(method.id)}
-                    className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-2 ${
+                    className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${
                       paymentMethod === method.id
                         ? 'border-train bg-train/20'
                         : 'border-white/10 bg-white/5 hover:border-train/50'
@@ -441,6 +441,9 @@ const TrainBookingPage = () => {
                     <span className="text-white font-semibold text-xs">
                       {method.name}
                     </span>
+                    {method.hint && (
+                      <span className="text-[9px] font-medium text-green-400">{method.hint}</span>
+                    )}
                   </button>
                 ))}
               </div>

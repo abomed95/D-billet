@@ -12,10 +12,11 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const PAYMENT_METHODS = [
   {
     id: 'waafi',
-    name: 'Waafi',
-    description: 'Paiement mobile',
+    name: 'WaafiPay',
+    description: 'Paiement mobile sécurisé',
     color: '#FF6B00',
     logo: '/images/waafi-logo.png',
+    secure: true,
   },
   {
     id: 'dmoney',
@@ -132,7 +133,14 @@ const CheckoutPage = () => {
                     />
                   </div>
                   <div className="text-left flex-1">
-                    <h3 className="font-unbounded font-bold text-white text-lg">{method.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-unbounded font-bold text-white text-lg">{method.name}</h3>
+                      {method.secure && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-green-400 bg-green-500/10 border border-green-500/30 rounded-full px-2 py-0.5">
+                          <Shield size={10} /> Sécurisé
+                        </span>
+                      )}
+                    </div>
                     <p className="text-gray-400 text-sm">{method.description}</p>
                   </div>
                   {paymentMethod === method.id && (
