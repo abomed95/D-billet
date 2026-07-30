@@ -19,6 +19,8 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
+
 from config import db, APP_URL, WAAFIPAY_CURRENCY
 from services import waafipay
 
@@ -56,15 +58,25 @@ async def start_waafi_payment(
     success_url = f"{APP_URL}/api/payments/waafi/return/{reference_id}?outcome=success"
     failure_url = f"{APP_URL}/api/payments/waafi/return/{reference_id}?outcome=failure"
 
-    purchase = await waafipay.create_hpp_purchase(
-        reference_id=reference_id,
-        amount=amount,
-        description=description,
-        success_url=success_url,
-        failure_url=failure_url,
-        currency=currency,
-        payer_phone=user.get("phone"),
-    )
+    try:
+        purchase = await waafipay.create_hpp_purchase(
+            reference_id=reference_id,
+            amount=amount,
+            description=description,
+            success_url=success_url,
+            failure_url=failure_url,
+            currency=currency,
+            payer_phone=user.get("phone"),
+        )
+    except waafipay.WaafiPayError as exc:
+        # Payment could not be created: release the seats we just reserved so
+        # nothing stays blocked, and surface a clean error to the client.
+        await _rollback_reservation(ticket_ids, vehicle_ids, sold_adjustments)
+        logger.error("WaafiPay initiation failed (source=%s, user=%s): %s", source, user.get("id"), exc)
+        raise HTTPException(
+            status_code=502,
+            detail="Le paiement WaafiPay est momentanement indisponible. Merci de reessayer dans un instant.",
+        ) from exc
 
     now = _now()
     payment_doc = {
@@ -102,6 +114,15 @@ async def start_waafi_payment(
         "amount": amount,
         "currency": currency,
     }
+
+
+async def _rollback_reservation(ticket_ids: list, vehicle_ids: list, sold_adjustments: list):
+    """Undo a reservation when the payment could not even be created."""
+    if ticket_ids:
+        await db.tickets.delete_many({"id": {"$in": ticket_ids}})
+    if vehicle_ids:
+        await db.ferry_vehicles.delete_many({"id": {"$in": vehicle_ids}})
+    await _release_sold(sold_adjustments)
 
 
 async def _release_sold(sold_adjustments: list):
