@@ -12,24 +12,28 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const PAYMENT_METHODS = [
   {
     id: 'waafi',
-    name: 'Waafi',
-    description: 'Paiement mobile',
+    name: 'WaafiPay',
+    description: 'Paiement mobile sécurisé',
     color: '#FF6B00',
     logo: '/images/waafi-logo.png',
+    secure: true,
+    available: true,
   },
   {
     id: 'dmoney',
     name: 'D-Money',
-    description: 'Paiement mobile',
+    description: 'Bientôt disponible',
     color: '#00A651',
     logo: '/images/dmoney-logo.png',
+    available: false,
   },
   {
     id: 'cacbank',
-    name: 'CAC Bank',
-    description: 'Virement bancaire',
+    name: 'CAC Pay',
+    description: 'Bientôt disponible',
     color: '#1E40AF',
     logo: '/images/cac-bank-logo.webp',
+    available: false,
   },
 ];
 
@@ -39,7 +43,7 @@ const CheckoutPage = () => {
   const { getAuthHeaders } = useAuth();
   
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('waafi');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -117,25 +121,43 @@ const CheckoutPage = () => {
               {PAYMENT_METHODS.map((method) => (
                 <button
                   key={method.id}
-                  onClick={() => setPaymentMethod(method.id)}
+                  onClick={() => method.available && setPaymentMethod(method.id)}
+                  disabled={!method.available}
+                  aria-disabled={!method.available}
                   className={`glass p-5 rounded-xl flex items-center gap-4 transition-all border
-                    ${paymentMethod === method.id ? 'border-green-500 bg-green-500/10' : 'border-white/10 hover:border-white/20'}`}
+                    ${!method.available
+                      ? 'border-white/10 opacity-50 cursor-not-allowed'
+                      : paymentMethod === method.id
+                        ? 'border-green-500 bg-green-500/10'
+                        : 'border-white/10 hover:border-white/20'}`}
                   data-testid={`payment-${method.id}`}
                 >
-                  <div 
+                  <div
                     className="w-16 h-16 rounded-xl flex items-center justify-center bg-white overflow-hidden p-2"
                   >
-                    <img 
-                      src={method.logo} 
+                    <img
+                      src={method.logo}
                       alt={method.name}
-                      className="w-full h-full object-contain"
+                      className={`w-full h-full object-contain ${!method.available ? 'grayscale' : ''}`}
                     />
                   </div>
                   <div className="text-left flex-1">
-                    <h3 className="font-unbounded font-bold text-white text-lg">{method.name}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-unbounded font-bold text-white text-lg">{method.name}</h3>
+                      {method.secure && method.available && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-green-400 bg-green-500/10 border border-green-500/30 rounded-full px-2 py-0.5">
+                          <Shield size={10} /> Sécurisé
+                        </span>
+                      )}
+                      {!method.available && (
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-2 py-0.5">
+                          Bientôt
+                        </span>
+                      )}
+                    </div>
                     <p className="text-gray-400 text-sm">{method.description}</p>
                   </div>
-                  {paymentMethod === method.id && (
+                  {method.available && paymentMethod === method.id && (
                     <CheckCircle className="text-green-400" size={24} />
                   )}
                 </button>

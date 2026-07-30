@@ -150,6 +150,13 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
         and checkout_data.payment_method == "waafi"
     )
 
+    # Only WaafiPay is live for now; D-Money and CAC Pay are not yet available.
+    if waafipay.is_configured() and checkout_data.payment_method != "waafi":
+        raise HTTPException(
+            status_code=400,
+            detail="Seul le paiement WaafiPay est disponible actuellement. D-Money et CAC Pay arrivent bientot.",
+        )
+
     for item in cart["items"]:
         event = await db.events.find_one({"id": item["event_id"]})
         if not event:

@@ -710,23 +710,30 @@ const FerryBookingPage = () => {
               <h3 className="text-white font-semibold mb-4">Sélectionnez votre moyen de paiement</h3>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { id: 'waafi', name: 'Waafi', logo: '/images/waafi-logo.png' },
-                  { id: 'dmoney', name: 'D-Money', logo: '/images/dmoney-logo.png' },
-                  { id: 'cacbank', name: 'CAC Bank', logo: '/images/cac-bank-logo.webp' }
+                  { id: 'waafi', name: 'WaafiPay', hint: 'Sécurisé', logo: '/images/waafi-logo.png', available: true },
+                  { id: 'dmoney', name: 'D-Money', hint: 'Bientôt', logo: '/images/dmoney-logo.png', available: false },
+                  { id: 'cacbank', name: 'CAC Pay', hint: 'Bientôt', logo: '/images/cac-bank-logo.webp', available: false }
                 ].map((method) => (
                   <button
                     key={method.id}
-                    onClick={() => setPaymentMethod(method.id)}
-                    className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-2 ${
-                      paymentMethod === method.id
-                        ? 'border-ferry bg-ferry/20'
-                        : 'border-white/10 bg-white/5 hover:border-ferry/50'
+                    onClick={() => method.available && setPaymentMethod(method.id)}
+                    disabled={!method.available}
+                    aria-disabled={!method.available}
+                    className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${
+                      !method.available
+                        ? 'border-white/10 bg-white/5 opacity-50 cursor-not-allowed'
+                        : paymentMethod === method.id
+                          ? 'border-ferry bg-ferry/20'
+                          : 'border-white/10 bg-white/5 hover:border-ferry/50'
                     }`}
                   >
                     <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center p-1.5 overflow-hidden">
-                      <img src={method.logo} alt={method.name} className="w-full h-full object-contain" />
+                      <img src={method.logo} alt={method.name} className={`w-full h-full object-contain ${!method.available ? 'grayscale' : ''}`} />
                     </div>
                     <span className="text-white font-semibold text-xs">{method.name}</span>
+                    {method.hint && (
+                      <span className={`text-[9px] font-medium ${method.available ? 'text-green-400' : 'text-yellow-400'}`}>{method.hint}</span>
+                    )}
                   </button>
                 ))}
               </div>

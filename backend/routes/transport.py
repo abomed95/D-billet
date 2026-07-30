@@ -475,6 +475,11 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
     final_total = total_price - discount
 
     use_waafi = waafipay.is_configured() and booking.payment_method == "waafi"
+    if waafipay.is_configured() and booking.payment_method != "waafi":
+        raise HTTPException(
+            status_code=400,
+            detail="Seul le paiement WaafiPay est disponible actuellement. D-Money et CAC Pay arrivent bientot.",
+        )
     ticket_status = "pending" if use_waafi else "valid"
     payment_status = "pending" if use_waafi else "simulated"
     ticket_ids = []
@@ -704,6 +709,11 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
     final_total = total_price - discount
 
     use_waafi = waafipay.is_configured() and booking.payment_method == "waafi"
+    if waafipay.is_configured() and booking.payment_method != "waafi":
+        raise HTTPException(
+            status_code=400,
+            detail="Seul le paiement WaafiPay est disponible actuellement. D-Money et CAC Pay arrivent bientot.",
+        )
     ticket_status = "pending" if use_waafi else "valid"
     payment_status = "pending" if use_waafi else "simulated"
     ticket_ids = []
