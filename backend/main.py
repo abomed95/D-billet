@@ -4,8 +4,7 @@ Main application entry point with full OpenAPI documentation
 """
 import logging
 from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 import time
 
@@ -27,10 +26,14 @@ from routes.transport_organizer import router as transport_organizer_router
 from config import (
     AUTO_SEED_DEMO_DATA,
     BACKEND_CORS_ORIGINS,
+    CONTENT_SECURITY_POLICY,
+    FRONTEND_BUILD_DIR,
+    SERVE_FRONTEND,
     UPLOAD_DIR,
     IS_PRODUCTION,
 )
 from services import seed_demo_data, ensure_indexes
+from spa import CachedStaticFiles, mount_spa
 
 # Configure root logger (production-safe defaults)
 logging.basicConfig(
@@ -129,6 +132,10 @@ async def add_security_headers(request: Request, call_next):
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+    # Nginx sets the CSP on the Droplet; when this container also serves the
+    # frontend (Cloud Run) there is no Nginx, so the app sets it itself.
+    if SERVE_FRONTEND and CONTENT_SECURITY_POLICY:
+        response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
     if IS_PRODUCTION:
         response.headers.setdefault(
             "Strict-Transport-Security",
@@ -164,7 +171,16 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # ============== STATIC FILES ==============
 
-app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+# Upload filenames are UUIDs, so their content never changes: cache them
+# like Nginx did on the Droplet (30 days, immutable).
+app.mount(
+    "/uploads",
+    CachedStaticFiles(
+        directory=str(UPLOAD_DIR),
+        cache_control="public, max-age=2592000, immutable",
+    ),
+    name="uploads",
+)
 
 
 # ============== ROUTERS ==============
@@ -209,9 +225,14 @@ async def on_startup():
 
 # ============== ROOT ENDPOINTS ==============
 
-@app.get("/", tags=["Health"])
+@app.get("/", tags=["Health"], include_in_schema=not SERVE_FRONTEND)
 async def root():
-    """API Root - Basic info"""
+    """API root. Serves the React shell when this container hosts the frontend."""
+    if SERVE_FRONTEND:
+        return FileResponse(
+            FRONTEND_BUILD_DIR / "index.html",
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )
     return {
         "name": "D-Billet API",
         "version": "2.1.0",
@@ -242,3 +263,11 @@ async def api_info():
             "openapi": "/api/openapi.json"
         }
     }
+
+
+# ============== FRONTEND (single-container deployments only) ==============
+# Registered last: the catch-all matches every path and must stay behind the
+# API routers, /health and the /uploads mount.
+if SERVE_FRONTEND:
+    logger.info("Serving frontend build from %s", FRONTEND_BUILD_DIR)
+    mount_spa(app, FRONTEND_BUILD_DIR)

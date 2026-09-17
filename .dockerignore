@@ -1,0 +1,42 @@
+# Keep the build context small: everything the image does not need.
+.git
+.gitignore
+.emergent
+.gcloudignore
+
+# Dependencies and build outputs (rebuilt inside the image)
+**/node_modules
+frontend/build
+frontend/public/prerender-data
+**/__pycache__
+**/*.pyc
+.venv
+venv
+
+# Secrets and local state - must never reach an image layer
+**/.env
+**/.env.*
+!**/env.production.example
+**/.localdb.json
+*.pem
+*token.json*
+*credentials.json*
+
+# Docs, tests and tooling that play no part in the runtime image
+DEPLOY.md
+DEPLOY-GCP.md
+README.md
+auth_testing.md
+test_result.md
+design_guidelines.json
+backend_test.py
+tests/
+test_reports/
+memory/
+scripts/
+deploy/
+backend/tests/
+frontend/plugins/visual-edits
+frontend/plugins/health-check
+.tmp-*
+*.log

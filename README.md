@@ -127,14 +127,26 @@ le seed est **completement desactive** quel que soit `AUTO_SEED_DEMO_DATA`.
 
 ## Deploiement
 
-Pour le deploiement production, voir [deploy/digitalocean/README.md](deploy/digitalocean/README.md).
+Deux cibles sont supportees, le code est identique pour les deux :
+
+| Cible | Guide | Modele |
+|-------|-------|--------|
+| Google Cloud Run | [DEPLOY-GCP.md](DEPLOY-GCP.md) | conteneur, mise a l'echelle automatique, HTTPS gere par Google |
+| DigitalOcean | [DEPLOY.md](DEPLOY.md) / [deploy/digitalocean/README.md](deploy/digitalocean/README.md) | VM Ubuntu, Nginx + systemd + certbot |
+
+Sur Cloud Run, un seul conteneur sert l'API et le build React (`backend/spa.py`),
+les uploads vont dans un bucket Cloud Storage monte sur `/mnt/uploads` et les
+secrets viennent de Secret Manager. Sur le Droplet, Nginx sert le frontend et
+proxifie `/api`.
 
 Points cles avant deploy:
 
 1. Generer `JWT_SECRET` avec `openssl rand -hex 64` (l'app refuse de demarrer en prod sans).
 2. Verifier `AUTO_SEED_DEMO_DATA=false` et `ALLOW_PUBLIC_SEED_ROUTE=false` (forces a `false` en `APP_ENV=production`).
 3. `npm run build` strip automatiquement les `console.log` et `debugger`.
-4. La configuration Nginx fournie inclut HSTS, CSP, X-Frame-Options et rate-limiting (10 req/min sur les routes auth).
+4. Les en-tetes de securite (HSTS, CSP, X-Frame-Options) sont poses par Nginx sur le Droplet,
+   et par l'application elle-meme sur Cloud Run. Le rate-limiting des routes auth est applicatif
+   dans les deux cas, renforce par `limit_req` (Nginx) ou Cloud Armor (GCP, optionnel).
 5. Documentation OpenAPI (`/api/docs`, `/api/redoc`) est masquee en production.
 
 ## Notes

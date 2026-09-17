@@ -1,0 +1,48 @@
+# D-Billet backend - production runtime dependencies (container images).
+#
+# Subset of requirements.txt limited to what the application actually imports,
+# with the exact same pins. requirements.txt is the development/CI set and also
+# carries linters, test tooling and unused SDKs (litellm, openai, pandas,
+# boto3, huggingface...) that would add ~1.5 GB to the image and slow down
+# Cloud Run cold starts.
+#
+# Regenerate after adding a real dependency:
+#   pip install --dry-run --ignore-installed --report report.json -r <direct deps>
+# and keep the versions aligned with requirements.txt.
+
+annotated-types==0.7.0
+anyio==4.12.0
+bcrypt==4.1.3
+certifi==2026.1.4
+charset-normalizer==3.4.4
+click==8.3.1
+dnspython==2.8.0
+ecdsa==0.19.1
+email-validator==2.3.0
+fastapi==0.110.1
+google-auth==2.47.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.11
+motor==3.3.1
+passlib==1.7.4
+pillow==12.1.0
+pyasn1==0.6.1
+pyasn1_modules==0.4.2
+pydantic==2.12.5
+pydantic_core==2.41.5
+pymongo==4.5.0
+python-dotenv==1.2.1
+python-jose==3.5.0
+python-multipart==0.0.21
+qrcode==8.2
+reportlab==4.4.7
+requests==2.32.5
+rsa==4.9.1
+six==1.17.0
+starlette==0.37.2
+typing_extensions==4.15.0
+typing-inspection==0.4.2
+urllib3==2.6.2
+uvicorn==0.25.0

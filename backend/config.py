@@ -104,6 +104,33 @@ otp_storage = {}
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", str(ROOT_DIR / "uploads"))).resolve()
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+# ============== Frontend serving (single-container deployments) ==============
+# On the Droplet, Nginx serves the React build and this stays disabled.
+# On Cloud Run the API container also serves `frontend/build`.
+FRONTEND_BUILD_DIR = Path(
+    os.environ.get("FRONTEND_BUILD_DIR", str(ROOT_DIR.parent / "frontend" / "build"))
+)
+# Auto-detect: serve the SPA only when a build is actually present.
+SERVE_FRONTEND = _env_flag(
+    "SERVE_FRONTEND",
+    (FRONTEND_BUILD_DIR / "index.html").is_file(),
+)
+
+# Content-Security-Policy. Set by Nginx on the Droplet, by the app itself when
+# the container serves the frontend. Override with the CONTENT_SECURITY_POLICY
+# env var when adding a third-party (analytics, Stripe...).
+CONTENT_SECURITY_POLICY = os.environ.get(
+    "CONTENT_SECURITY_POLICY",
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://accounts.google.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com data:; "
+    "img-src 'self' data: blob: https:; "
+    "connect-src 'self' https://accounts.google.com; "
+    "frame-src https://accounts.google.com; "
+    "object-src 'none'; base-uri 'self'; form-action 'self';",
+).strip()
+
 # ============== WaafiPay payment gateway ==============
 # Production endpoint: https://api.waafipay.net/asm
 # Sandbox endpoint:    https://sandbox.waafipay.com/asm
