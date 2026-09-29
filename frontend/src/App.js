@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "./components/ui/sonner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -5,7 +6,9 @@ import { CartProvider } from "./context/CartContext";
 import { StaffAuthProvider } from "./context/StaffAuthContext";
 import Seo from "./components/Seo";
 
-// Pages
+// Public pages stay eagerly imported: react-snap prerenders them, and a
+// deferred chunk would leave the prerendered HTML out of step with
+// hydration.
 import HomePage from "./pages/HomePage";
 import EventsPage from "./pages/EventsPage";
 import EventDetailPage from "./pages/EventDetailPage";
@@ -17,48 +20,104 @@ import MyTicketsPage from "./pages/MyTicketsPage";
 import AuthPage from "./pages/AuthPage";
 import TrainBookingPage from "./pages/TrainBookingPage";
 import FerryBookingPage from "./pages/FerryBookingPage";
-import ScannerPage from "./pages/ScannerPage";
 import TermsPage from "./pages/TermsPage";
 import LegalPage from "./pages/LegalPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminEvents from "./pages/admin/AdminEvents";
-import AdminScanner from "./pages/admin/AdminScanner";
-import AdminOrganizers from "./pages/admin/AdminOrganizers";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminTransactions from "./pages/admin/AdminTransactions";
-import AdminPayouts from "./pages/admin/AdminPayouts";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminTransport from "./pages/admin/AdminTransport";
-import OrganizerDashboard from "./pages/organizer/OrganizerDashboard";
-import OrganizerEvents from "./pages/organizer/OrganizerEvents";
-import OrganizerPromoCodes from "./pages/organizer/OrganizerPromoCodes";
-import OrganizerParticipants from "./pages/organizer/OrganizerParticipants";
-import OrganizerFinances from "./pages/organizer/OrganizerFinances";
-import OrganizerStaff from "./pages/organizer/OrganizerStaff";
-import OrganizerLiveDashboard from "./pages/organizer/OrganizerLiveDashboard";
-import TransportOrganizerDashboard from "./pages/organizer/TransportOrganizerDashboard";
-import StaffLoginPage from "./pages/staff/StaffLoginPage";
-import StaffScannerPage from "./pages/staff/StaffScannerPage";
 
 // Layout
 import MainLayout from "./layouts/MainLayout";
-import AdminLayout from "./layouts/AdminLayout";
-import OrganizerLayout from "./layouts/OrganizerLayout";
+
+// Admin area. These share one chunk name so the whole area arrives in a
+// single request instead of nine: latency hurts more than bytes on 3G.
+const AdminDashboard = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./pages/admin/AdminDashboard")
+);
+const AdminEvents = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./pages/admin/AdminEvents")
+);
+const AdminScanner = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./pages/admin/AdminScanner")
+);
+const AdminOrganizers = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./pages/admin/AdminOrganizers")
+);
+const AdminUsers = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./pages/admin/AdminUsers")
+);
+const AdminTransactions = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./pages/admin/AdminTransactions")
+);
+const AdminPayouts = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./pages/admin/AdminPayouts")
+);
+const AdminSettings = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./pages/admin/AdminSettings")
+);
+const AdminTransport = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./pages/admin/AdminTransport")
+);
+const AdminLayout = lazy(() =>
+  import(/* webpackChunkName: "admin" */ "./layouts/AdminLayout")
+);
+
+// Organizer area, one chunk.
+const OrganizerDashboard = lazy(() =>
+  import(/* webpackChunkName: "organizer" */ "./pages/organizer/OrganizerDashboard")
+);
+const OrganizerEvents = lazy(() =>
+  import(/* webpackChunkName: "organizer" */ "./pages/organizer/OrganizerEvents")
+);
+const OrganizerPromoCodes = lazy(() =>
+  import(/* webpackChunkName: "organizer" */ "./pages/organizer/OrganizerPromoCodes")
+);
+const OrganizerParticipants = lazy(() =>
+  import(/* webpackChunkName: "organizer" */ "./pages/organizer/OrganizerParticipants")
+);
+const OrganizerFinances = lazy(() =>
+  import(/* webpackChunkName: "organizer" */ "./pages/organizer/OrganizerFinances")
+);
+const OrganizerStaff = lazy(() =>
+  import(/* webpackChunkName: "organizer" */ "./pages/organizer/OrganizerStaff")
+);
+const OrganizerLiveDashboard = lazy(() =>
+  import(/* webpackChunkName: "organizer" */ "./pages/organizer/OrganizerLiveDashboard")
+);
+const TransportOrganizerDashboard = lazy(() =>
+  import(/* webpackChunkName: "organizer" */ "./pages/organizer/TransportOrganizerDashboard")
+);
+const OrganizerLayout = lazy(() =>
+  import(/* webpackChunkName: "organizer" */ "./layouts/OrganizerLayout")
+);
+
+// Scanners (staff and security), one chunk.
+const StaffLoginPage = lazy(() =>
+  import(/* webpackChunkName: "scanner" */ "./pages/staff/StaffLoginPage")
+);
+const StaffScannerPage = lazy(() =>
+  import(/* webpackChunkName: "scanner" */ "./pages/staff/StaffScannerPage")
+);
+const ScannerPage = lazy(() =>
+  import(/* webpackChunkName: "scanner" */ "./pages/ScannerPage")
+);
+
+// Shown while an area chunk is still on the wire, and while the session is
+// being restored. Identical markup in both cases, so a slow connection does
+// not flash one layout and then another.
+const LoadingScreen = () => (
+  <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+    <div className="text-center">
+      <div className="font-unbounded font-bold text-3xl bg-gradient-to-r from-gold to-yellow-300 bg-clip-text text-transparent mb-2">D-BILLET</div>
+      <div className="animate-pulse text-gray-400">Chargement...</div>
+    </div>
+  </div>
+);
 
 // Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false, organizerOnly = false }) => {
   const { user, loading, isAdmin, isOrganizer } = useAuth();
-  
+
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="text-center">
-          <div className="font-unbounded font-bold text-3xl bg-gradient-to-r from-gold to-yellow-300 bg-clip-text text-transparent mb-2">D-BILLET</div>
-          <div className="animate-pulse text-gray-400">Chargement...</div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
   
   if (!user) {
@@ -180,7 +239,9 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <AppRoutes />
+          <Suspense fallback={<LoadingScreen />}>
+            <AppRoutes />
+          </Suspense>
           <Toaster 
             position="top-center" 
             richColors 

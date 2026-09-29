@@ -30,7 +30,7 @@ Ces contraintes priment sur toute preference technique.
 
 | Contrainte | Consequence concrete |
 |------------|----------------------|
-| Android d'entree de gamme, 3G/4G instable, donnees cheres | Application legere. Peu de JavaScript, images optimisees, chargement differe. Budget : **JS initial < ~200 ko gzip** (mesure du 29/09 : 235,6 ko en un seul bundle ; Lighthouse mobile 82/100 avec compression) |
+| Android d'entree de gamme, 3G/4G instable, donnees cheres | Application legere. Peu de JavaScript, images optimisees, chargement differe. Budget : **JS initial < ~200 ko gzip** - **respecte** depuis le decoupage du 29/09 : **178,9 ko** (contre 235,6 ko). Lighthouse mobile 84/100. |
 | Controle des billets sans reseau (train, ferry) | Le billet **et sa verification** doivent fonctionner hors ligne : QR signe, verification par cle publique, manifeste embarque |
 | Langue | **Francais** par defaut. Prevoir somali, afar et arabe (**RTL**). Aucun texte en dur : passer par des cles de traduction |
 | Monnaie | **Franc djiboutien (DJF), sans decimales** : montants stockes en **entiers**, jamais en flottant |
@@ -166,7 +166,15 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
    Reste ouvert : `dbillet-logo.png` est toujours un JPEG renomme `.png`, sert
    d'`og:image` et de visuel de repli. Sans impact PWA, mais a assainir un jour.
 6. **Aucun i18n** : textes en dur, aucune preparation RTL.
-7. **Pas de code splitting** : un seul bundle de 235,6 ko gzip charge par tous.
+7. ~~**Pas de code splitting**~~ : **corrige.** Les espaces admin, organisateur
+   et scanner sont en `React.lazy`, regroupes par `webpackChunkName` en trois
+   chunks (`admin` 22,4 ko, `organizer` 25 ko, `scanner` 6,8 ko) plutot qu'en
+   une vingtaine de petits fichiers : sur 3G la latence coute plus que les
+   octets. `main.js` passe de 235,6 a **178,9 ko**. Les pages publiques restent
+   en import statique, car react-snap les pre-rend.
+   Un chunk differe n'est demande que si la route est atteinte : sur `/admin`,
+   `ProtectedRoute` redirige avant, donc un visiteur non autorise ne telecharge
+   rien.
 8. **818 ko d'images mortes** dans `frontend/public/images/` (`dbilleh-*`).
 9. ~~**Pas de compression sur le chemin Cloud Run**~~ : **corrige.**
    `backend/compression.py` ajoute un gzip selectif (types compressibles
@@ -176,7 +184,14 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
    dans `main.py`, donc le plus interne : place en externe, il voit les
    reponses deja transformees en flux par les `BaseHTTPMiddleware` et son
    `minimum_size` ne s'applique plus.
-10. **Tests d'integration instables** : ils enchainent les connexions et
+10. **Erreur d'hydratation React #418 sur toutes les routes** : react-snap
+   pre-rend le HTML au build, puis le client recupere ses donnees et rend
+   autre chose. Verifie le 29/09 sur les builds **avant et apres** le
+   decoupage : identique, donc preexistant et sans lien avec lui. Sans effet
+   visible (React re-rend), mais cela annule le benefice du pre-rendu sur la
+   partie dynamique. A traiter en alignant l'etat initial du client sur les
+   donnees de `public/prerender-data/`.
+11. **Tests d'integration instables** : ils enchainent les connexions et
    declenchent le limiteur de debit applicatif (429). Echecs preexistants, sans
    rapport avec les modifications recentes.
 
