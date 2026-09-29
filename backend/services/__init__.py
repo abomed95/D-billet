@@ -10,6 +10,7 @@ from .auth import (
 from .pdf import generate_ticket_pdf
 from .seed import seed_demo_data
 from .seo import slugify, generate_unique_event_slug, ensure_event_slug, event_public_url
+from .inventory import release_event_seats, reserve_event_seats
 from .rate_limit import rate_limited
 from .indexes import ensure_indexes
 from . import waafipay
@@ -23,6 +24,8 @@ __all__ = [
     'seed_demo_data',
     'slugify', 'generate_unique_event_slug', 'ensure_event_slug', 'event_public_url',
     'rate_limited',
+    'reserve_event_seats',
+    'release_event_seats',
     'ensure_indexes',
     'waafipay',
     'start_waafi_payment', 'resolve_waafi_payment', 'pay_with_waafi_wallet',
