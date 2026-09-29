@@ -344,7 +344,7 @@ const HomePage = () => {
           {/* Top bar — app header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <img src="/images/dbillet-icon.png" alt="Logo D-Billet" className="h-10 w-10 rounded-2xl object-cover ring-1 ring-gold/30" />
+              <img src="/images/icon-192.png" alt="Logo D-Billet" className="h-10 w-10 rounded-2xl object-cover ring-1 ring-gold/30" />
               <div className="leading-tight">
                 <p className="font-display text-lg font-extrabold text-white">D-BILLET</p>
                 <p className="flex items-center gap-1 text-[11px] text-gold">

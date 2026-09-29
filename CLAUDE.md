@@ -160,8 +160,11 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
    `StaffScannerPage.js`).
 4. **Aucun stockage hors ligne** : pas d'IndexedDB, les billets disparaissent
    sans reseau.
-5. **Icones PWA** : `dbillet-icon.png` et `dbillet-logo.png` sont en realite
-   des **JPEG** renommes `.png`, declares `image/png` et `any maskable`.
+5. ~~**Icones PWA**~~ : **corrige.** Le manifest utilise desormais quatre vrais
+   PNG (`icon-192`, `icon-512`, `icon-maskable-192`, `icon-maskable-512`), le
+   contenu de l'icone maskable a ete recentre dans la zone sure de 80 %.
+   Reste ouvert : `dbillet-logo.png` est toujours un JPEG renomme `.png`, sert
+   d'`og:image` et de visuel de repli. Sans impact PWA, mais a assainir un jour.
 6. **Aucun i18n** : textes en dur, aucune preparation RTL.
 7. **Pas de code splitting** : un seul bundle de 235,6 ko gzip charge par tous.
 8. **818 ko d'images mortes** dans `frontend/public/images/` (`dbilleh-*`).

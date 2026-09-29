@@ -77,9 +77,9 @@ cloudbuild.yaml       pipeline Cloud Build
 
 | Point | Constat verifie |
 |-------|-----------------|
-| Icones | `dbillet-icon.png` et `dbillet-logo.png` sont **des fichiers JPEG portant l'extension `.png`** (`file` le confirme). Le manifest les declare `"type": "image/png"`. |
-| Tailles d'icones | Un seul fichier 1024x1024 declare simultanement en 512, 192 et 384. Aucune icone `maskable` dediee. |
-| `purpose: "any maskable"` | Applique a un JPEG sans transparence ni zone de securite : le masque Android rognera le logo. |
+| Icones | ~~JPEG renommes `.png`~~ - **corrige le 29/09.** Quatre vrais PNG generes. `dbillet-logo.png` reste un JPEG renomme, mais il ne sert plus au manifest. |
+| Tailles d'icones | ~~Un seul fichier declare en 3 tailles~~ - **corrige le 29/09.** Un fichier par taille (192 et 512), plus deux icones `maskable` dediees. |
+| `purpose: "any maskable"` | ~~Applique a un JPEG~~ - **corrige le 29/09.** `any` et `maskable` sont separes ; le contenu maskable tient dans 71 % du diametre (zone sure : 80 %). |
 | Page hors ligne | Pas de page de secours dediee ; repli sur `index.html` en cache. |
 | Billets hors ligne | **Aucun IndexedDB dans le projet.** `MyTicketsPage` appelle l'API a chaque affichage : sans reseau, pas de billet. |
 | Notification de mise a jour | `SKIP_WAITING` est gere cote worker, mais aucune interface ne previent l'utilisateur. |
