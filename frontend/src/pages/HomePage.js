@@ -31,6 +31,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
 import { loadPrerenderHomeData } from '../lib/prerender';
+import { readPrerenderState, savePrerenderState } from '../lib/prerenderState';
 import { absoluteUrl, slugify } from '../lib/seo';
 
 const API = API_BASE;
@@ -172,10 +173,15 @@ const formatDate = (dateStr) =>
   });
 
 const HomePage = () => {
-  const [allEvents, setAllEvents] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [testimonials, setTestimonials] = useState(TESTIMONIALS_FALLBACK);
-  const [loading, setLoading] = useState(true);
+  // Seeded from the snapshot react-snap inlined, so the first render matches
+  // the prerendered HTML and hydration succeeds instead of discarding it.
+  const preloaded = readPrerenderState('home');
+  const [allEvents, setAllEvents] = useState(preloaded?.events || []);
+  const [events, setEvents] = useState(preloaded?.events || []);
+  const [testimonials, setTestimonials] = useState(
+    preloaded?.testimonials?.length ? preloaded.testimonials : TESTIMONIALS_FALLBACK
+  );
+  const [loading, setLoading] = useState(!preloaded);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [openFaq, setOpenFaq] = useState(0);
@@ -188,6 +194,7 @@ const HomePage = () => {
     try {
       if (isPrerender) {
         const data = await loadPrerenderHomeData();
+        savePrerenderState('home', data);
         setAllEvents(data.events || []);
         setEvents(data.events || []);
         setTestimonials(data.testimonials?.length ? data.testimonials : TESTIMONIALS_FALLBACK);

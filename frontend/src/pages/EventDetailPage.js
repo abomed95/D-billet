@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
 import { loadPrerenderEventData } from '../lib/prerender';
+import { readPrerenderState, savePrerenderState } from '../lib/prerenderState';
 import { absoluteUrl, slugify } from '../lib/seo';
 
 const API = API_BASE;
@@ -49,8 +50,10 @@ const EventDetailPage = () => {
   const { user } = useAuth();
   const { addToCart } = useCart();
 
-  const [event, setEvent] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // See lib/prerenderState.js: seeds the first render from the prerendered HTML.
+  const preloadedEvent = readPrerenderState(`event-${id}`);
+  const [event, setEvent] = useState(preloadedEvent);
+  const [loading, setLoading] = useState(!preloadedEvent);
   const [selectedTicketType, setSelectedTicketType] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
@@ -63,6 +66,7 @@ const EventDetailPage = () => {
         ? await loadPrerenderEventData(id)
         : (await axios.get(`${API}/events/${id}`)).data;
 
+      savePrerenderState(`event-${id}`, eventData);
       setEvent(eventData);
 
       const availableTypes = eventData.ticket_types?.filter(

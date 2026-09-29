@@ -6,6 +6,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
 import { loadPrerenderLegalPage } from '../lib/prerender';
+import { readPrerenderState, savePrerenderState } from '../lib/prerenderState';
 
 const API = API_BASE;
 
@@ -47,20 +48,27 @@ const LEGAL_PAGES = {
 const LegalPage = () => {
   const { page } = useParams();
   const navigate = useNavigate();
-  const [content, setContent] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // See lib/prerenderState.js: seeds the first render from the prerendered HTML.
+  const preloadedContent = readPrerenderState(`legal-${page}`);
+  const [content, setContent] = useState(preloadedContent);
+  const [loading, setLoading] = useState(!preloadedContent);
 
   const pageConfig = LEGAL_PAGES[page];
 
   const fetchContent = useCallback(async () => {
     if (!pageConfig) return;
 
-    setLoading(true);
+    // Keep the prerendered text on screen for the page react-snap captured;
+    // navigating to another legal page still shows the loader.
+    if (!readPrerenderState(`legal-${page}`)) {
+      setLoading(true);
+    }
     try {
       const legalData = isPrerender
         ? await loadPrerenderLegalPage(page)
         : (await axios.get(`${API}${pageConfig.endpoint}`)).data;
 
+      savePrerenderState(`legal-${page}`, legalData);
       setContent(legalData);
     } catch (error) {
       console.error('Failed to fetch legal content:', error);

@@ -184,14 +184,34 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
    dans `main.py`, donc le plus interne : place en externe, il voit les
    reponses deja transformees en flux par les `BaseHTTPMiddleware` et son
    `minimum_size` ne s'applique plus.
-10. **Erreur d'hydratation React #418 sur toutes les routes** : react-snap
-   pre-rend le HTML au build, puis le client recupere ses donnees et rend
-   autre chose. Verifie le 29/09 sur les builds **avant et apres** le
-   decoupage : identique, donc preexistant et sans lien avec lui. Sans effet
-   visible (React re-rend), mais cela annule le benefice du pre-rendu sur la
-   partie dynamique. A traiter en alignant l'etat initial du client sur les
-   donnees de `public/prerender-data/`.
-11. **Tests d'integration instables** : ils enchainent les connexions et
+10. **Erreur d'hydratation React #418 sur toutes les routes - cause
+   identifiee, non corrigeable simplement.** Diagnostic du 29/09 en comparant
+   le HTML pre-rendu au DOM client, attribut par attribut : l'ecart vient de
+   la **serialisation du DOM par react-snap**, pas des donnees.
+   react-snap capture `outerHTML`, donc le navigateur normalise les styles
+   inline (`background-image:url(...)` devient
+   `background-image: url("..."); `, `#ffd600` devient `rgb(255, 214, 0)`) et
+   quelques espaces de `class`. React 19 compare ce qu'il veut rendre a
+   l'attribut present et conclut a un ecart. L'ordre des attributs SVG change
+   aussi, mais cela n'a aucune incidence.
+   Consequence : React jette l'arbre pre-rendu et le refait cote client. Le
+   pre-rendu garde son interet pour le referencement et le premier affichage,
+   mais l'hydratation ne sera jamais reutilisee tant que les pages publiques
+   portent des `style` inline, ou tant que react-snap reste le moteur de
+   pre-rendu.
+   **Ce qui a ete corrige** : `lib/prerenderState.js` seme l'etat initial des
+   pages pre-rendues depuis l'instantane que react-snap inline dans le HTML
+   (via `window.snapSaveState`). Le premier rendu client affiche donc le vrai
+   contenu au lieu d'un ecran de chargement. Mesure sur `/terms` : 35 -> 50
+   lignes rendues, sur `/ferry` : 50 -> 65, soit le contenu du pre-rendu au
+   bloc `<noscript>` pres.
+11. **Contenus de repli dupliques et divergents** : les valeurs par defaut de
+   `frontend/scripts/generate-prerender-data.js` sont **sans accents**
+   (« J'ai reserve mon billet »), alors que celles de `HomePage.js` en ont
+   (« J'ai reserve » -> « J'ai reserve » accentue). Elles ne servent que si
+   l'API est injoignable au build, mais dans ce cas le HTML indexe par Google
+   contient du francais sans accents. A dedupliquer vers une source unique.
+12. **Tests d'integration instables** : ils enchainent les connexions et
    declenchent le limiteur de debit applicatif (429). Echecs preexistants, sans
    rapport avec les modifications recentes.
 

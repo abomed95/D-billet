@@ -18,6 +18,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
 import { loadPrerenderHomeData } from '../lib/prerender';
+import { readPrerenderState, savePrerenderState } from '../lib/prerenderState';
 import { absoluteUrl, slugify } from '../lib/seo';
 
 const API = API_BASE;
@@ -105,8 +106,10 @@ const EventCard = ({ event }) => {
 
 const EventsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [allEvents, setAllEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // See lib/prerenderState.js: seeds the first render from the prerendered HTML.
+  const preloaded = readPrerenderState('home');
+  const [allEvents, setAllEvents] = useState(preloaded?.events || []);
+  const [loading, setLoading] = useState(!preloaded);
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || '');
   const [activeCategory, setActiveCategory] = useState('all');
 
@@ -128,6 +131,7 @@ const EventsPage = () => {
       try {
         if (isPrerender) {
           const data = await loadPrerenderHomeData();
+          savePrerenderState('home', data);
           if (isMounted) setAllEvents(data.events || []);
           return;
         }
