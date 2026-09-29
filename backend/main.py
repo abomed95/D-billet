@@ -27,12 +27,16 @@ from config import (
     AUTO_SEED_DEMO_DATA,
     BACKEND_CORS_ORIGINS,
     CONTENT_SECURITY_POLICY,
+    ENABLE_GZIP,
     FRONTEND_BUILD_DIR,
+    GZIP_COMPRESS_LEVEL,
+    GZIP_MINIMUM_SIZE,
     SERVE_FRONTEND,
     UPLOAD_DIR,
     IS_PRODUCTION,
 )
 from services import seed_demo_data, ensure_indexes
+from compression import SelectiveGZipMiddleware
 from spa import CachedStaticFiles, mount_spa
 
 # Configure root logger (production-safe defaults)
@@ -101,6 +105,21 @@ app = FastAPI(
 
 
 # ============== MIDDLEWARE ==============
+
+# Compression. Registered first, which makes it the INNERMOST middleware, and
+# that placement matters: the two BaseHTTPMiddleware handlers below re-emit
+# every response as a stream, and Starlette's gzip responder skips its
+# minimum_size check on streamed bodies. Sitting closest to the router, this
+# sees the original responses, so small payloads are left alone instead of
+# being compressed into something slightly larger.
+# Nginx does this on the Droplet, hence ENABLE_GZIP=false there.
+if ENABLE_GZIP:
+    app.add_middleware(
+        SelectiveGZipMiddleware,
+        minimum_size=GZIP_MINIMUM_SIZE,
+        compresslevel=GZIP_COMPRESS_LEVEL,
+    )
+
 
 # CORS Middleware - restricted methods/headers in production
 _ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]

@@ -56,10 +56,10 @@ def _safe_join(build_dir: Path, raw_path: str) -> Path | None:
 class CachedStaticFiles(StaticFiles):
     """StaticFiles with an explicit Cache-Control header.
 
-    Keeps StaticFiles' ETag and Range handling and only adds the caching
-    header Nginx used to set for `/static/` and `/uploads/`. Both serve
-    content-addressed names (CRA bundle hashes, upload UUIDs), so their
-    responses can be cached aggressively.
+    Keeps StaticFiles' ETag and conditional-request handling (it does not
+    implement Range) and only adds the caching header Nginx used to set for
+    `/static/` and `/uploads/`. Both serve content-addressed names (CRA bundle
+    hashes, upload UUIDs), so their responses can be cached aggressively.
     """
 
     def __init__(self, *args, cache_control: str = _IMMUTABLE, **kwargs):

@@ -116,6 +116,15 @@ SERVE_FRONTEND = _env_flag(
     (FRONTEND_BUILD_DIR / "index.html").is_file(),
 )
 
+# ============== Response compression ==============
+# Nginx compresses on the Droplet, so this can be turned off there
+# (ENABLE_GZIP=false). On Cloud Run nothing else compresses, so it defaults on.
+ENABLE_GZIP = _env_flag("ENABLE_GZIP", True)
+# Matches gzip_min_length in the Nginx config.
+GZIP_MINIMUM_SIZE = int(os.environ.get("GZIP_MINIMUM_SIZE", "1024"))
+# Starlette defaults to 9, which is slow for little gain on a ~900 kB bundle.
+GZIP_COMPRESS_LEVEL = int(os.environ.get("GZIP_COMPRESS_LEVEL", "6"))
+
 # Content-Security-Policy. Set by Nginx on the Droplet, by the app itself when
 # the container serves the frontend. Override with the CONTENT_SECURITY_POLICY
 # env var when adding a third-party (analytics, Stripe...).

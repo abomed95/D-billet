@@ -168,11 +168,14 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
 6. **Aucun i18n** : textes en dur, aucune preparation RTL.
 7. **Pas de code splitting** : un seul bundle de 235,6 ko gzip charge par tous.
 8. **818 ko d'images mortes** dans `frontend/public/images/` (`dbilleh-*`).
-9. **Pas de compression sur le chemin Cloud Run** : Nginx active `gzip` sur le
-   Droplet, mais le conteneur Cloud Run sert `main.js` **non compresse**
-   (893 ko au lieu de 235 ko). Mesure Lighthouse mobile du 29/09 : performance
-   **65/100 sans compression contre 82/100 avec**. Correctif : ajouter
-   `GZipMiddleware` dans `backend/main.py`.
+9. ~~**Pas de compression sur le chemin Cloud Run**~~ : **corrige.**
+   `backend/compression.py` ajoute un gzip selectif (types compressibles
+   uniquement, images et PDF laisses intacts). Mesure sur le conteneur :
+   `main.js` 915 ko -> 236 ko, performance Lighthouse mobile **65/100 avant**
+   contre **79-83/100 apres**. Le middleware est enregistre **en premier**
+   dans `main.py`, donc le plus interne : place en externe, il voit les
+   reponses deja transformees en flux par les `BaseHTTPMiddleware` et son
+   `minimum_size` ne s'applique plus.
 10. **Tests d'integration instables** : ils enchainent les connexions et
    declenchent le limiteur de debit applicatif (429). Echecs preexistants, sans
    rapport avec les modifications recentes.
