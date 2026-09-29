@@ -9,7 +9,7 @@ import uuid
 
 from config import db, TRAIN_PRICE, DAY_TO_WEEKDAY
 from models import TrainBookingRequest
-from services import get_current_user, waafipay, start_waafi_payment, pay_with_waafi_wallet
+from services import build_qr_payload, get_current_user, waafipay, start_waafi_payment, pay_with_waafi_wallet
 
 router = APIRouter(tags=["Transport"])
 
@@ -492,7 +492,13 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
     tickets_created = []
     for passenger in booking.passengers:
         ticket_id = str(uuid.uuid4())
-        qr_data = f"FERRY-{ticket_id}"
+        qr_data = build_qr_payload(
+            ticket_id,
+            service="ferry",
+            reference=booking.destination,
+            seat=trip_time,
+            departure=booking.date,
+        )
 
         is_child = passenger.age and passenger.age < child_free_age
         ticket_price = 0 if is_child else passenger_price
@@ -535,7 +541,13 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
     vehicles_created = []
     for vehicle in booking.vehicles:
         vehicle_id = str(uuid.uuid4())
-        qr_data = f"FERRY-VEH-{vehicle_id}"
+        qr_data = build_qr_payload(
+            vehicle_id,
+            service="ferry_vehicle",
+            reference=booking.destination,
+            seat=vehicle.plate_number,
+            departure=booking.date,
+        )
         vt = vehicle_types.get(vehicle.vehicle_type, {})
 
         vehicle_doc = {
@@ -753,7 +765,13 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
     tickets_created = []
     for passenger in booking.passengers:
         ticket_id = str(uuid.uuid4())
-        qr_data = f"TRAIN-{ticket_id}"
+        qr_data = build_qr_payload(
+            ticket_id,
+            service="train",
+            reference=f"{booking.departure}-{booking.arrival}",
+            seat=departure_time,
+            departure=booking.date,
+        )
 
         ticket_doc = {
             "id": ticket_id,

@@ -91,9 +91,22 @@ if IS_PRODUCTION:
             "JWT_SECRET is too short for production (minimum 32 characters)."
         )
 
+# ============== Ticket QR signing ==============
+# Ed25519 private key seed, 32 bytes, base64url without padding. Generate with:
+#   python -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).rstrip(b'=').decode())"
+# Empty means QR codes keep the legacy unsigned `DBILLET-<id>` form, so offline
+# verification is impossible. Never commit this value: it can mint valid tickets.
+TICKET_SIGNING_KEY = os.environ.get('TICKET_SIGNING_KEY', '').strip()
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 STAFF_TOKEN_EXPIRE_HOURS = 24
+
+if IS_PRODUCTION and not TICKET_SIGNING_KEY:
+    logger.warning(
+        "TICKET_SIGNING_KEY is not set: ticket QR codes stay unsigned, so they "
+        "cannot be verified offline on the train or the ferry."
+    )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") if CryptContext else None
 

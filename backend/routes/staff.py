@@ -12,6 +12,7 @@ from models import (
     ScanRequest
 )
 from services import (
+    parse_qr_payload,
     verify_password, hash_password, create_staff_token,
     generate_staff_password, get_current_staff, get_organizer_user
 )
@@ -96,7 +97,18 @@ async def staff_scan_ticket(data: ScanRequest, staff: dict = Depends(get_current
     if data.event_id not in staff.get("assigned_events", []):
         raise HTTPException(status_code=403, detail="Vous n'etes pas assigne a cet evenement")
     
-    ticket = await db.tickets.find_one({"qr_code_data": data.qr_code}, {"_id": 0})
+    claims = parse_qr_payload(data.qr_code)
+    if claims["signed"] and not claims["valid_signature"]:
+        # Forged QR: never look it up, and never mark anything as used.
+        raise HTTPException(status_code=400, detail="Billet non authentique")
+
+    # Match on the ticket id carried by the QR; fall back to the stored payload
+    # so tickets issued before signing keep scanning.
+    ticket = None
+    if claims["ticket_id"]:
+        ticket = await db.tickets.find_one({"id": claims["ticket_id"]}, {"_id": 0})
+    if not ticket:
+        ticket = await db.tickets.find_one({"qr_code_data": data.qr_code}, {"_id": 0})
     
     scan_log = {
         "id": str(uuid.uuid4()),

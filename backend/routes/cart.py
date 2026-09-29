@@ -7,7 +7,7 @@ import uuid
 
 from config import db
 from models import CartItemAdd, CheckoutRequest
-from services import release_event_seats, reserve_event_seats, get_current_user, waafipay, start_waafi_payment, pay_with_waafi_wallet
+from services import build_qr_payload, release_event_seats, reserve_event_seats, get_current_user, waafipay, start_waafi_payment, pay_with_waafi_wallet
 
 router = APIRouter(tags=["Cart"])
 
@@ -228,7 +228,13 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
 
         for _ in range(item["quantity"]):
             ticket_id = str(uuid.uuid4())
-            qr_data = f"DBILLET-{ticket_id}"
+            qr_data = build_qr_payload(
+                ticket_id,
+                service="event",
+                reference=event["id"],
+                seat=ticket_type["name"],
+                departure=event["date"],
+            )
 
             ticket_doc = {
                 "id": ticket_id,

@@ -133,6 +133,13 @@ create_secret() {
                 value="$(openssl rand -hex 64)"
                 echo "    secret ${name}: generated"
                 ;;
+            generate_ed25519)
+                # 32 random bytes, base64url without padding: the seed the
+                # ticket QR signature is built from.
+                value="$(openssl rand 32 | basenc --base64url 2>/dev/null | tr -d '=' \
+                    || openssl rand 32 | base64 | tr '+/' '-_' | tr -d '=\n')"
+                echo "    secret ${name}: generated"
+                ;;
             prompt)
                 read -rsp "    ${prompt}: " value; echo
                 [[ -n "$value" ]] || die "${name} cannot be empty."
@@ -158,8 +165,13 @@ create_secret() {
 log "Configuring Secret Manager"
 create_secret "dbillet-jwt-secret" "JWT signing key" generate
 create_secret "dbillet-mongo-url"  "MongoDB connection string (mongodb+srv://...)" prompt
+# Without this, ticket QR codes stay unsigned and cannot be checked offline on
+# the train or the ferry. Rotating it invalidates every ticket already issued.
+create_secret "dbillet-ticket-signing-key" "Ticket QR signing key" generate_ed25519
 
-SECRET_REFS="JWT_SECRET=dbillet-jwt-secret:latest,MONGO_URL=dbillet-mongo-url:latest"
+SECRET_REFS="JWT_SECRET=dbillet-jwt-secret:latest"
+SECRET_REFS="${SECRET_REFS},MONGO_URL=dbillet-mongo-url:latest"
+SECRET_REFS="${SECRET_REFS},TICKET_SIGNING_KEY=dbillet-ticket-signing-key:latest"
 add_optional_secret() {
     if create_secret "$1" "$2" optional; then
         SECRET_REFS="${SECRET_REFS},$3=$1:latest"
