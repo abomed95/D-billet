@@ -150,14 +150,33 @@ Ne jamais executer ces scripts sans demande explicite.
 
 Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
 
-1. **Anti-double-vente non garanti** : le stock est lu puis reecrit
-   (`backend/routes/cart.py`), sans operation atomique ni contrainte d'unicite.
-   Deux achats simultanes peuvent survendre.
-2. **QR non signe** : le contenu est `DBILLET-<uuid>`. La validite exige un
-   appel serveur, donc **aucun controle hors ligne possible**.
-3. **Le scan ne decode pas les QR** : la camera est affichee, mais la
-   validation passe par une saisie manuelle (`ScannerPage.js`,
-   `StaffScannerPage.js`).
+1. ~~**Anti-double-vente non garanti**~~ : **corrige.**
+   `backend/services/inventory.py` fait la verification et l'increment dans une
+   seule mise a jour de document, que MongoDB applique atomiquement. Mesure
+   avant/apres sur un vrai MongoDB, 100 reservations simultanees pour 25
+   places : **avant, 100 acceptees et compteur a 2** ; apres, 25 acceptees et
+   compteur a 25. La liberation des places avait la meme course, corrigee de
+   meme. L'element de tableau est adresse par index plutot que par l'operateur
+   positionnel `$`, pour que la meme instruction marche aussi sur `localdb`.
+2. ~~**QR non signe**~~ : **corrige.** `backend/services/qr.py` signe une
+   charge utile compacte en Ed25519 :
+   `DB1.<payload>.<signature>`, ou payload =
+   `ticket_id|service|reference|place|depart|expiration`. Un appareil de
+   controle muni de la seule **cle publique** (`GET /api/scanner/public-key`)
+   peut etablir hors ligne qu'un QR vient bien de D-Billet, pour quel trajet et
+   jusqu'a quand. Les trois points d'entree de scan refusent une signature
+   invalide **sans toucher la base**. Retrocompatible : sans
+   `TICKET_SIGNING_KEY`, l'ancien format est emis, et les anciens prefixes
+   restent scannables.
+   *Reste a faire pour un controle hors ligne complet* (phase 3 de la mission) :
+   manifeste de trajet embarque, file de scans et synchronisation differee.
+3. ~~**Le scan ne decode pas les QR**~~ : **corrige.**
+   `frontend/src/lib/qrScanner.js` decode le flux video quatre fois par
+   seconde. Il privilegie `BarcodeDetector` (natif sur Chrome Android, zero
+   octet ajoute) et retombe sur jsQR importe a la demande (46,4 ko gzip, chunk
+   separe) la ou l'API manque, notamment iOS Safari. Verifie en navigateur avec
+   une camera factice alimentee par un vrai QR signe : la charge utile qui
+   arrive a `/api/scanner/validate` est identique a celle emise.
 4. **Aucun stockage hors ligne** : pas d'IndexedDB, les billets disparaissent
    sans reseau.
 5. ~~**Icones PWA**~~ : **corrige.** Le manifest utilise desormais quatre vrais
@@ -175,7 +194,11 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
    Un chunk differe n'est demande que si la route est atteinte : sur `/admin`,
    `ProtectedRoute` redirige avant, donc un visiteur non autorise ne telecharge
    rien.
-8. **818 ko d'images mortes** dans `frontend/public/images/` (`dbilleh-*`).
+8. ~~**818 ko d'images mortes**~~ : **corrige.** `dbilleh-*` supprimes, et les
+   logos de paiement redimensionnes de 1024 px a 192 px (ils sont affiches en
+   24-32 px) : le dossier `images/` passe de **1,1 Mo a 172 ko**. Pas de
+   conversion en WebP : `browserslist` cible encore Safari 12 et iOS 12, qui ne
+   le lisent pas.
 9. ~~**Pas de compression sur le chemin Cloud Run**~~ : **corrige.**
    `backend/compression.py` ajoute un gzip selectif (types compressibles
    uniquement, images et PDF laisses intacts). Mesure sur le conteneur :
@@ -205,13 +228,24 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
    contenu au lieu d'un ecran de chargement. Mesure sur `/terms` : 35 -> 50
    lignes rendues, sur `/ferry` : 50 -> 65, soit le contenu du pre-rendu au
    bloc `<noscript>` pres.
-11. **Contenus de repli dupliques et divergents** : les valeurs par defaut de
-   `frontend/scripts/generate-prerender-data.js` sont **sans accents**
-   (« J'ai reserve mon billet »), alors que celles de `HomePage.js` en ont
-   (« J'ai reserve » -> « J'ai reserve » accentue). Elles ne servent que si
-   l'API est injoignable au build, mais dans ce cas le HTML indexe par Google
-   contient du francais sans accents. A dedupliquer vers une source unique.
-12. **Tests d'integration instables** : ils enchainent les connexions et
+11. ~~**Contenus de repli dupliques et divergents**~~ : **corrige pour les
+   temoignages**, desormais lus par les deux cotes depuis
+   `frontend/src/data/fallbacks.json`, dans leur version accentuee.
+   *Reste ouvert* : les autres valeurs par defaut de
+   `generate-prerender-data.js` (actualites, CGU, pages legales) sont toujours
+   sans accents. Elles n'ont pas d'equivalent dans l'application et ne servent
+   que si l'API est injoignable au build, mais dans ce cas elles atterrissent
+   telles quelles dans le HTML indexe.
+12. **PostHog charge sur toutes les pages** : un extrait est code en dur dans
+   `frontend/public/index.html`, avec cle de projet en clair. Il tire quatre
+   scripts tiers, dont l'enregistrement de session (`posthog-recorder`). Deux
+   problemes : la CSP posee par Nginx et par l'application n'autorise ni
+   `us-assets.i.posthog.com` ni `us.i.posthog.com`, donc **c'est deja bloque en
+   production** tout en consommant des requetes ; et l'enregistrement de
+   session sur un parcours d'achat capture des donnees personnelles, ce qui
+   contredit la regle de collecte minimale. Decision produit : garder et
+   ouvrir la CSP, ou retirer.
+13. **Tests d'integration instables** : ils enchainent les connexions et
    declenchent le limiteur de debit applicatif (429). Echecs preexistants, sans
    rapport avec les modifications recentes.
 

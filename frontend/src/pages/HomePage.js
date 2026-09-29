@@ -31,6 +31,9 @@ import { Skeleton } from '../components/ui/skeleton';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
 import { loadPrerenderHomeData } from '../lib/prerender';
+// Shared with scripts/generate-prerender-data.js so the prerendered HTML and
+// the client fall back to exactly the same text.
+import fallbacks from '../data/fallbacks.json';
 import { readPrerenderState, savePrerenderState } from '../lib/prerenderState';
 import { absoluteUrl, slugify } from '../lib/seo';
 
@@ -132,26 +135,6 @@ const HOME_LINKS = [
   { to: '/terms', label: "Conditions d'utilisation" },
 ];
 
-const TESTIMONIALS_FALLBACK = [
-  {
-    author: 'Amina H.',
-    role: 'Cliente D-BILLET',
-    content: "J'ai réservé mon billet en quelques minutes et tout s'est déroulé sans attente à l'entrée.",
-    rating: 5,
-  },
-  {
-    author: 'Moussa A.',
-    role: 'Voyageur ferry',
-    content: "La réservation en ligne m'a permis d'organiser mon départ plus sereinement, avec mon billet déjà prêt.",
-    rating: 5,
-  },
-  {
-    author: 'Noura S.',
-    role: 'Participante événement',
-    content: 'Le paiement était simple, les informations étaient claires et le QR code a été reçu immédiatement.',
-    rating: 5,
-  },
-];
 
 const getCategoryColor = (category) =>
   ({
@@ -179,7 +162,7 @@ const HomePage = () => {
   const [allEvents, setAllEvents] = useState(preloaded?.events || []);
   const [events, setEvents] = useState(preloaded?.events || []);
   const [testimonials, setTestimonials] = useState(
-    preloaded?.testimonials?.length ? preloaded.testimonials : TESTIMONIALS_FALLBACK
+    preloaded?.testimonials?.length ? preloaded.testimonials : fallbacks.testimonials
   );
   const [loading, setLoading] = useState(!preloaded);
   const [searchQuery, setSearchQuery] = useState('');
@@ -197,13 +180,13 @@ const HomePage = () => {
         savePrerenderState('home', data);
         setAllEvents(data.events || []);
         setEvents(data.events || []);
-        setTestimonials(data.testimonials?.length ? data.testimonials : TESTIMONIALS_FALLBACK);
+        setTestimonials(data.testimonials?.length ? data.testimonials : fallbacks.testimonials);
         return;
       }
 
       const [eventsResponse, testimonialsResponse] = await Promise.all([
         axios.get(`${API}/events`),
-        axios.get(`${API}/testimonials`).catch(() => ({ data: TESTIMONIALS_FALLBACK })),
+        axios.get(`${API}/testimonials`).catch(() => ({ data: fallbacks.testimonials })),
       ]);
 
       setAllEvents(eventsResponse.data || []);
@@ -211,11 +194,11 @@ const HomePage = () => {
       setTestimonials(
         Array.isArray(testimonialsResponse.data) && testimonialsResponse.data.length
           ? testimonialsResponse.data
-          : TESTIMONIALS_FALLBACK
+          : fallbacks.testimonials
       );
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      setTestimonials(TESTIMONIALS_FALLBACK);
+      setTestimonials(fallbacks.testimonials);
     } finally {
       setLoading(false);
     }
