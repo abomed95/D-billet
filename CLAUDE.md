@@ -30,7 +30,7 @@ Ces contraintes priment sur toute preference technique.
 
 | Contrainte | Consequence concrete |
 |------------|----------------------|
-| Android d'entree de gamme, 3G/4G instable, donnees cheres | Application legere. Peu de JavaScript, images optimisees, chargement differe. Budget : **JS initial < ~200 ko gzip** (mesure actuelle : 235,6 ko) |
+| Android d'entree de gamme, 3G/4G instable, donnees cheres | Application legere. Peu de JavaScript, images optimisees, chargement differe. Budget : **JS initial < ~200 ko gzip** (mesure du 29/09 : 235,6 ko en un seul bundle ; Lighthouse mobile 82/100 avec compression) |
 | Controle des billets sans reseau (train, ferry) | Le billet **et sa verification** doivent fonctionner hors ligne : QR signe, verification par cle publique, manifeste embarque |
 | Langue | **Francais** par defaut. Prevoir somali, afar et arabe (**RTL**). Aucun texte en dur : passer par des cles de traduction |
 | Monnaie | **Franc djiboutien (DJF), sans decimales** : montants stockes en **entiers**, jamais en flottant |
@@ -168,7 +168,12 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
 6. **Aucun i18n** : textes en dur, aucune preparation RTL.
 7. **Pas de code splitting** : un seul bundle de 235,6 ko gzip charge par tous.
 8. **818 ko d'images mortes** dans `frontend/public/images/` (`dbilleh-*`).
-9. **Tests d'integration instables** : ils enchainent les connexions et
+9. **Pas de compression sur le chemin Cloud Run** : Nginx active `gzip` sur le
+   Droplet, mais le conteneur Cloud Run sert `main.js` **non compresse**
+   (893 ko au lieu de 235 ko). Mesure Lighthouse mobile du 29/09 : performance
+   **65/100 sans compression contre 82/100 avec**. Correctif : ajouter
+   `GZipMiddleware` dans `backend/main.py`.
+10. **Tests d'integration instables** : ils enchainent les connexions et
    declenchent le limiteur de debit applicatif (429). Echecs preexistants, sans
    rapport avec les modifications recentes.
 
