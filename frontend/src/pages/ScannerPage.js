@@ -3,6 +3,7 @@ import { QrCode, Camera, CheckCircle, XCircle, RotateCcw, Flashlight, Keyboard }
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import axios from 'axios';
+import { startQrScanner } from '../lib/qrScanner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -19,10 +20,27 @@ const ScannerPage = () => {
   const streamRef = useRef(null);
 
   useEffect(() => {
-    if (mode === 'camera' && scanning) {
-      startCamera();
+    if (mode !== 'camera' || !scanning) {
+      return undefined;
     }
-    return () => stopCamera();
+    startCamera();
+    // Decode straight from the video feed. The loop waits for the stream to
+    // deliver its first frame on its own.
+    const stopScanner = startQrScanner({
+      video: videoRef.current,
+      canvas: canvasRef.current,
+      onDecode: (text) => {
+        setScanning(false);
+        validateTicket(text);
+      },
+    });
+    return () => {
+      stopScanner();
+      stopCamera();
+    };
+    // validateTicket is rebuilt on every render; listing it here would restart
+    // the camera constantly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, scanning]);
 
   const startCamera = async () => {
@@ -97,13 +115,10 @@ const ScannerPage = () => {
     }
   };
 
-  // Simple QR detection simulation (in real app, use a QR library like jsQR or html5-qrcode)
+  // The camera decodes on its own now; tapping the frame switches to typing a
+  // code by hand, for a damaged or unreadable ticket.
   const handleVideoClick = () => {
-    // For demo: prompt for manual entry
-    const code = prompt('Entrez le code QR (ou ID du billet):');
-    if (code) {
-      validateTicket(code);
-    }
+    setMode('manual');
   };
 
   return (

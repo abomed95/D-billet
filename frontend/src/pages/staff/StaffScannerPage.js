@@ -9,6 +9,7 @@ import {
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useStaffAuth } from '../../context/StaffAuthContext';
+import { startQrScanner } from '../../lib/qrScanner';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -42,6 +43,8 @@ const StaffScannerPage = () => {
   const [cameraError, setCameraError] = useState(null);
   
   const videoRef = useRef(null);
+  // Working surface for the jsQR fallback, where BarcodeDetector is missing.
+  const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const lastScannedRef = useRef(null);
 
@@ -66,10 +69,27 @@ const StaffScannerPage = () => {
   }, [fetchStats, selectedEvent]);
 
   useEffect(() => {
-    if (scanning && !showManual) {
-      startCamera();
+    if (!scanning || showManual) {
+      return undefined;
     }
-    return () => stopCamera();
+    startCamera();
+    // Decode straight from the video feed instead of waiting for the
+    // controller to read the code and type it in.
+    const stopScanner = startQrScanner({
+      video: videoRef.current,
+      canvas: canvasRef.current,
+      onDecode: (text) => {
+        setScanning(false);
+        handleScan(text);
+      },
+    });
+    return () => {
+      stopScanner();
+      stopCamera();
+    };
+    // handleScan only reads the selected event, so it does not need to retrigger
+    // the camera.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanning, showManual, startCamera, stopCamera]);
 
   const startCamera = useCallback(async () => {
@@ -405,6 +425,7 @@ const StaffScannerPage = () => {
                       playsInline
                       muted
                     />
+                    <canvas ref={canvasRef} className="hidden" />
                     
                     {/* Scan overlay */}
                     <div className="absolute inset-0 pointer-events-none">
