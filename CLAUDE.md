@@ -168,8 +168,7 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
    invalide **sans toucher la base**. Retrocompatible : sans
    `TICKET_SIGNING_KEY`, l'ancien format est emis, et les anciens prefixes
    restent scannables.
-   *Reste a faire pour un controle hors ligne complet* (phase 3 de la mission) :
-   manifeste de trajet embarque, file de scans et synchronisation differee.
+   Le controle hors ligne complet est en place, voir le point 4.
 3. ~~**Le scan ne decode pas les QR**~~ : **corrige.**
    `frontend/src/lib/qrScanner.js` decode le flux video quatre fois par
    seconde. Il privilegie `BarcodeDetector` (natif sur Chrome Android, zero
@@ -177,8 +176,23 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
    separe) la ou l'API manque, notamment iOS Safari. Verifie en navigateur avec
    une camera factice alimentee par un vrai QR signe : la charge utile qui
    arrive a `/api/scanner/validate` est identique a celle emise.
-4. **Aucun stockage hors ligne** : pas d'IndexedDB, les billets disparaissent
-   sans reseau.
+4. ~~**Aucun stockage hors ligne**~~ : **corrige pour le controle** (phase 3).
+   `lib/offlineStore.js` (IndexedDB brut, sans dependance) garde le manifeste du
+   trajet et la file des scans ; `lib/qrVerify.js` verifie la signature Ed25519
+   sur l'appareil, par WebCrypto quand il l'expose, sinon via `@noble/ed25519`
+   (4,2 ko gzip, chunk a part). Trois conditions appliquees hors ligne :
+   signature valide, billet present dans le manifeste, pas deja scanne sur cet
+   appareil. Les scans partent ensuite vers `POST /api/staff/scans/batch`,
+   idempotent sur `scan_id`, qui signale un billet scanne sur **deux appareils**
+   differents. Les moteurs de decodage et de verification sont preloades au
+   telechargement du manifeste, sans quoi leurs imports dynamiques echoueraient
+   hors ligne. Ecran accessible sur `/controle` comme sur `/staff/scanner`.
+   *Reste ouvert* : les **billets du client** (page « Mes billets ») ne sont
+   toujours pas stockes hors ligne. C'est l'autre moitie de la contrainte
+   terrain, non traitee ici.
+   *Ecarts assumes avec la mission* : l'endpoint est sous `/api/staff/...` et
+   non `/api/v1/scans/batch`, le projet n'ayant pas de versionnage ; et le role
+   `controleur` reste le module `staff` existant, enrichi plutot que renomme.
 5. ~~**Icones PWA**~~ : **corrige.** Le manifest utilise desormais quatre vrais
    PNG (`icon-192`, `icon-512`, `icon-maskable-192`, `icon-maskable-512`), le
    contenu de l'icone maskable a ete recentre dans la zone sure de 80 %.
@@ -245,7 +259,15 @@ Detail et preuves dans [`docs/AUDIT.md`](docs/AUDIT.md).
    session sur un parcours d'achat capture des donnees personnelles, ce qui
    contredit la regle de collecte minimale. Decision produit : garder et
    ouvrir la CSP, ou retirer.
-13. **Tests d'integration instables** : ils enchainent les connexions et
+13. ~~**L'ecran controleur plantait avant tout affichage**~~ : **corrige.**
+   `StaffScannerPage.js` nommait `fetchEvents`, `fetchStats`, `startCamera` et
+   `stopCamera` dans des tableaux de dependances **avant** leurs declarations
+   `const`. Ces tableaux sont evalues pendant le rendu, donc la variable etait
+   encore dans sa zone morte temporelle : `Cannot access 'x' before
+   initialization`, page blanche. Verifie sur `main` et sur le build committe :
+   le defaut **preexistait a tout ce travail**, l'ecran de scan ne s'affichait
+   donc pas. Les effets concernes ont ete deplaces apres les callbacks.
+14. **Tests d'integration instables** : ils enchainent les connexions et
    declenchent le limiteur de debit applicatif (429). Echecs preexistants, sans
    rapport avec les modifications recentes.
 
