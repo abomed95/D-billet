@@ -35,6 +35,14 @@ _INDEX_SPEC = {
         ([("created_at", -1)], {}),
         ([("payment_method", 1)], {}),
     ],
+    "scan_logs": [
+        # scan_id is the client-generated key that makes a replayed offline sync
+        # idempotent: the second insert is rejected rather than double-counted.
+        ([("scan_id", 1)], {"unique": True, "sparse": True}),
+        ([("event_id", 1), ("scanned_at", -1)], {}),
+        ([("ticket_id", 1)], {}),
+        ([("device_id", 1)], {}),
+    ],
     "bookings": [
         ([("user_id", 1)], {}),
         ([("date", 1)], {}),

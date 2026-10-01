@@ -43,6 +43,22 @@ class ScanRequest(BaseModel):
     event_id: str
 
 
+class OfflineScan(BaseModel):
+    """One scan a controller device recorded while it had no network."""
+    # Generated on the device. It is what makes a replayed sync idempotent:
+    # re-sending the same queue records nothing twice.
+    scan_id: str
+    ticket_id: str
+    event_id: str
+    # Device clock, so a late sync still reports when the ticket was presented.
+    scanned_at: str
+    device_id: str
+
+
+class BatchScanRequest(BaseModel):
+    scans: List[OfflineScan]
+
+
 class ScanLogEntry(BaseModel):
     id: str
     staff_id: str

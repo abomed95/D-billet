@@ -140,7 +140,7 @@ const ProtectedRoute = ({ children, adminOnly = false, organizerOnly = false }) 
 function RouteMetadata() {
   const location = useLocation();
   const pathname = location.pathname;
-  const noIndexPrefixes = ["/admin", "/organizer", "/staff"];
+  const noIndexPrefixes = ["/admin", "/organizer", "/staff", "/controle"];
   const noIndexExact = ["/auth", "/cart", "/checkout", "/payment/result", "/my-tickets", "/scan", "/transport-organizer"];
   const isNoIndex =
     noIndexExact.includes(pathname) ||
@@ -211,6 +211,10 @@ function AppRoutes() {
         {/* Staff Routes - Separate Auth Context */}
         <Route path="/staff/login" element={<StaffAuthProvider><StaffLoginPage /></StaffAuthProvider>} />
         <Route path="/staff/scanner" element={<StaffAuthProvider><StaffScannerPage /></StaffAuthProvider>} />
+        {/* The mission names this screen /controle; /staff/scanner is kept so
+            existing bookmarks and the login redirect keep working. */}
+        <Route path="/controle" element={<StaffAuthProvider><StaffScannerPage /></StaffAuthProvider>} />
+        <Route path="/controle/login" element={<StaffAuthProvider><StaffLoginPage /></StaffAuthProvider>} />
         
         {/* Admin Routes */}
         <Route path="/admin" element={<ProtectedRoute adminOnly><AdminLayout /></ProtectedRoute>}>

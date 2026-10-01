@@ -41,6 +41,21 @@ const nativeDetector = () => {
 export const hasNativeQrDetector = () => nativeDetector() !== null;
 
 /**
+ * Fetch the fallback decoder while there is still a connection.
+ *
+ * jsQR arrives through a dynamic import, which cannot succeed once the device
+ * is offline. Controllers go offline on purpose, so the chunk has to be in hand
+ * before departure.
+ */
+export const warmUpDecoder = async () => {
+  if (nativeDetector()) {
+    return 'native';
+  }
+  await loadJsQr();
+  return 'jsqr';
+};
+
+/**
  * Start scanning `video` until a QR code is read.
  *
  * Calls `onDecode(text)` once with the decoded content, then stops: the caller
