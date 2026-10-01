@@ -4,17 +4,23 @@ Staff routes (Event Staff Management & Scanning)
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
+import logging
 import uuid
 
 from config import db
 from models import (
+    BatchScanRequest,
     StaffCreate, StaffUpdate, StaffLogin, StaffResponse, StaffTokenResponse,
     ScanRequest
 )
 from services import (
+    parse_qr_payload,
+    ticket_public_key,
     verify_password, hash_password, create_staff_token,
     generate_staff_password, get_current_staff, get_organizer_user
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Staff"])
 
@@ -90,13 +96,234 @@ async def get_staff_events(staff: dict = Depends(get_current_staff)):
     return events
 
 
+# ============== OFFLINE CONTROL ==============
+# Tickets are checked on the train and the ferry, where there is no network, so
+# the controller device has to decide on its own. These two endpoints bracket
+# that: one hands the device everything it needs before departure, the other
+# takes back what it recorded once a connection returns.
+
+
+@router.get("/staff/manifest/{event_id}")
+async def staff_manifest(
+    event_id: str,
+    date: str | None = None,
+    staff: dict = Depends(get_current_staff),
+):
+    """
+    Everything a controller device needs to check tickets offline.
+
+    Call it while still connected. The device stores the result and can then
+    verify, with no network: the QR signature (against `public_key`), that the
+    ticket belongs to this event or trip, and whether it was already used
+    before the device went offline.
+
+    `date` narrows a ferry or train manifest to one departure; event tickets do
+    not need it.
+
+    Holder names are only included where the ticket itself carries one, which is
+    the transport case where the name is checked against an ID. Event tickets
+    keep the buyer's name on the server: a manifest sits on a phone, so it
+    should hold no more than the check actually requires.
+    """
+    if event_id not in staff.get("assigned_events", []):
+        raise HTTPException(status_code=403, detail="Vous n'etes pas assigne a cet evenement")
+
+    query: dict = {
+        "event_id": event_id,
+        # `used` is included so a device knows what was already scanned before
+        # it lost the network, instead of waving through a second entry.
+        "status": {"$in": ["valid", "used"]},
+    }
+    if date:
+        query["event_date"] = date
+
+    tickets = await db.tickets.find(
+        query,
+        {
+            "_id": 0,
+            "id": 1,
+            "ticket_type": 1,
+            "status": 1,
+            "passenger_name": 1,
+            "event_title": 1,
+            "event_date": 1,
+        },
+    ).to_list(50000)
+
+    entries = [
+        {
+            "ticket_id": ticket["id"],
+            "ticket_type": ticket.get("ticket_type", "Standard"),
+            "status": ticket.get("status", "valid"),
+            **({"holder": ticket["passenger_name"]} if ticket.get("passenger_name") else {}),
+        }
+        for ticket in tickets
+    ]
+
+    first = tickets[0] if tickets else {}
+    return {
+        "event_id": event_id,
+        "event_title": first.get("event_title", ""),
+        "date": date or first.get("event_date", ""),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        # Lets the device verify signatures without a second round trip.
+        "public_key": ticket_public_key(),
+        "count": len(entries),
+        "tickets": entries,
+    }
+
+
+@router.post("/staff/scans/batch")
+async def staff_scans_batch(
+    data: BatchScanRequest,
+    staff: dict = Depends(get_current_staff),
+):
+    """
+    Take back the scans a device recorded offline.
+
+    Idempotent on `scan_id`: re-sending a queue that was already accepted
+    records nothing twice, so a device may safely retry after a dropped
+    connection.
+
+    Per scan, `status` is one of:
+      recorded   - the ticket was valid and is now marked used
+      duplicate  - this exact scan was already synced, nothing changed
+      conflict   - the ticket had already been used, by another device or agent
+      wrong_event, invalid, not_found, forbidden
+    """
+    results = []
+    now = datetime.now(timezone.utc).isoformat()
+
+    for scan in data.scans:
+        def outcome(status: str, message: str, **extra):
+            return {"scan_id": scan.scan_id, "ticket_id": scan.ticket_id,
+                    "status": status, "message": message, **extra}
+
+        if scan.event_id not in staff.get("assigned_events", []):
+            results.append(outcome("forbidden", "Non assigne a cet evenement"))
+            continue
+
+        # Already synced? Report what it did the first time and move on.
+        existing = await db.scan_logs.find_one({"scan_id": scan.scan_id}, {"_id": 0})
+        if existing:
+            results.append(outcome(
+                "duplicate",
+                "Scan deja synchronise",
+                first_status=existing.get("status"),
+            ))
+            continue
+
+        ticket = await db.tickets.find_one({"id": scan.ticket_id}, {"_id": 0})
+        if not ticket:
+            results.append(outcome("not_found", "Billet inconnu"))
+            await _record_offline_scan(scan, staff, ticket, "not_found", now)
+            continue
+
+        if ticket.get("event_id") != scan.event_id:
+            results.append(outcome("wrong_event", "Billet pour un autre evenement"))
+            await _record_offline_scan(scan, staff, ticket, "wrong_event", now)
+            continue
+
+        if ticket.get("status") not in ("valid", "used"):
+            message = (
+                "Billet non paye" if ticket.get("status") == "pending"
+                else "Billet annule" if ticket.get("status") == "cancelled"
+                else "Billet invalide"
+            )
+            results.append(outcome("invalid", message))
+            await _record_offline_scan(scan, staff, ticket, "invalid", now)
+            continue
+
+        # Claim the ticket only while it is still valid. Two devices syncing the
+        # same ticket at the same time must not both come back "recorded": the
+        # loser of this conditional update is reported as a conflict.
+        claimed = await db.tickets.update_one(
+            {"id": scan.ticket_id, "status": "valid"},
+            {"$set": {
+                "status": "used",
+                "scanned_at": scan.scanned_at,
+                "scanned_by": staff["id"],
+                "scanned_by_name": staff["full_name"],
+                "scanned_by_device": scan.device_id,
+                "synced_at": now,
+            }},
+        )
+
+        if claimed.matched_count == 1:
+            results.append(outcome("recorded", "Scan enregistre"))
+            await _record_offline_scan(scan, staff, ticket, "valid", now)
+            continue
+
+        # Someone got there first.
+        current = await db.tickets.find_one({"id": scan.ticket_id}, {"_id": 0}) or {}
+        other_device = current.get("scanned_by_device")
+        same_device = other_device == scan.device_id
+        results.append(outcome(
+            "duplicate" if same_device else "conflict",
+            "Scan deja enregistre par cet appareil" if same_device
+            else "ALERTE: billet deja scanne sur un autre appareil",
+            first_scanned_at=current.get("scanned_at"),
+            first_scanned_by=current.get("scanned_by_name"),
+            first_device=other_device,
+        ))
+        await _record_offline_scan(
+            scan, staff, current,
+            "already_scanned" if not same_device else "duplicate",
+            now,
+        )
+
+    counts: dict = {}
+    for result in results:
+        counts[result["status"]] = counts.get(result["status"], 0) + 1
+
+    return {"synced": len(results), "counts": counts, "results": results}
+
+
+async def _record_offline_scan(scan, staff: dict, ticket: dict | None, status: str, now: str):
+    """Write the scan log for one synced offline scan, keyed by scan_id."""
+    try:
+        await db.scan_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "scan_id": scan.scan_id,
+            "staff_id": staff["id"],
+            "staff_name": staff["full_name"],
+            "event_id": scan.event_id,
+            "ticket_id": scan.ticket_id,
+            "device_id": scan.device_id,
+            "offline": True,
+            "qr_code": "",
+            "event_title": (ticket or {}).get("event_title", ""),
+            "client_name": (ticket or {}).get("passenger_name") or "",
+            "ticket_type": (ticket or {}).get("ticket_type", ""),
+            "status": status,
+            "message": "Synchronise depuis un appareil hors ligne",
+            "scanned_at": scan.scanned_at,
+            "synced_at": now,
+        })
+    except Exception as exc:  # noqa: BLE001
+        # The unique index on scan_id rejects a replay that slipped past the
+        # lookup above; that is the idempotency guarantee doing its job.
+        logger.info("Offline scan %s already recorded: %s", scan.scan_id, exc)
+
+
 @router.post("/staff/scan")
 async def staff_scan_ticket(data: ScanRequest, staff: dict = Depends(get_current_staff)):
     """Scan a ticket QR code - returns validation result"""
     if data.event_id not in staff.get("assigned_events", []):
         raise HTTPException(status_code=403, detail="Vous n'etes pas assigne a cet evenement")
     
-    ticket = await db.tickets.find_one({"qr_code_data": data.qr_code}, {"_id": 0})
+    claims = parse_qr_payload(data.qr_code)
+    if claims["signed"] and not claims["valid_signature"]:
+        # Forged QR: never look it up, and never mark anything as used.
+        raise HTTPException(status_code=400, detail="Billet non authentique")
+
+    # Match on the ticket id carried by the QR; fall back to the stored payload
+    # so tickets issued before signing keep scanning.
+    ticket = None
+    if claims["ticket_id"]:
+        ticket = await db.tickets.find_one({"id": claims["ticket_id"]}, {"_id": 0})
+    if not ticket:
+        ticket = await db.tickets.find_one({"qr_code_data": data.qr_code}, {"_id": 0})
     
     scan_log = {
         "id": str(uuid.uuid4()),

@@ -15,6 +15,8 @@ from .transport import (
     FerryBookingRequest, FerryDaySchedule
 )
 from .staff import (
+    BatchScanRequest,
+    OfflineScan,
     StaffCreate, StaffUpdate, StaffLogin, StaffResponse, StaffTokenResponse,
     ScanRequest, ScanLogEntry, TransportStaffCreate, TransportStaffUpdate, 
     TransportStaffResponse
@@ -22,6 +24,8 @@ from .staff import (
 from .admin import TestimonialCreate, NewsCreate
 
 __all__ = [
+    'BatchScanRequest',
+    'OfflineScan',
     # Auth
     'UserRegister', 'UserLogin', 'PhoneOTPRequest', 'PhoneOTPVerify',
     'UserResponse', 'TokenResponse', 'OrganizerCreate', 'OrganizerResponse',

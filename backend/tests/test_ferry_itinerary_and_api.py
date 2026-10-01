@@ -394,15 +394,27 @@ class TestHealthCheck:
         print("✓ Health check: healthy")
     
     def test_root_endpoint(self):
-        """Test root endpoint"""
+        """Test root endpoint.
+
+        `/` returns the API description when the backend runs alone (Droplet,
+        where Nginx serves the frontend), and the React shell when the same
+        process also serves the build (Cloud Run). `/api` returns the API
+        description in both cases.
+        """
         response = requests.get(f"{BASE_URL}/")
-        
+
         assert response.status_code == 200, f"Root endpoint failed: {response.status_code}"
-        
+
+        if response.headers.get("content-type", "").startswith("text/html"):
+            assert "<div id=\"root\"" in response.text, "Root should return the React shell"
+            print("✓ Root serves the frontend build")
+            response = requests.get(f"{BASE_URL}/api")
+            assert response.status_code == 200, f"/api failed: {response.status_code}"
+
         data = response.json()
         assert "name" in data, "Root should return service name"
         assert "version" in data, "Root should return version"
-        
+
         print(f"✓ API: {data.get('name')} v{data.get('version')}")
 
 

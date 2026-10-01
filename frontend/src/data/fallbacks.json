@@ -1,0 +1,23 @@
+{
+  "_comment": "Single source for the content shown when the API cannot be reached. Read by the app AND by scripts/generate-prerender-data.js at build time: keeping two copies let them drift, and the prerender copy had lost its accents, so the HTML search engines index showed unaccented French.",
+  "testimonials": [
+    {
+      "author": "Amina H.",
+      "role": "Cliente D-BILLET",
+      "content": "J'ai réservé mon billet en quelques minutes et tout s'est déroulé sans attente à l'entrée.",
+      "rating": 5
+    },
+    {
+      "author": "Moussa A.",
+      "role": "Voyageur ferry",
+      "content": "La réservation en ligne m'a permis d'organiser mon départ plus sereinement, avec mon billet déjà prêt.",
+      "rating": 5
+    },
+    {
+      "author": "Noura S.",
+      "role": "Participante événement",
+      "content": "Le paiement était simple, les informations étaient claires et le QR code a été reçu immédiatement.",
+      "rating": 5
+    }
+  ]
+}

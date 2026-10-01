@@ -7,7 +7,7 @@ import uuid
 
 from config import db
 from models import CartItemAdd, CheckoutRequest
-from services import get_current_user, waafipay, start_waafi_payment, pay_with_waafi_wallet
+from services import build_qr_payload, release_event_seats, reserve_event_seats, get_current_user, waafipay, start_waafi_payment, pay_with_waafi_wallet
 
 router = APIRouter(tags=["Cart"])
 
@@ -202,13 +202,39 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
         if not ticket_type:
             continue
 
-        available = ticket_type["quantity"] - ticket_type.get("sold", 0)
-        if available < item["quantity"]:
+        # Take the seats first, in one atomic update. Checking availability and
+        # then writing the counter separately let two simultaneous checkouts
+        # oversell the same ticket type.
+        reserved = await reserve_event_seats(
+            event["id"], item["ticket_type_id"], item["quantity"]
+        )
+        if not reserved:
+            # Hand back whatever this checkout already took before failing.
+            for done in sold_adjustments:
+                await release_event_seats(
+                    done["event_id"], done["ticket_type_id"], done["quantity"]
+                )
+            if tickets_created:
+                await db.tickets.delete_many(
+                    {"id": {"$in": [t["id"] for t in tickets_created]}}
+                )
             raise HTTPException(status_code=400, detail=f"Pas assez de billets pour {event['title']} ({ticket_type['name']})")
+
+        sold_adjustments.append({
+            "event_id": event["id"],
+            "ticket_type_id": item["ticket_type_id"],
+            "quantity": item["quantity"],
+        })
 
         for _ in range(item["quantity"]):
             ticket_id = str(uuid.uuid4())
-            qr_data = f"DBILLET-{ticket_id}"
+            qr_data = build_qr_payload(
+                ticket_id,
+                service="event",
+                reference=event["id"],
+                seat=ticket_type["name"],
+                departure=event["date"],
+            )
 
             ticket_doc = {
                 "id": ticket_id,
@@ -233,18 +259,6 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
             tickets_created.append(ticket_doc)
             ticket_ids.append(ticket_id)
 
-        # Reserve the seats now (released again if a WaafiPay payment fails).
-        ticket_types = event.get("ticket_types", [])
-        for tt in ticket_types:
-            if tt["id"] == item["ticket_type_id"]:
-                tt["sold"] = tt.get("sold", 0) + item["quantity"]
-                break
-        await db.events.update_one({"id": event["id"]}, {"$set": {"ticket_types": ticket_types}})
-        sold_adjustments.append({
-            "event_id": event["id"],
-            "ticket_type_id": item["ticket_type_id"],
-            "quantity": item["quantity"],
-        })
 
     if use_waafi:
         event_titles = ", ".join(sorted({t["event_title"] for t in tickets_created}))

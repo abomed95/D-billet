@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from config import db, APP_URL, WAAFIPAY_CURRENCY
+from .inventory import release_event_seats
 from services import waafipay
 
 logger = logging.getLogger(__name__)
@@ -226,15 +227,11 @@ async def _rollback_reservation(ticket_ids: list, vehicle_ids: list, sold_adjust
 async def _release_sold(sold_adjustments: list):
     """Give reserved event seats back when a payment fails/cancels."""
     for adj in sold_adjustments or []:
-        event = await db.events.find_one({"id": adj["event_id"]})
-        if not event:
-            continue
-        ticket_types = event.get("ticket_types", [])
-        for tt in ticket_types:
-            if tt["id"] == adj["ticket_type_id"]:
-                tt["sold"] = max(0, tt.get("sold", 0) - adj["quantity"])
-                break
-        await db.events.update_one({"id": event["id"]}, {"$set": {"ticket_types": ticket_types}})
+        # Atomic decrement: rewriting the whole ticket_types array here could
+        # drop a concurrent checkout's reservation.
+        await release_event_seats(
+            adj["event_id"], adj["ticket_type_id"], adj["quantity"]
+        )
 
 
 async def _record_promo_usage(payment: dict):

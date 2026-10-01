@@ -4,13 +4,13 @@
 //   * /api/*           : network-only (never cached)
 //   * Static assets    : cache-first
 //   * Cross-origin     : passthrough (no caching, no interception of POST/PUT/etc.)
-const CACHE_VERSION = 'dbillet-cache-v4';
+const CACHE_VERSION = 'dbillet-cache-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/images/dbillet-logo.png',
-  '/images/dbillet-icon.png',
+  '/images/icon-192.png',
   '/images/dbillet-mark.svg',
 ];
 
