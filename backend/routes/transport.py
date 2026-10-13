@@ -475,6 +475,7 @@ async def book_ferry(booking: FerryBookingRequest, user: dict = Depends(get_curr
     
     final_total = total_price - discount
 
+    waafipay.ensure_payment_available()
     use_waafi = waafipay.is_available() and booking.payment_method == "waafi"
     if waafipay.is_available() and booking.payment_method != "waafi":
         raise HTTPException(
@@ -738,6 +739,7 @@ async def book_train(booking: TrainBookingRequest, user: dict = Depends(get_curr
         discount = _calculate_discount_amount(total_price, promo)
     final_total = total_price - discount
 
+    waafipay.ensure_payment_available()
     use_waafi = waafipay.is_available() and booking.payment_method == "waafi"
     if waafipay.is_available() and booking.payment_method != "waafi":
         raise HTTPException(

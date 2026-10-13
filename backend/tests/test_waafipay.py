@@ -256,7 +256,10 @@ def test_scanner_rejects_pending_ticket(monkeypatch):
             "id": "tk1", "event_id": "e1", "event_title": "Show",
             "status": "pending", "payment_status": "pending",
             "qr_code_data": "DBILLET-tk1", "ticket_type": "Std", "price": 1000})
-        res = await tickets_routes.scanner_validate_ticket(qr_data="DBILLET-tk1")
+        admin_operator = {"kind": "user", "id": "adm", "name": "Admin", "role": "admin",
+                          "assigned_events": []}
+        res = await tickets_routes.scanner_validate_ticket(
+            qr_data="DBILLET-tk1", operator=admin_operator)
         assert res["valid"] is False and res["status"] == "pending"
 
     asyncio.run(scenario())
