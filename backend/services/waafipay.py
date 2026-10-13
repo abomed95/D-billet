@@ -25,6 +25,7 @@ import uuid
 from datetime import datetime, timezone
 
 import httpx
+from fastapi import HTTPException
 
 import config
 
@@ -74,6 +75,21 @@ def is_api_configured() -> bool:
 def is_available() -> bool:
     """True when any WaafiPay flow (direct wallet debit or HPP) is configured."""
     return is_api_configured() or is_configured()
+
+
+def ensure_payment_available() -> None:
+    """
+    Fail-closed : sans passerelle configuree, on REFUSE la vente au lieu
+    d'emettre des billets valides gratuits. Le paiement simule n'est possible
+    que si ALLOW_SIMULATED_PAYMENTS est explicitement active hors production.
+    """
+    if is_available() or config.ALLOW_SIMULATED_PAYMENTS:
+        return
+    logger.error("Paiement refuse : WaafiPay non configure et paiement simule desactive.")
+    raise HTTPException(
+        status_code=503,
+        detail="Le paiement est temporairement indisponible. Reessayez plus tard.",
+    )
 
 
 def normalize_msisdn(phone: str) -> str:

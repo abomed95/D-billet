@@ -186,8 +186,9 @@ async def staff_scan_ticket(data: ScanRequest, staff: dict = Depends(get_current
             "vibration": "error"
         }
 
-    await db.tickets.update_one(
-        {"id": ticket["id"]},
+    # Passage a "used" atomique : un seul de deux scans simultanes peut gagner.
+    claim = await db.tickets.update_one(
+        {"id": ticket["id"], "status": "valid"},
         {"$set": {
             "status": "used",
             "scanned_at": datetime.now(timezone.utc).isoformat(),
@@ -195,6 +196,13 @@ async def staff_scan_ticket(data: ScanRequest, staff: dict = Depends(get_current
             "scanned_by_name": staff["full_name"]
         }}
     )
+    if claim.modified_count == 0:
+        return {
+            "status": "already_scanned",
+            "message": "ALERTE: Billet deja utilise!",
+            "details": "Ce billet vient d'etre scanne par un autre agent",
+            "vibration": "warning"
+        }
 
     client_name = ticket.get("passenger_name")
     if not client_name:

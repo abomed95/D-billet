@@ -9,7 +9,7 @@ from io import BytesIO
 from urllib.parse import quote
 
 from config import APP_URL, db
-from services import get_current_user, generate_ticket_pdf
+from services import get_current_user, generate_ticket_pdf, get_scanner_operator, operator_can_scan
 
 router = APIRouter(tags=["Tickets"])
 
@@ -28,6 +28,29 @@ async def get_ticket(ticket_id: str, user: dict = Depends(get_current_user)):
     if ticket["user_id"] != user["id"] and ticket.get("organizer_id") != user["id"] and user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Acces refuse")
     return ticket
+
+
+# Champs d'un billet visibles via le lien de partage public. Tout le reste
+# (user_id, organizer_id, telephone, piece d'identite complete, paiement...) est
+# volontairement exclu : le lien circule sur WhatsApp.
+PUBLIC_TICKET_FIELDS = (
+    "id", "event_id", "event_title", "event_date", "event_time", "event_venue",
+    "ticket_type", "qr_code_data", "status", "price", "created_at",
+    "passenger_name", "holder_name", "type", "route", "departure_date",
+    "departure_time", "origin", "destination", "seat",
+)
+
+
+def _mask(value: str) -> str:
+    value = str(value or "")
+    return ("*" * max(len(value) - 3, 0)) + value[-3:] if value else ""
+
+
+def _public_ticket_fields(ticket: dict) -> dict:
+    data = {k: ticket[k] for k in PUBLIC_TICKET_FIELDS if k in ticket}
+    if ticket.get("passenger_id"):
+        data["passenger_id"] = _mask(ticket["passenger_id"])
+    return data
 
 
 @router.get("/tickets/{ticket_id}/view")
@@ -58,7 +81,7 @@ async def get_ticket_view(ticket_id: str):
     whatsapp_url = f"https://wa.me/?text={encoded_text}"
     
     return {
-        **ticket,
+        **_public_ticket_fields(ticket),
         "qr_code_image": qr_data_uri,
         "share_url": share_url,
         "whatsapp_url": whatsapp_url
@@ -85,8 +108,11 @@ async def download_ticket_pdf(ticket_id: str, user: dict = Depends(get_current_u
 # ============== SCANNER ROUTES ==============
 
 @router.post("/scanner/validate")
-async def scanner_validate_ticket(qr_data: str = Query(...)):
-    """Public scanner endpoint for security personnel"""
+async def scanner_validate_ticket(
+    qr_data: str = Query(...),
+    operator: dict = Depends(get_scanner_operator),
+):
+    """Valide un billet a l'entree. Reserve au staff, aux organisateurs et aux admins."""
     ticket_id = qr_data
     if qr_data.startswith("DBILLET-") or qr_data.startswith("TRAIN-") or qr_data.startswith("FERRY-"):
         ticket_id = qr_data.split("-", 1)[1]
@@ -97,6 +123,15 @@ async def scanner_validate_ticket(qr_data: str = Query(...)):
             "valid": False,
             "status": "not_found",
             "message": "Billet non trouve",
+            "color": "red"
+        }
+
+    if not operator_can_scan(operator, ticket):
+        # On ne revele rien sur le billet d'un autre evenement.
+        return {
+            "valid": False,
+            "status": "wrong_event",
+            "message": "Billet pour un autre evenement",
             "color": "red"
         }
     
@@ -134,10 +169,26 @@ async def scanner_validate_ticket(qr_data: str = Query(...)):
             "color": "red"
         }
 
-    await db.tickets.update_one(
-        {"id": ticket_id},
-        {"$set": {"status": "used", "used_at": datetime.now(timezone.utc).isoformat()}}
+    # Passage a "used" ATOMIQUE : si deux scanners valident le meme billet au
+    # meme instant, un seul gagne (filtre sur status == "valid").
+    now_iso = datetime.now(timezone.utc).isoformat()
+    result = await db.tickets.update_one(
+        {"id": ticket_id, "status": "valid"},
+        {"$set": {
+            "status": "used",
+            "used_at": now_iso,
+            "scanned_at": now_iso,
+            "scanned_by": operator["id"],
+            "scanned_by_name": operator["name"],
+        }}
     )
+    if result.modified_count == 0:
+        return {
+            "valid": False,
+            "status": "already_used",
+            "message": "Billet deja utilise",
+            "color": "red"
+        }
     
     return {
         "valid": True,
@@ -157,8 +208,8 @@ async def scanner_validate_ticket(qr_data: str = Query(...)):
 
 
 @router.get("/scanner/check/{qr_data}")
-async def scanner_check_ticket(qr_data: str):
-    """Check ticket without marking as used"""
+async def scanner_check_ticket(qr_data: str, operator: dict = Depends(get_scanner_operator)):
+    """Verifie un billet sans le marquer utilise. Reserve au personnel autorise."""
     ticket_id = qr_data
     if qr_data.startswith("DBILLET-") or qr_data.startswith("TRAIN-") or qr_data.startswith("FERRY-"):
         ticket_id = qr_data.split("-", 1)[1]
@@ -166,6 +217,8 @@ async def scanner_check_ticket(qr_data: str):
     ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
     if not ticket:
         return {"valid": False, "message": "Billet non trouve"}
+    if not operator_can_scan(operator, ticket):
+        return {"valid": False, "message": "Billet pour un autre evenement"}
     
     return {
         "valid": ticket["status"] == "valid",

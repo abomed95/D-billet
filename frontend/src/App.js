@@ -17,7 +17,6 @@ import MyTicketsPage from "./pages/MyTicketsPage";
 import AuthPage from "./pages/AuthPage";
 import TrainBookingPage from "./pages/TrainBookingPage";
 import FerryBookingPage from "./pages/FerryBookingPage";
-import ScannerPage from "./pages/ScannerPage";
 import TermsPage from "./pages/TermsPage";
 import LegalPage from "./pages/LegalPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -124,7 +123,8 @@ function AppRoutes() {
         </Route>
         
         {/* Scanner - Separate Public App */}
-        <Route path="/scan" element={<ScannerPage />} />
+        {/* Le scanner public a ete retire : /scan envoie vers la connexion staff. */}
+        <Route path="/scan" element={<Navigate to="/staff/login" replace />} />
         
         {/* Protected User Routes */}
         <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
