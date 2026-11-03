@@ -9,7 +9,7 @@ from io import BytesIO
 from urllib.parse import quote
 
 from config import APP_URL, db
-from services import get_current_user, generate_ticket_pdf
+from services import parse_qr_payload, ticket_public_key, get_current_user, generate_ticket_pdf
 
 router = APIRouter(tags=["Tickets"])
 
@@ -84,13 +84,54 @@ async def download_ticket_pdf(ticket_id: str, user: dict = Depends(get_current_u
 
 # ============== SCANNER ROUTES ==============
 
+@router.get("/scanner/public-key", tags=["Tickets"])
+async def scanner_public_key():
+    """
+    Ed25519 verification key for the ticket QR codes.
+
+    A controller device fetches this once while it still has a connection, then
+    verifies signatures on the train or the ferry with no network at all. The
+    key is public by design: it can check a signature, never produce one.
+    """
+    key = ticket_public_key()
+    return {
+        "algorithm": "Ed25519",
+        "format": "raw-base64url",
+        "public_key": key,
+        "signed_tickets": key is not None,
+    }
+
+
 @router.post("/scanner/validate")
 async def scanner_validate_ticket(qr_data: str = Query(...)):
     """Public scanner endpoint for security personnel"""
-    ticket_id = qr_data
-    if qr_data.startswith("DBILLET-") or qr_data.startswith("TRAIN-") or qr_data.startswith("FERRY-"):
-        ticket_id = qr_data.split("-", 1)[1]
-    
+    claims = parse_qr_payload(qr_data)
+    if claims["signed"] and not claims["valid_signature"]:
+        # A signed QR whose signature does not check out is a forgery: refuse it
+        # without touching the database.
+        return {
+            "valid": False,
+            "status": "forged",
+            "message": "Billet non authentique",
+            "color": "red",
+        }
+    if claims["expired"]:
+        return {
+            "valid": False,
+            "status": "expired",
+            "message": f"Billet expire depuis le {claims['expires']}",
+            "color": "red",
+        }
+
+    ticket_id = claims["ticket_id"]
+    if not ticket_id:
+        return {
+            "valid": False,
+            "status": "not_found",
+            "message": "Billet non trouve",
+            "color": "red",
+        }
+
     ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
     if not ticket:
         return {
@@ -159,10 +200,20 @@ async def scanner_validate_ticket(qr_data: str = Query(...)):
 @router.get("/scanner/check/{qr_data}")
 async def scanner_check_ticket(qr_data: str):
     """Check ticket without marking as used"""
-    ticket_id = qr_data
-    if qr_data.startswith("DBILLET-") or qr_data.startswith("TRAIN-") or qr_data.startswith("FERRY-"):
-        ticket_id = qr_data.split("-", 1)[1]
-    
+    claims = parse_qr_payload(qr_data)
+    if claims["signed"] and not claims["valid_signature"]:
+        return {"valid": False, "status": "forged", "message": "Billet non authentique"}
+    if claims["expired"]:
+        return {
+            "valid": False,
+            "status": "expired",
+            "message": f"Billet expire depuis le {claims['expires']}",
+        }
+
+    ticket_id = claims["ticket_id"]
+    if not ticket_id:
+        return {"valid": False, "message": "Billet non trouve"}
+
     ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
     if not ticket:
         return {"valid": False, "message": "Billet non trouve"}

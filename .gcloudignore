@@ -1,0 +1,29 @@
+# Keeps `gcloud builds submit` from uploading hundreds of MB of local state.
+# Anything listed here is also absent from the Cloud Build context, so it must
+# stay in sync with .dockerignore for files the image needs.
+
+.git
+.gitignore
+.gcloudignore
+.emergent
+
+**/node_modules
+frontend/build
+frontend/public/prerender-data
+**/__pycache__
+**/*.pyc
+.venv
+venv
+
+# Never upload secrets or local databases
+**/.env
+**/.env.*
+!**/env.production.example
+**/.localdb.json
+*.pem
+*token.json*
+*credentials.json*
+
+.tmp-*
+*.log
+test_reports/

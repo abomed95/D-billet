@@ -30,10 +30,12 @@ def _fresh_db():
 
 def _rebind_db(db):
     """Point config and the modules that captured `db` at import time to `db`."""
+    import services.inventory as inventory_service
     import services.payments as payments_service
     import routes.cart as cart
     import routes.tickets as tickets_routes
     config.db = db
+    inventory_service.db = db
     payments_service.db = db
     cart.db = db
     tickets_routes.db = db

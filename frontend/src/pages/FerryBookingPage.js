@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
 import { loadPrerenderFerrySchedule } from '../lib/prerender';
+import { readPrerenderState, savePrerenderState } from '../lib/prerenderState';
 import { absoluteUrl } from '../lib/seo';
 
 const API = API_BASE;
@@ -26,11 +27,13 @@ const FerryBookingPage = () => {
   const [tripInfo, setTripInfo] = useState(null);
   
   // Schedule and pricing
-  const [weeklySchedule, setWeeklySchedule] = useState([]);
-  const [passengerPrice, setPassengerPrice] = useState(1100);
-  const [childFreeAge, setChildFreeAge] = useState(10);
-  const [vehicleTypes, setVehicleTypes] = useState([]);
-  const [loadingSchedule, setLoadingSchedule] = useState(true);
+  // See lib/prerenderState.js: seeds the first render from the prerendered HTML.
+  const preloadedSchedule = readPrerenderState('ferry');
+  const [weeklySchedule, setWeeklySchedule] = useState(preloadedSchedule?.schedule || []);
+  const [passengerPrice, setPassengerPrice] = useState(preloadedSchedule?.passenger_price || 1100);
+  const [childFreeAge, setChildFreeAge] = useState(preloadedSchedule?.child_free_age || 10);
+  const [vehicleTypes, setVehicleTypes] = useState(preloadedSchedule?.vehicle_types || []);
+  const [loadingSchedule, setLoadingSchedule] = useState(!preloadedSchedule);
   
   // Passengers
   const [passengers, setPassengers] = useState([
@@ -64,6 +67,7 @@ const FerryBookingPage = () => {
         ? await loadPrerenderFerrySchedule()
         : (await axios.get(`${API}/ferry/schedule`)).data;
 
+      savePrerenderState('ferry', scheduleData);
       setWeeklySchedule(scheduleData.schedule || []);
       setPassengerPrice(scheduleData.passenger_price || 1100);
       setChildFreeAge(scheduleData.child_free_age || 10);

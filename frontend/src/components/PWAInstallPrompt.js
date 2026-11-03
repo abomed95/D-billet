@@ -115,7 +115,7 @@ const PWAInstallPrompt = () => {
 
         <div className="relative flex items-start gap-3 pr-6">
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gold/15">
-            <img src="/images/dbillet-icon.png" alt="D-Billet" className="h-8 w-8 rounded-xl object-cover" />
+            <img src="/images/icon-192.png" alt="D-Billet" className="h-8 w-8 rounded-xl object-cover" />
           </div>
           <div className="flex-1">
             <p className="font-unbounded text-sm text-white">Installer D-BILLET</p>

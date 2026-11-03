@@ -1,0 +1,42 @@
+# D-Billet - Cloud Build pipeline for the Cloud Run image.
+#
+# Invoked by deploy/gcp/deploy-cloudrun.sh, or directly:
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions _IMAGE=europe-west1-docker.pkg.dev/PROJECT/dbillet/dbillet,_TAG=manual
+
+substitutions:
+  _IMAGE: ''                       # full Artifact Registry path, without tag
+  _TAG: 'latest'
+  _SITE_URL: 'https://d-billet.com'
+  _ENABLE_PRERENDER: 'true'
+
+steps:
+  # Warm the layer cache from the previous build. Never fails the pipeline:
+  # on the very first build there is nothing to pull.
+  - id: pull-cache
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args: ['-c', 'docker pull ${_IMAGE}:latest || exit 0']
+
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --cache-from=${_IMAGE}:latest
+      - --build-arg=REACT_APP_BACKEND_URL=${_SITE_URL}
+      - --build-arg=REACT_APP_SITE_URL=${_SITE_URL}
+      - --build-arg=ENABLE_PRERENDER=${_ENABLE_PRERENDER}
+      - --tag=${_IMAGE}:${_TAG}
+      - --tag=${_IMAGE}:latest
+      - .
+
+images:
+  - ${_IMAGE}:${_TAG}
+  - ${_IMAGE}:latest
+
+options:
+  # The React build (npm ci + CRA + react-snap) is the long pole.
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s

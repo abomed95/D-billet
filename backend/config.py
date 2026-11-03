@@ -91,9 +91,22 @@ if IS_PRODUCTION:
             "JWT_SECRET is too short for production (minimum 32 characters)."
         )
 
+# ============== Ticket QR signing ==============
+# Ed25519 private key seed, 32 bytes, base64url without padding. Generate with:
+#   python -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).rstrip(b'=').decode())"
+# Empty means QR codes keep the legacy unsigned `DBILLET-<id>` form, so offline
+# verification is impossible. Never commit this value: it can mint valid tickets.
+TICKET_SIGNING_KEY = os.environ.get('TICKET_SIGNING_KEY', '').strip()
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 STAFF_TOKEN_EXPIRE_HOURS = 24
+
+if IS_PRODUCTION and not TICKET_SIGNING_KEY:
+    logger.warning(
+        "TICKET_SIGNING_KEY is not set: ticket QR codes stay unsigned, so they "
+        "cannot be verified offline on the train or the ferry."
+    )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") if CryptContext else None
 
@@ -103,6 +116,42 @@ otp_storage = {}
 # Upload directory
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", str(ROOT_DIR / "uploads"))).resolve()
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# ============== Frontend serving (single-container deployments) ==============
+# On the Droplet, Nginx serves the React build and this stays disabled.
+# On Cloud Run the API container also serves `frontend/build`.
+FRONTEND_BUILD_DIR = Path(
+    os.environ.get("FRONTEND_BUILD_DIR", str(ROOT_DIR.parent / "frontend" / "build"))
+)
+# Auto-detect: serve the SPA only when a build is actually present.
+SERVE_FRONTEND = _env_flag(
+    "SERVE_FRONTEND",
+    (FRONTEND_BUILD_DIR / "index.html").is_file(),
+)
+
+# ============== Response compression ==============
+# Nginx compresses on the Droplet, so this can be turned off there
+# (ENABLE_GZIP=false). On Cloud Run nothing else compresses, so it defaults on.
+ENABLE_GZIP = _env_flag("ENABLE_GZIP", True)
+# Matches gzip_min_length in the Nginx config.
+GZIP_MINIMUM_SIZE = int(os.environ.get("GZIP_MINIMUM_SIZE", "1024"))
+# Starlette defaults to 9, which is slow for little gain on a ~900 kB bundle.
+GZIP_COMPRESS_LEVEL = int(os.environ.get("GZIP_COMPRESS_LEVEL", "6"))
+
+# Content-Security-Policy. Set by Nginx on the Droplet, by the app itself when
+# the container serves the frontend. Override with the CONTENT_SECURITY_POLICY
+# env var when adding a third-party (analytics, Stripe...).
+CONTENT_SECURITY_POLICY = os.environ.get(
+    "CONTENT_SECURITY_POLICY",
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://accounts.google.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com data:; "
+    "img-src 'self' data: blob: https:; "
+    "connect-src 'self' https://accounts.google.com; "
+    "frame-src https://accounts.google.com; "
+    "object-src 'none'; base-uri 'self'; form-action 'self';",
+).strip()
 
 # ============== WaafiPay payment gateway ==============
 # Production endpoint: https://api.waafipay.net/asm

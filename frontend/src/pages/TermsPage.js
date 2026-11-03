@@ -5,13 +5,16 @@ import axios from 'axios';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
 import { loadPrerenderTerms } from '../lib/prerender';
+import { readPrerenderState, savePrerenderState } from '../lib/prerenderState';
 
 const API = API_BASE;
 
 const TermsPage = () => {
   const navigate = useNavigate();
-  const [terms, setTerms] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // See lib/prerenderState.js: seeds the first render from the prerendered HTML.
+  const preloaded = readPrerenderState('terms');
+  const [terms, setTerms] = useState(preloaded);
+  const [loading, setLoading] = useState(!preloaded);
 
   useEffect(() => {
     fetchTerms();
@@ -23,6 +26,7 @@ const TermsPage = () => {
         ? await loadPrerenderTerms()
         : (await axios.get(`${API}/terms`)).data;
 
+      savePrerenderState('terms', termsData);
       setTerms(termsData);
     } catch (error) {
       console.error('Failed to fetch terms:', error);

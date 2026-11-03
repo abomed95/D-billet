@@ -9,6 +9,12 @@ import {
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useStaffAuth } from '../../context/StaffAuthContext';
+import { startQrScanner, warmUpDecoder } from '../../lib/qrScanner';
+import {
+  countQueue, getDeviceId, getManifest, listQueue, queueScan,
+  removeFromQueue, saveManifest,
+} from '../../lib/offlineStore';
+import { verifyOffline, warmUpVerifier } from '../../lib/qrVerify';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -40,8 +46,21 @@ const StaffScannerPage = () => {
   const [manualCode, setManualCode] = useState('');
   const [showManual, setShowManual] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+
+  // Offline control. The manifest is downloaded before departure; scans taken
+  // without network are queued and synced when a connection returns.
+  const [online, setOnline] = useState(
+    typeof navigator === 'undefined' ? true : navigator.onLine
+  );
+  const [manifest, setManifest] = useState(null);
+  const [queued, setQueued] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [syncReport, setSyncReport] = useState(null);
+  const [downloadingManifest, setDownloadingManifest] = useState(false);
   
   const videoRef = useRef(null);
+  // Working surface for the jsQR fallback, where BarcodeDetector is missing.
+  const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const lastScannedRef = useRef(null);
 
@@ -50,27 +69,6 @@ const StaffScannerPage = () => {
       navigate('/staff/login');
     }
   }, [loading, isAuthenticated, navigate]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchEvents();
-    }
-  }, [fetchEvents, isAuthenticated]);
-
-  useEffect(() => {
-    if (selectedEvent) {
-      fetchStats();
-      const interval = setInterval(fetchStats, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [fetchStats, selectedEvent]);
-
-  useEffect(() => {
-    if (scanning && !showManual) {
-      startCamera();
-    }
-    return () => stopCamera();
-  }, [scanning, showManual, startCamera, stopCamera]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -96,6 +94,34 @@ const StaffScannerPage = () => {
       streamRef.current = null;
     }
   }, []);
+
+  // Placed after startCamera/stopCamera on purpose: the dependency array below
+  // reads them during render, so declaring them further down would leave them in
+  // their temporal dead zone and throw before the screen ever painted.
+  useEffect(() => {
+    if (!scanning || showManual) {
+      return undefined;
+    }
+    startCamera();
+    // Decode straight from the video feed instead of waiting for the
+    // controller to read the code and type it in.
+    const stopScanner = startQrScanner({
+      video: videoRef.current,
+      canvas: canvasRef.current,
+      onDecode: (text) => {
+        setScanning(false);
+        handleScan(text);
+      },
+    });
+    return () => {
+      stopScanner();
+      stopCamera();
+    };
+    // handleScan only reads the selected event, so it does not need to retrigger
+    // the camera.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanning, showManual, startCamera, stopCamera]);
+
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -128,6 +154,160 @@ const StaffScannerPage = () => {
     }
   }, [getAuthHeaders, selectedEvent]);
 
+  // Same reason as the camera effect below: these dependency arrays are read
+  // during render, so they must sit after the callbacks they name.
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchEvents();
+    }
+  }, [fetchEvents, isAuthenticated]);
+
+  useEffect(() => {
+    if (selectedEvent) {
+      fetchStats();
+      const interval = setInterval(fetchStats, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [fetchStats, selectedEvent]);
+
+
+  // --- Offline control ---------------------------------------------------
+
+  const deviceId = getDeviceId();
+
+  const refreshQueueCount = useCallback(async () => {
+    setQueued(await countQueue());
+  }, []);
+
+  // Track connectivity. navigator.onLine only reports the link, not whether the
+  // server answers, so a failed request also flips us to offline below.
+  useEffect(() => {
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  // Load whatever manifest is already stored for the selected event.
+  useEffect(() => {
+    if (!selectedEvent) {
+      setManifest(null);
+      return;
+    }
+    let active = true;
+    getManifest(selectedEvent.id, selectedEvent.date).then((stored) => {
+      if (active) setManifest(stored || null);
+    });
+    refreshQueueCount();
+    return () => { active = false; };
+  }, [selectedEvent, refreshQueueCount]);
+
+  const downloadManifest = async () => {
+    if (!selectedEvent) return;
+    setDownloadingManifest(true);
+    try {
+      const response = await axios.get(
+        `${API}/staff/manifest/${selectedEvent.id}`,
+        { params: selectedEvent.date ? { date: selectedEvent.date } : {},
+          headers: getAuthHeaders() }
+      );
+      await saveManifest(response.data);
+      setManifest(response.data);
+      setOnline(true);
+      // Pull the decoder and the signature verifier down now: both arrive via
+      // dynamic import, which cannot run once the device is offline.
+      await Promise.all([warmUpDecoder(), warmUpVerifier()]);
+    } catch (error) {
+      setSyncReport({ error: "Telechargement du manifeste impossible" });
+    } finally {
+      setDownloadingManifest(false);
+    }
+  };
+
+  const syncQueue = useCallback(async () => {
+    const pending = await listQueue();
+    if (!pending.length) {
+      setQueued(0);
+      return;
+    }
+    setSyncing(true);
+    try {
+      const response = await axios.post(
+        `${API}/staff/scans/batch`,
+        { scans: pending.map(({ scan_id, ticket_id, event_id, scanned_at, device_id }) =>
+            ({ scan_id, ticket_id, event_id, scanned_at, device_id })) },
+        { headers: getAuthHeaders() }
+      );
+      // Every outcome is final on the server side, conflicts included, so the
+      // queue is cleared either way; the report tells the controller what the
+      // server made of it.
+      await removeFromQueue(response.data.results.map((r) => r.scan_id));
+      setSyncReport({
+        synced: response.data.synced,
+        counts: response.data.counts,
+        conflicts: response.data.results.filter((r) => r.status === 'conflict'),
+      });
+      setOnline(true);
+    } catch (error) {
+      setSyncReport({ error: 'Synchronisation impossible, file conservee' });
+      setOnline(false);
+    } finally {
+      setSyncing(false);
+      await refreshQueueCount();
+    }
+  }, [getAuthHeaders, refreshQueueCount]);
+
+  // Sync as soon as the network comes back.
+  useEffect(() => {
+    if (online && queued > 0 && !syncing) {
+      syncQueue();
+    }
+    // Only react to the connection returning, not to every queue change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online]);
+
+  const scanOffline = async (qrCode) => {
+    const pending = await listQueue();
+    const scannedHere = pending
+      .filter((entry) => entry.event_id === selectedEvent.id)
+      .map((entry) => entry.ticket_id);
+
+    const verdict = await verifyOffline({
+      qrData: qrCode,
+      manifest,
+      alreadyScannedIds: scannedHere,
+    });
+
+    if (verdict.ok) {
+      await queueScan({
+        scan_id: (crypto.randomUUID && crypto.randomUUID()) ||
+          `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        ticket_id: verdict.ticketId,
+        event_id: selectedEvent.id,
+        scanned_at: new Date().toISOString(),
+        device_id: deviceId,
+      });
+      await refreshQueueCount();
+    }
+
+    return {
+      status: verdict.ok ? 'valid' : (
+        verdict.status === 'already_used' || verdict.status === 'already_scanned_here'
+          ? 'already_scanned' : 'invalid'
+      ),
+      message: verdict.message,
+      details: 'Hors ligne - sera synchronise au retour du reseau',
+      client_name: verdict.holder || 'Client',
+      ticket_type: verdict.ticketType || 'Standard',
+      vibration: verdict.ok ? 'success' : 'error',
+      offline: true,
+    };
+  };
+
   const handleScan = async (qrCode) => {
     if (!qrCode || processing) return;
     if (lastScannedRef.current === qrCode) return;
@@ -135,8 +315,22 @@ const StaffScannerPage = () => {
     
     setProcessing(true);
     setScanResult(null);
-    
+
     try {
+      if (!online) {
+        const offlineResult = await scanOffline(qrCode);
+        setScanResult(offlineResult);
+        vibrate(offlineResult.vibration);
+        if (offlineResult.status === 'valid') {
+          setStats((prev) => ({ ...prev, entries: prev.entries + 1 }));
+        }
+        setTimeout(() => {
+          setScanResult(null);
+          lastScannedRef.current = null;
+        }, 3000);
+        return;
+      }
+
       const response = await axios.post(
         `${API}/staff/scan`,
         { qr_code: qrCode, event_id: selectedEvent.id },
@@ -157,11 +351,25 @@ const StaffScannerPage = () => {
       
     } catch (error) {
       console.error('Scan error:', error);
+      // No response at all means the link died mid-check: fall back to the
+      // offline path rather than turning the controller away.
+      if (!error.response && manifest) {
+        setOnline(false);
+        const offlineResult = await scanOffline(qrCode);
+        setScanResult(offlineResult);
+        vibrate(offlineResult.vibration);
+        setTimeout(() => {
+          setScanResult(null);
+          lastScannedRef.current = null;
+        }, 3000);
+        return;
+      }
       vibrate('error');
       setScanResult({
         status: 'error',
-        message: 'Erreur de connexion',
-        details: error.response?.data?.detail || 'Réessayez'
+        message: error.response ? 'Erreur de connexion' : 'Hors ligne sans manifeste',
+        details: error.response?.data?.detail
+          || 'Telechargez le manifeste avant le depart pour scanner hors ligne'
       });
       setTimeout(() => {
         setScanResult(null);
@@ -313,6 +521,85 @@ const StaffScannerPage = () => {
         </div>
       )}
 
+      {/* Offline control: manifest, connection state, pending queue */}
+      {selectedEvent && (
+        <div className="px-4 py-3 border-b border-white/10 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span
+                className={`h-2 w-2 rounded-full ${online ? 'bg-green-400' : 'bg-orange-400'}`}
+                aria-hidden="true"
+              />
+              <span className="text-sm text-gray-300">
+                {online ? 'En ligne' : 'Hors ligne'}
+              </span>
+              {queued > 0 && (
+                <span className="text-xs text-orange-300" data-testid="queue-count">
+                  · {queued} scan{queued > 1 ? 's' : ''} en attente
+                </span>
+              )}
+            </div>
+
+            {online && queued > 0 ? (
+              <Button
+                onClick={syncQueue}
+                disabled={syncing}
+                size="sm"
+                className="bg-green-500 hover:bg-green-600 text-black"
+                data-testid="sync-btn"
+              >
+                <RefreshCw size={14} className={`mr-1 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Synchronisation' : 'Synchroniser'}
+              </Button>
+            ) : (
+              <Button
+                onClick={downloadManifest}
+                disabled={!online || downloadingManifest}
+                size="sm"
+                variant="outline"
+                data-testid="manifest-btn"
+              >
+                {downloadingManifest ? 'Téléchargement' : 'Manifeste'}
+              </Button>
+            )}
+          </div>
+
+          <p className="text-xs text-gray-400">
+            {manifest
+              ? `Manifeste : ${manifest.count} billet${manifest.count > 1 ? 's' : ''}, chargé le ${new Date(manifest.generated_at).toLocaleString('fr-FR')}`
+              : 'Aucun manifeste sur cet appareil. Téléchargez-le avant le départ pour pouvoir contrôler sans réseau.'}
+          </p>
+
+          {syncReport && (
+            <div
+              className={`rounded-lg p-2 text-xs ${
+                syncReport.error || (syncReport.conflicts && syncReport.conflicts.length)
+                  ? 'bg-red-500/10 border border-red-500/30 text-red-300'
+                  : 'bg-green-500/10 border border-green-500/30 text-green-300'
+              }`}
+              data-testid="sync-report"
+            >
+              {syncReport.error ? (
+                syncReport.error
+              ) : (
+                <>
+                  <p>{syncReport.synced} scan(s) synchronisé(s).</p>
+                  {syncReport.conflicts && syncReport.conflicts.length > 0 && (
+                    <p className="mt-1">
+                      ALERTE : {syncReport.conflicts.length} billet(s) déjà scanné(s)
+                      sur un autre appareil —{' '}
+                      {syncReport.conflicts
+                        .map((c) => `${c.ticket_id} (${c.first_scanned_by || 'agent inconnu'})`)
+                        .join(', ')}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-4">
         {!selectedEvent ? (
@@ -405,6 +692,7 @@ const StaffScannerPage = () => {
                       playsInline
                       muted
                     />
+                    <canvas ref={canvasRef} className="hidden" />
                     
                     {/* Scan overlay */}
                     <div className="absolute inset-0 pointer-events-none">

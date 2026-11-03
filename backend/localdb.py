@@ -24,12 +24,22 @@ def _deepcopy_jsonable(value: Any):
     return json.loads(json.dumps(value, default=_json_default))
 
 
+def _step_into(current: Any, part: str) -> Any:
+    """Follow one path segment, supporting list indexes like `items.0.name`."""
+    if isinstance(current, dict):
+        return current.get(part)
+    if isinstance(current, list) and part.isdigit():
+        index = int(part)
+        return current[index] if index < len(current) else None
+    return None
+
+
 def _get_path(document: dict, path: str) -> Any:
     current = document
     for part in path.split("."):
-        if not isinstance(current, dict):
+        current = _step_into(current, part)
+        if current is None:
             return None
-        current = current.get(part)
     return current
 
 
@@ -37,19 +47,32 @@ def _set_path(document: dict, path: str, value: Any) -> None:
     parts = path.split(".")
     current = document
     for part in parts[:-1]:
+        if isinstance(current, list):
+            # `items.0.sold`: the list element must already exist, as it does
+            # in MongoDB - an index path never grows an array.
+            if not part.isdigit() or int(part) >= len(current):
+                return
+            current = current[int(part)]
+            continue
         next_value = current.get(part)
-        if not isinstance(next_value, dict):
+        if not isinstance(next_value, (dict, list)):
             next_value = {}
             current[part] = next_value
         current = next_value
-    current[parts[-1]] = _deepcopy_jsonable(value)
+
+    last = parts[-1]
+    if isinstance(current, list):
+        if last.isdigit() and int(last) < len(current):
+            current[int(last)] = _deepcopy_jsonable(value)
+        return
+    current[last] = _deepcopy_jsonable(value)
 
 
 def _delete_path(document: dict, path: str) -> None:
     parts = path.split(".")
     current = document
     for part in parts[:-1]:
-        current = current.get(part)
+        current = _step_into(current, part)
         if not isinstance(current, dict):
             return
     if isinstance(current, dict):
@@ -92,6 +115,8 @@ def _match_operator(actual: Any, operator: str, expected: Any, full_condition: d
         return actual in expected
     if operator == "$ne":
         return actual != expected
+    if operator == "$exists":
+        return (actual is not None) == bool(expected)
     if operator == "$gte":
         return actual is not None and actual >= expected
     if operator == "$gt":

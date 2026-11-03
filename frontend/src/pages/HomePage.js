@@ -31,6 +31,10 @@ import { Skeleton } from '../components/ui/skeleton';
 import Seo from '../components/Seo';
 import { API_BASE, isPrerender } from '../lib/api';
 import { loadPrerenderHomeData } from '../lib/prerender';
+// Shared with scripts/generate-prerender-data.js so the prerendered HTML and
+// the client fall back to exactly the same text.
+import fallbacks from '../data/fallbacks.json';
+import { readPrerenderState, savePrerenderState } from '../lib/prerenderState';
 import { absoluteUrl, slugify } from '../lib/seo';
 
 const API = API_BASE;
@@ -131,26 +135,6 @@ const HOME_LINKS = [
   { to: '/terms', label: "Conditions d'utilisation" },
 ];
 
-const TESTIMONIALS_FALLBACK = [
-  {
-    author: 'Amina H.',
-    role: 'Cliente D-BILLET',
-    content: "J'ai réservé mon billet en quelques minutes et tout s'est déroulé sans attente à l'entrée.",
-    rating: 5,
-  },
-  {
-    author: 'Moussa A.',
-    role: 'Voyageur ferry',
-    content: "La réservation en ligne m'a permis d'organiser mon départ plus sereinement, avec mon billet déjà prêt.",
-    rating: 5,
-  },
-  {
-    author: 'Noura S.',
-    role: 'Participante événement',
-    content: 'Le paiement était simple, les informations étaient claires et le QR code a été reçu immédiatement.',
-    rating: 5,
-  },
-];
 
 const getCategoryColor = (category) =>
   ({
@@ -172,10 +156,15 @@ const formatDate = (dateStr) =>
   });
 
 const HomePage = () => {
-  const [allEvents, setAllEvents] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [testimonials, setTestimonials] = useState(TESTIMONIALS_FALLBACK);
-  const [loading, setLoading] = useState(true);
+  // Seeded from the snapshot react-snap inlined, so the first render matches
+  // the prerendered HTML and hydration succeeds instead of discarding it.
+  const preloaded = readPrerenderState('home');
+  const [allEvents, setAllEvents] = useState(preloaded?.events || []);
+  const [events, setEvents] = useState(preloaded?.events || []);
+  const [testimonials, setTestimonials] = useState(
+    preloaded?.testimonials?.length ? preloaded.testimonials : fallbacks.testimonials
+  );
+  const [loading, setLoading] = useState(!preloaded);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [openFaq, setOpenFaq] = useState(0);
@@ -188,15 +177,16 @@ const HomePage = () => {
     try {
       if (isPrerender) {
         const data = await loadPrerenderHomeData();
+        savePrerenderState('home', data);
         setAllEvents(data.events || []);
         setEvents(data.events || []);
-        setTestimonials(data.testimonials?.length ? data.testimonials : TESTIMONIALS_FALLBACK);
+        setTestimonials(data.testimonials?.length ? data.testimonials : fallbacks.testimonials);
         return;
       }
 
       const [eventsResponse, testimonialsResponse] = await Promise.all([
         axios.get(`${API}/events`),
-        axios.get(`${API}/testimonials`).catch(() => ({ data: TESTIMONIALS_FALLBACK })),
+        axios.get(`${API}/testimonials`).catch(() => ({ data: fallbacks.testimonials })),
       ]);
 
       setAllEvents(eventsResponse.data || []);
@@ -204,11 +194,11 @@ const HomePage = () => {
       setTestimonials(
         Array.isArray(testimonialsResponse.data) && testimonialsResponse.data.length
           ? testimonialsResponse.data
-          : TESTIMONIALS_FALLBACK
+          : fallbacks.testimonials
       );
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      setTestimonials(TESTIMONIALS_FALLBACK);
+      setTestimonials(fallbacks.testimonials);
     } finally {
       setLoading(false);
     }
@@ -344,7 +334,7 @@ const HomePage = () => {
           {/* Top bar — app header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <img src="/images/dbillet-icon.png" alt="Logo D-Billet" className="h-10 w-10 rounded-2xl object-cover ring-1 ring-gold/30" />
+              <img src="/images/icon-192.png" alt="Logo D-Billet" className="h-10 w-10 rounded-2xl object-cover ring-1 ring-gold/30" />
               <div className="leading-tight">
                 <p className="font-display text-lg font-extrabold text-white">D-BILLET</p>
                 <p className="flex items-center gap-1 text-[11px] text-gold">

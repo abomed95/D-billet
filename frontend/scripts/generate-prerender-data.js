@@ -1,5 +1,8 @@
 const fs = require("fs/promises");
 const path = require("path");
+// Shared with src/pages/HomePage.js: two copies had already drifted, and this
+// one had lost its accents, which then ended up in the indexed HTML.
+const { testimonials: DEFAULT_TESTIMONIALS } = require("../src/data/fallbacks.json");
 
 const trimTrailingSlash = (value = "") => value.replace(/\/+$/, "");
 const siteUrl = trimTrailingSlash(process.env.REACT_APP_SITE_URL || "https://d-billet.com");
@@ -7,26 +10,6 @@ const backendUrl = trimTrailingSlash(process.env.REACT_APP_BACKEND_URL || siteUr
 const apiBase = `${backendUrl}/api`;
 const outputDir = path.join(__dirname, "..", "public", "prerender-data");
 
-const DEFAULT_TESTIMONIALS = [
-  {
-    author: "Amina H.",
-    role: "Cliente D-BILLET",
-    content: "J'ai reserve mon billet en quelques minutes et tout s'est deroule sans attente a l'entree.",
-    rating: 5,
-  },
-  {
-    author: "Moussa A.",
-    role: "Voyageur ferry",
-    content: "La reservation en ligne m'a permis d'organiser mon depart plus sereinement, avec mon billet deja pret.",
-    rating: 5,
-  },
-  {
-    author: "Noura S.",
-    role: "Participante evenement",
-    content: "Le paiement etait simple, les informations etaient claires et le QR code a ete recu immediatement.",
-    rating: 5,
-  },
-];
 
 const DEFAULT_NEWS = [
   {
