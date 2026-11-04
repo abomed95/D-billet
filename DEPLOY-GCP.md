@@ -141,7 +141,8 @@ MIN_INSTANCES=1 \
 ```
 
 Le script demande la chaine de connexion MongoDB, puis, en option, les cles
-Google OAuth et WaafiPay (laisse vide pour garder le paiement simule).
+Google OAuth et WaafiPay. Laisser WaafiPay vide deploie un site **sans vente
+possible** : voir la section WaafiPay plus bas.
 
 Il execute ensuite :
 
@@ -348,8 +349,13 @@ deploie aussi, et non seulement builde.
 
 ## WaafiPay
 
-Comme sur le Droplet, le paiement reste **simule** tant que les cles ne sont
-pas renseignees. Pour les ajouter apres coup :
+**Sans cles WaafiPay, la vente est refusee en production** (HTTP 503,
+« Le paiement est temporairement indisponible »). Le paiement simule
+(`ALLOW_SIMULATED_PAYMENTS`) est ignore d'office quand `APP_ENV=production` :
+il emettait des billets valides sans encaissement. Le site, la consultation
+des trajets et le controle restent utilisables ; seul l'achat est bloque.
+
+Pour ajouter les cles apres coup :
 
 ```bash
 printf '%s' 'LA_CLE' | gcloud secrets versions add dbillet-waafipay-api-key --data-file=-
