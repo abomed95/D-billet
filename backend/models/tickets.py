@@ -1,14 +1,14 @@
 """
 Pydantic models for tickets and cart
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
 class CartItemAdd(BaseModel):
     event_id: str
     ticket_type_id: str
-    quantity: int
+    quantity: int = Field(ge=1, le=50)
     promo_code: Optional[str] = None
 
 
