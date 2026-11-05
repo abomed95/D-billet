@@ -145,6 +145,7 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
     # Route "waafi" through the real WaafiPay gateway when it is configured.
     # Any other method (or an unconfigured gateway) keeps the legacy behaviour
     # of issuing valid tickets immediately (simulated payment).
+    waafipay.ensure_payment_available()
     use_waafi = (
         waafipay.is_available()
         and checkout_data.payment_method == "waafi"
@@ -163,6 +164,9 @@ async def checkout(checkout_data: CheckoutRequest, user: dict = Depends(get_curr
             raise HTTPException(status_code=400, detail="Numero Waafi requis pour le paiement.")
 
     for item in cart["items"]:
+        # Un panier ancien ou falsifie ne doit jamais contenir une quantite <= 0.
+        if not isinstance(item.get("quantity"), int) or item["quantity"] < 1:
+            raise HTTPException(status_code=400, detail="Quantite invalide dans le panier")
         event = await db.events.find_one({"id": item["event_id"]})
         if not event:
             continue

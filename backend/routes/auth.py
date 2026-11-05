@@ -36,6 +36,26 @@ class PhoneLoginRequest(BaseModel):
     full_name: Optional[str] = None
 
 
+def _is_protected_account(user: dict) -> bool:
+    """
+    True si le compte NE DOIT PAS etre accessible avec un simple numero de
+    telephone (aucun OTP n'est envoye) : comptes avec mot de passe, email,
+    Google, ou tout role autre que client/invite (admin, organisateur...).
+    """
+    return bool(
+        user.get("hashed_password")
+        or user.get("email")
+        or user.get("auth_provider") == "google"
+        or user.get("role", "user") not in ("user", "guest")
+    )
+
+
+PROTECTED_ACCOUNT_MESSAGE = (
+    "Ce numero est lie a un compte protege. "
+    "Connectez-vous avec votre email et votre mot de passe."
+)
+
+
 class GuestCheckoutRequest(BaseModel):
     phone: str
     full_name: str
@@ -185,12 +205,16 @@ async def login(user_data: UserLogin):
         raise HTTPException(status_code=400, detail="Email ou telephone requis")
     
     user = await db.users.find_one(query)
-    if not user:
-        raise HTTPException(status_code=401, detail="Identifiant incorrect")
-    
-    if user_data.password and user.get("hashed_password"):
-        if not verify_password(user_data.password, user["hashed_password"]):
-            raise HTTPException(status_code=401, detail="Mot de passe incorrect")
+    # Le mot de passe est TOUJOURS obligatoire. Meme message d'erreur pour un
+    # compte inconnu, sans mot de passe (compte Google/telephone) ou un mot de
+    # passe faux : on n'indique pas si le compte existe.
+    if (
+        not user
+        or not user_data.password
+        or not user.get("hashed_password")
+        or not verify_password(user_data.password, user["hashed_password"])
+    ):
+        raise HTTPException(status_code=401, detail="Identifiant ou mot de passe incorrect")
     
     token = create_access_token({"sub": user["id"]})
     return TokenResponse(
@@ -213,6 +237,9 @@ async def login(user_data: UserLogin):
 async def phone_login(data: PhoneLoginRequest):
     """Quick login/register with phone number only (no OTP)"""
     user = await db.users.find_one({"phone": data.phone})
+
+    if user and _is_protected_account(user):
+        raise HTTPException(status_code=403, detail=PROTECTED_ACCOUNT_MESSAGE)
     
     if not user:
         user_id = str(uuid.uuid4())
@@ -245,6 +272,9 @@ async def phone_login(data: PhoneLoginRequest):
 async def create_guest_session(data: GuestCheckoutRequest):
     """Create a guest session for checkout without full registration"""
     existing = await db.users.find_one({"phone": data.phone})
+
+    if existing and _is_protected_account(existing):
+        raise HTTPException(status_code=403, detail=PROTECTED_ACCOUNT_MESSAGE)
     
     if existing:
         token = create_access_token({"sub": existing["id"], "guest": False})

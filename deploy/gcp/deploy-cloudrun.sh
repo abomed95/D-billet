@@ -10,6 +10,13 @@
 #   ./deploy/gcp/deploy-cloudrun.sh
 #   PROJECT_ID=my-project REGION=europe-west1 ./deploy/gcp/deploy-cloudrun.sh
 #
+# Non-interactive run (CI, remote session): set ASSUME_YES=1 and pass the
+# secret values through the environment instead of the prompts:
+#   MONGO_URL (required on the first run), GOOGLE_CLIENT_SECRET,
+#   WAAFIPAY_MERCHANT_UID, WAAFIPAY_API_USER_ID, WAAFIPAY_API_KEY,
+#   WAAFIPAY_STORE_ID, WAAFIPAY_HPP_KEY (optional).
+# A secret that already exists in Secret Manager is never overwritten.
+#
 # Prerequisites: gcloud CLI authenticated (`gcloud auth login`) and a billing
 # account attached to the project.
 
@@ -66,8 +73,12 @@ cat <<SUMMARY
 
 SUMMARY
 
-read -rp "Continue? [y/N] " confirm
-[[ "$confirm" =~ ^[Yy]$ ]] || die "Aborted."
+if [[ "${ASSUME_YES:-0}" == "1" ]]; then
+    echo "ASSUME_YES=1: continuing without confirmation."
+else
+    read -rp "Continue? [y/N] " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] || die "Aborted."
+fi
 
 # ============================== APIs ==============================
 
@@ -121,9 +132,15 @@ gcloud storage buckets add-iam-policy-binding "gs://${BUCKET}" \
 
 # ============================= Secrets =============================
 
-# create_secret <name> <prompt> <generate|prompt|optional>
+# create_secret <name> <prompt> <generate|prompt|optional> [ENV_VAR]
+# For prompt/optional, a non-empty ENV_VAR is used instead of asking. With
+# ASSUME_YES=1 nothing is ever asked: a missing optional value is skipped and a
+# missing required one aborts.
 create_secret() {
-    local name="$1" prompt="$2" mode="$3" value=""
+    local name="$1" prompt="$2" mode="$3" from_env="${4:-}" value=""
+    if [[ -n "$from_env" ]]; then
+        value="${!from_env:-}"
+    fi
 
     if gcloud secrets describe "$name" >/dev/null 2>&1; then
         echo "    secret ${name}: already exists, keeping the current version"
@@ -141,11 +158,16 @@ create_secret() {
                 echo "    secret ${name}: generated"
                 ;;
             prompt)
-                read -rsp "    ${prompt}: " value; echo
-                [[ -n "$value" ]] || die "${name} cannot be empty."
+                if [[ -z "$value" && "${ASSUME_YES:-0}" != "1" ]]; then
+                    read -rsp "    ${prompt}: " value; echo
+                fi
+                [[ -n "$value" ]] || die "${name} cannot be empty${from_env:+ (set ${from_env})}."
+                echo "    secret ${name}: set"
                 ;;
             optional)
-                read -rsp "    ${prompt} (leave empty to skip): " value; echo
+                if [[ -z "$value" && "${ASSUME_YES:-0}" != "1" ]]; then
+                    read -rsp "    ${prompt} (leave empty to skip): " value; echo
+                fi
                 if [[ -z "$value" ]]; then
                     echo "    secret ${name}: skipped"
                     return 1
@@ -164,7 +186,7 @@ create_secret() {
 
 log "Configuring Secret Manager"
 create_secret "dbillet-jwt-secret" "JWT signing key" generate
-create_secret "dbillet-mongo-url"  "MongoDB connection string (mongodb+srv://...)" prompt
+create_secret "dbillet-mongo-url"  "MongoDB connection string (mongodb+srv://...)" prompt MONGO_URL
 # Without this, ticket QR codes stay unsigned and cannot be checked offline on
 # the train or the ferry. Rotating it invalidates every ticket already issued.
 create_secret "dbillet-ticket-signing-key" "Ticket QR signing key" generate_ed25519
@@ -173,7 +195,7 @@ SECRET_REFS="JWT_SECRET=dbillet-jwt-secret:latest"
 SECRET_REFS="${SECRET_REFS},MONGO_URL=dbillet-mongo-url:latest"
 SECRET_REFS="${SECRET_REFS},TICKET_SIGNING_KEY=dbillet-ticket-signing-key:latest"
 add_optional_secret() {
-    if create_secret "$1" "$2" optional; then
+    if create_secret "$1" "$2" optional "$3"; then
         SECRET_REFS="${SECRET_REFS},$3=$1:latest"
     fi
 }
