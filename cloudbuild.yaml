@@ -8,6 +8,9 @@ substitutions:
   _IMAGE: ''                       # full Artifact Registry path, without tag
   _TAG: 'latest'
   _SITE_URL: 'https://d-billet.com'
+  # Empty = the frontend calls /api on its own origin, which is right because the
+  # same container serves both. Set it only to point at an API on another host.
+  _BACKEND_URL: ''
   _ENABLE_PRERENDER: 'true'
 
 steps:
@@ -23,7 +26,7 @@ steps:
     args:
       - build
       - --cache-from=${_IMAGE}:latest
-      - --build-arg=REACT_APP_BACKEND_URL=${_SITE_URL}
+      - --build-arg=REACT_APP_BACKEND_URL=${_BACKEND_URL}
       - --build-arg=REACT_APP_SITE_URL=${_SITE_URL}
       - --build-arg=ENABLE_PRERENDER=${_ENABLE_PRERENDER}
       - --tag=${_IMAGE}:${_TAG}

@@ -66,8 +66,16 @@ cat <<SUMMARY
 
 SUMMARY
 
-read -rp "Continue? [y/N] " confirm
-[[ "$confirm" =~ ^[Yy]$ ]] || die "Aborted."
+# ASSUME_YES=true runs without a terminal (CI, or an agent with no keyboard):
+# no confirmation, no secret prompts. Secrets that must be typed are then
+# expected to exist already - see create_secret below.
+ASSUME_YES="${ASSUME_YES:-false}"
+if [[ "$ASSUME_YES" == "true" ]]; then
+    echo "ASSUME_YES=true: continuing without asking."
+else
+    read -rp "Continue? [y/N] " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] || die "Aborted."
+fi
 
 # ============================== APIs ==============================
 
@@ -141,10 +149,19 @@ create_secret() {
                 echo "    secret ${name}: generated"
                 ;;
             prompt)
+                if [[ "$ASSUME_YES" == "true" ]]; then
+                    # A value that has to be typed must never be requested from
+                    # an unattended run: create the secret beforehand instead.
+                    die "Secret ${name} does not exist. Create it first (${prompt}); it is never prompted for with ASSUME_YES=true."
+                fi
                 read -rsp "    ${prompt}: " value; echo
                 [[ -n "$value" ]] || die "${name} cannot be empty."
                 ;;
             optional)
+                if [[ "$ASSUME_YES" == "true" ]]; then
+                    echo "    secret ${name}: skipped (unattended run)"
+                    return 1
+                fi
                 read -rsp "    ${prompt} (leave empty to skip): " value; echo
                 if [[ -z "$value" ]]; then
                     echo "    secret ${name}: skipped"
@@ -189,7 +206,7 @@ add_optional_secret "dbillet-waafipay-hpp-key"     "WaafiPay HPP key"           
 log "Building the image with Cloud Build (5-10 minutes on the first run)"
 gcloud builds submit "$REPO_ROOT" \
     --config "${REPO_ROOT}/cloudbuild.yaml" \
-    --substitutions "_IMAGE=${IMAGE},_TAG=${TAG},_SITE_URL=${APP_URL},_ENABLE_PRERENDER=${ENABLE_PRERENDER}"
+    --substitutions "_IMAGE=${IMAGE},_TAG=${TAG},_SITE_URL=${APP_URL},_ENABLE_PRERENDER=${ENABLE_PRERENDER}${BACKEND_URL:+,_BACKEND_URL=${BACKEND_URL}}"
 
 # ============================== Deploy ==============================
 
@@ -262,6 +279,7 @@ DONE
 
 if [[ "$APP_URL" != "$SERVICE_URL" ]]; then
     warn "APP_URL is ${APP_URL} but Cloud Run serves ${SERVICE_URL}."
-    warn "Until ${DOMAIN} points at the service, browse it through ${SERVICE_URL}"
-    warn "and rebuild after mapping the domain (REACT_APP_BACKEND_URL is baked in at build time)."
+    warn "The site and its API work on ${SERVICE_URL} as is: the frontend calls /api on"
+    warn "its own origin. Mapping ${DOMAIN} later only needs a rebuild for the SEO canonical"
+    warn "URLs (REACT_APP_SITE_URL is baked in at build time)."
 fi

@@ -104,8 +104,10 @@ GCP), `docs/`. **Ne pas deplacer cette arborescence** sans accord explicite.
 ### Frontend
 
 - Alias `@` vers `frontend/src`.
-- URL de l'API : `REACT_APP_BACKEND_URL`, **figee au build**. Changer de domaine
-  impose un rebuild, pas seulement un redeploiement.
+- URL de l'API : `REACT_APP_BACKEND_URL`, **figee au build**. Sur Cloud Run elle
+  est **vide a dessein** (le meme conteneur sert site et API : le frontend
+  appelle `/api` sur sa propre origine, aucun rebuild au changement de
+  domaine). Sur le Droplet elle reste l'URL publique.
 - `frontend/src/lib/api.js` expose `API_BASE` : c'est le point d'entree a
   privilegier (29 fichiers le contournent encore, voir l'audit section 5.3).
 - Le service worker (`frontend/public/service-worker.js`) est ecrit a la main :

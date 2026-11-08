@@ -26,8 +26,10 @@ Points a connaitre avant de commencer :
 - **Le systeme de fichiers du conteneur est ephemere.** Tout ce qui est ecrit
   hors de `/mnt/uploads` disparait quand l'instance est recyclee. Le bucket
   Cloud Storage est donc obligatoire, pas optionnel.
-- **`REACT_APP_BACKEND_URL` est fige au build.** Changer de domaine impose un
-  rebuild, pas seulement un redeploiement.
+- **Le frontend appelle `/api` sur sa propre origine.** Le meme conteneur sert
+  le site et l'API, donc le site fonctionne sur n'importe quelle URL (`run.app`
+  comme `d-billet.com`) sans rebuild. Seule `REACT_APP_SITE_URL` (URL canonique
+  du referencement) est figee au build.
 - **Le rate-limiting applicatif compte par processus.** Avec plusieurs
   instances, la limite effective est multipliee par le nombre d'instances.
   Voir la section Cloud Armor plus bas.
@@ -269,19 +271,31 @@ gcloud compute forwarding-rules create dbillet-fr --global \
 Pointe ensuite `@` et `www` (enregistrements A) sur l'IP de la regle de
 transfert.
 
-### Apres le mapping : rebuild obligatoire
+### Apres le mapping : un rebuild pour le referencement
 
-`REACT_APP_BACKEND_URL` et `REACT_APP_SITE_URL` sont compiles dans le bundle
-React. Une fois le domaine actif, relance le script pour rebuilder avec la
-bonne URL :
+Le site marche des le mapping, sans rien refaire : le frontend appelle `/api`
+sur sa propre origine. Un rebuild reste utile pour deux raisons liees au
+referencement, `REACT_APP_SITE_URL` etant compilee dans le bundle :
 
 ```bash
 DOMAIN=d-billet.com ./deploy/gcp/deploy-cloudrun.sh
 ```
 
-Ce rebuild fige aussi les vraies donnees de pre-rendu SEO : au tout premier
-build l'API n'existait pas encore, `generate-prerender-data.js` est donc
-tombe sur ses valeurs par defaut.
+- les URL canoniques et les sitemaps pointent alors sur le vrai domaine ;
+- les donnees de pre-rendu sont figees avec le contenu reel : au tout premier
+  build l'API n'existait pas encore, `generate-prerender-data.js` est donc
+  tombe sur ses valeurs par defaut.
+
+### Lancer le script sans terminal
+
+`ASSUME_YES=true` supprime la confirmation et toute question. Les secrets
+optionnels sont alors sautes, et `dbillet-mongo-url` doit **deja exister** : le
+script refuse de le demander plutot que de le lire quelque part.
+
+```bash
+ASSUME_YES=true PROJECT_ID=<projet> REGION=europe-west1 \
+  ./deploy/gcp/deploy-cloudrun.sh
+```
 
 ---
 
