@@ -96,9 +96,6 @@ const StaffLoginPage = lazy(() =>
 const StaffScannerPage = lazy(() =>
   import(/* webpackChunkName: "scanner" */ "./pages/staff/StaffScannerPage")
 );
-const ScannerPage = lazy(() =>
-  import(/* webpackChunkName: "scanner" */ "./pages/ScannerPage")
-);
 
 // Shown while an area chunk is still on the wire, and while the session is
 // being restored. Identical markup in both cases, so a slow connection does
@@ -183,7 +180,8 @@ function AppRoutes() {
         </Route>
         
         {/* Scanner - Separate Public App */}
-        <Route path="/scan" element={<ScannerPage />} />
+        {/* Le scanner public a ete retire : /scan envoie vers la connexion staff. */}
+        <Route path="/scan" element={<Navigate to="/staff/login" replace />} />
         
         {/* Protected User Routes */}
         <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>

@@ -171,3 +171,55 @@ async def get_current_staff(credentials: HTTPAuthorizationCredentials = Depends(
         return staff
     except JWTError:
         raise HTTPException(status_code=401, detail="Token invalide ou expire")
+
+
+async def get_scanner_operator(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Authentifie la personne qui scanne un billet : agent staff (jeton staff),
+    organisateur ou admin. Renvoie {"kind", "id", "name", "role", "assigned_events"}.
+    Un simple visiteur ou un client ne peut PAS scanner.
+    """
+    try:
+        payload = decode_token(credentials.credentials)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token invalide ou expire")
+
+    subject = payload.get("sub")
+    if subject is None:
+        raise HTTPException(status_code=401, detail="Token invalide")
+
+    if payload.get("type") == "staff":
+        staff = await db.staff_accounts.find_one({"id": subject}, {"_id": 0})
+        if staff is None:
+            raise HTTPException(status_code=401, detail="Compte staff non trouve")
+        if not staff.get("active", True):
+            raise HTTPException(status_code=403, detail="Compte staff desactive")
+        return {
+            "kind": "staff",
+            "id": staff["id"],
+            "name": staff.get("full_name", "Agent"),
+            "role": "staff",
+            "assigned_events": staff.get("assigned_events", []),
+        }
+
+    user = await db.users.find_one({"id": subject}, {"_id": 0})
+    if user is None:
+        raise HTTPException(status_code=401, detail="Utilisateur non trouve")
+    if user.get("role") not in ("organizer", "admin"):
+        raise HTTPException(status_code=403, detail="Acces scanner reserve au personnel autorise")
+    return {
+        "kind": "user",
+        "id": user["id"],
+        "name": user.get("full_name", "Organisateur"),
+        "role": user["role"],
+        "assigned_events": [],
+    }
+
+
+def operator_can_scan(operator: dict, ticket: dict) -> bool:
+    """Le scanneur a-t-il le droit de traiter CE billet ?"""
+    if operator["role"] == "admin":
+        return True
+    if operator["role"] == "organizer":
+        return ticket.get("organizer_id") == operator["id"]
+    return ticket.get("event_id") in operator.get("assigned_events", [])

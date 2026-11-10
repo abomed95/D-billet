@@ -199,6 +199,11 @@ DEFAULT_FERRY_SCHEDULE = {
     6: {"route": "Djibouti-Obock", "destinations": ["Djibouti", "Obock"]},  # Saturday
 }
 
+# Paiement simule (billets emis sans passer par la passerelle).
+# Ferme par defaut ET jamais actif en production : il faut l'activer
+# explicitement en developpement avec ALLOW_SIMULATED_PAYMENTS=true.
+ALLOW_SIMULATED_PAYMENTS = (not IS_PRODUCTION) and _env_flag("ALLOW_SIMULATED_PAYMENTS", False)
+
 # Demo/bootstrap data
 # In production, both flags are always disabled regardless of the env value
 AUTO_SEED_DEMO_DATA = (
