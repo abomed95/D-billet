@@ -8,11 +8,12 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                unbounded: ['Unbounded', 'sans-serif'],
-                display: ['Sora', 'Unbounded', 'sans-serif'],
-                sans: ['Plus Jakarta Sans', 'Manrope', 'system-ui', 'sans-serif'],
-                manrope: ['Manrope', 'sans-serif'],
-                mono: ['JetBrains Mono', 'monospace'],
+                // Every family resolves to the system stack declared in index.css.
+                unbounded: ['var(--font-display)'],
+                display: ['var(--font-display)'],
+                sans: ['var(--font-sans)'],
+                manrope: ['var(--font-sans)'],
+                mono: ['var(--font-mono)'],
             },
             borderRadius: {
                 lg: 'var(--radius)',

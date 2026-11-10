@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;800&family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400&display=swap');
+/* No web font: the system stack (SF Pro on Apple, Roboto on Android) renders
+   at once and costs no request on a slow connection. */
 
 @tailwind base;
 @tailwind components;
@@ -6,27 +7,32 @@
 
 @layer base {
     :root {
+        /* Neutral dark surfaces, gold as the single accent */
         --background: 0 0% 2%;
-        --foreground: 0 0% 93%;
-        --card: 0 0% 7%;
-        --card-foreground: 0 0% 100%;
-        --popover: 0 0% 7%;
-        --popover-foreground: 0 0% 100%;
-        --primary: 267 100% 50%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 157 100% 50%;
-        --secondary-foreground: 0 0% 0%;
-        --muted: 0 0% 12%;
-        --muted-foreground: 0 0% 60%;
-        --accent: 0 0% 12%;
-        --accent-foreground: 0 0% 100%;
+        --foreground: 240 5% 96%;
+        --card: 240 3% 9%;
+        --card-foreground: 240 5% 96%;
+        --popover: 240 3% 11%;
+        --popover-foreground: 240 5% 96%;
+        --primary: 46 65% 52%;
+        --primary-foreground: 0 0% 4%;
+        --secondary: 240 3% 15%;
+        --secondary-foreground: 240 5% 96%;
+        --muted: 240 3% 13%;
+        --muted-foreground: 240 4% 64%;
+        --accent: 240 3% 15%;
+        --accent-foreground: 240 5% 96%;
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
-        --border: 0 0% 15%;
-        --input: 0 0% 12%;
-        --ring: 267 100% 50%;
-        --radius: 0.75rem;
-        
+        --border: 240 3% 17%;
+        --input: 240 3% 15%;
+        --ring: 46 65% 52%;
+        --radius: 1rem;
+
+        --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
         /* Category colors */
         --cinema: 342 100% 50%;
         --football: 157 100% 50%;
@@ -42,7 +48,7 @@
     
     body {
         @apply bg-background text-foreground antialiased;
-        font-family: 'Plus Jakarta Sans', 'Manrope', system-ui, -apple-system, sans-serif;
+        font-family: var(--font-sans);
         margin: 0;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -50,27 +56,45 @@
     }
 
     h1, h2, h3 {
-        letter-spacing: -0.02em;
+        letter-spacing: -0.022em;
+    }
+
+    :focus-visible {
+        outline: 2px solid hsl(var(--ring));
+        outline-offset: 2px;
     }
 }
 
 @layer utilities {
     .font-unbounded {
-        font-family: 'Unbounded', sans-serif;
+        font-family: var(--font-display);
+        letter-spacing: -0.02em;
     }
 
-    /* New premium display font used across the redesigned home page */
-    .font-display {
-        font-family: 'Sora', 'Unbounded', sans-serif;
+        .font-display {
+        font-family: var(--font-display);
         letter-spacing: -0.03em;
     }
 
     .font-sans-jakarta {
-        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-family: var(--font-sans);
     }
 
     .font-manrope {
-        font-family: 'Manrope', sans-serif;
+        font-family: var(--font-sans);
+    }
+
+    /* Layout containers: one page width, one card surface */
+    .container-page {
+        @apply mx-auto w-full max-w-2xl px-4 lg:max-w-6xl lg:px-6;
+    }
+
+    .surface {
+        @apply rounded-3xl border border-white/10 bg-card;
+    }
+
+    .surface-inset {
+        @apply rounded-2xl border border-white/10 bg-white/[0.03];
     }
 
     /* App-like helpers */
@@ -100,19 +124,23 @@
     }
     
     .font-mono {
-        font-family: 'JetBrains Mono', monospace;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
     }
     
     .glass {
-        @apply bg-white/5 backdrop-blur-xl border border-white/10;
+        @apply border border-white/10 backdrop-blur-xl;
+        background-color: rgba(28, 28, 30, 0.78);
+        -webkit-backdrop-filter: saturate(180%) blur(24px);
+        backdrop-filter: saturate(180%) blur(24px);
     }
     
     .neon-glow {
-        box-shadow: 0 0 20px rgba(255, 214, 0, 0.4);
+        box-shadow: 0 12px 30px -14px rgba(212, 175, 55, 0.55);
     }
     
     .neon-glow-green {
-        box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+        box-shadow: 0 12px 30px -14px rgba(0, 240, 255, 0.45);
     }
     
     .category-cinema {
@@ -140,7 +168,7 @@
     }
     
     .text-gradient {
-        @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-gold-light to-gold-dark;
     }
     
     /* Animations */
@@ -188,11 +216,11 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: #121212;
+    background: #0a0a0c;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #333;
+    background: #2c2c2e;
     border-radius: 4px;
 }
 
