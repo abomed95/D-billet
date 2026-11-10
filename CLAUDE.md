@@ -108,6 +108,11 @@ GCP), `docs/`. **Ne pas deplacer cette arborescence** sans accord explicite.
   impose un rebuild, pas seulement un redeploiement.
 - `frontend/src/lib/api.js` expose `API_BASE` : c'est le point d'entree a
   privilegier (29 fichiers le contournent encore, voir l'audit section 5.3).
+- Design : theme sombre neutre, or comme seul accent. Les jetons vivent dans
+  `frontend/src/index.css` (`--background`, `--card`, `--primary`...). **Aucune
+  police web** : toutes les familles Tailwind pointent vers la pile systeme
+  (`--font-sans`, `--font-display`, `--font-mono`). Conteneurs a reutiliser :
+  `.container-page` (largeur de page), `.surface` (carte), `.surface-inset`.
 - Le service worker (`frontend/public/service-worker.js`) est ecrit a la main :
   incrementer `CACHE_VERSION` a chaque changement de strategie.
 

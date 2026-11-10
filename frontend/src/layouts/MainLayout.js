@@ -54,7 +54,7 @@ const MainLayout = () => {
         <div className="fixed inset-0 z-[60]" onClick={() => setShowUserMenu(false)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div 
-            className="absolute bottom-24 left-1/2 -translate-x-1/2 w-72 glass rounded-2xl border border-gold/30 p-4"
+            className="absolute bottom-24 left-1/2 -translate-x-1/2 w-72 glass rounded-3xl p-4"
             onClick={(e) => e.stopPropagation()}
           >
             {/* User Info */}
@@ -113,7 +113,7 @@ const MainLayout = () => {
       )}
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-4 left-1/2 z-50 grid h-16 w-[min(94vw,760px)] -translate-x-1/2 grid-cols-5 items-center rounded-full border border-gold/20 bg-black/80 px-2 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <nav className="fixed bottom-4 left-1/2 z-50 grid h-16 w-[min(94vw,760px)] -translate-x-1/2 grid-cols-5 items-center rounded-full glass px-2 shadow-[0_18px_60px_rgba(0,0,0,0.5)]">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -124,7 +124,7 @@ const MainLayout = () => {
                 ${isActive ? 'text-gold' : 'text-gray-500 hover:text-white'}`}
               data-testid={`nav-${item.label.toLowerCase()}`}
             >
-              <item.icon size={21} className={isActive ? 'drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]' : ''} />
+              <item.icon size={21} strokeWidth={isActive ? 2.4 : 2} />
               <span className="mt-1 whitespace-nowrap text-[9px] leading-none sm:text-[10px]">{item.label}</span>
             </Link>
           );

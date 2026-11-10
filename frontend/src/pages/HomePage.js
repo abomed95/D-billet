@@ -330,7 +330,7 @@ const HomePage = () => {
         />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(212,175,55,0.22),transparent_40%),linear-gradient(180deg,rgba(5,5,5,0.82),rgba(5,5,5,0.92)_55%,#050505)]" aria-hidden="true" />
 
-        <div className="relative mx-auto w-full max-w-2xl px-4 pt-8 lg:max-w-6xl lg:pt-14">
+        <div className="relative container-page pt-8 lg:pt-14">
           {/* Top bar — app header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -393,7 +393,7 @@ const HomePage = () => {
       </header>
 
       {/* ============ Quick access — Train / Ferry ============ */}
-      <section className="mx-auto w-full max-w-2xl px-4 pt-6 lg:max-w-6xl" aria-label="Accès rapide transport">
+      <section className="container-page pt-8" aria-label="Accès rapide transport">
         <div className="grid grid-cols-2 gap-3 lg:gap-4">
           <QuickAction to="/train" title="Train" subtitle="Djibouti — Éthiopie" icon={Train} accent="#FFD600" />
           <QuickAction to="/ferry" title="Ferry" subtitle="Djibouti — Obock" icon={Ship} accent="#00F0FF" />
@@ -401,9 +401,9 @@ const HomePage = () => {
       </section>
 
       {/* ============ Categories — scrollable chips ============ */}
-      <section className="mx-auto w-full max-w-2xl px-4 pt-8 lg:max-w-6xl" aria-labelledby="cat-title">
+      <section className="container-page pt-10" aria-labelledby="cat-title">
         <div className="mb-3 flex items-center justify-between">
-          <h2 id="cat-title" className="font-display text-lg font-bold text-white">Catégories</h2>
+          <h2 id="cat-title" className="font-display text-xl font-bold text-white sm:text-2xl">Catégories</h2>
         </div>
         <div className="no-scrollbar snap-x-mandatory -mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1">
           <CategoryChip
@@ -428,9 +428,9 @@ const HomePage = () => {
       </section>
 
       {/* ============ Events ============ */}
-      <section className="mx-auto w-full max-w-2xl px-4 pt-8 lg:max-w-6xl" aria-labelledby="events-title">
+      <section className="container-page pt-10" aria-labelledby="events-title">
         <div className="mb-4 flex items-center justify-between">
-          <h2 id="events-title" className="font-display text-lg font-bold text-white">Événements à venir</h2>
+          <h2 id="events-title" className="font-display text-xl font-bold text-white sm:text-2xl">Événements à venir</h2>
           <Link
             to="/events"
             className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-gold transition-colors hover:bg-gold/10"
@@ -458,8 +458,8 @@ const HomePage = () => {
       </section>
 
       {/* ============ Why D-BILLET ============ */}
-      <section className="mx-auto w-full max-w-2xl px-4 pt-12 lg:max-w-6xl" aria-labelledby="why-title">
-        <div className="rounded-3xl border border-white/10 bg-[#0B0B10] p-5 app-shadow sm:p-7">
+      <section className="container-page pt-16" aria-labelledby="why-title">
+        <div className="surface p-5 app-shadow sm:p-7">
           <div className="grid gap-7 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="space-y-4">
               <div className="inline-flex rounded-full border border-gold/20 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
@@ -519,7 +519,7 @@ const HomePage = () => {
       </section>
 
       {/* ============ Testimonials ============ */}
-      <section className="mx-auto w-full max-w-2xl px-4 pt-12 lg:max-w-6xl" aria-labelledby="testi-title">
+      <section className="container-page pt-16" aria-labelledby="testi-title">
         <div className="mb-6 text-center">
           <div className="inline-flex rounded-full border border-gold/20 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
             Témoignages
@@ -530,7 +530,7 @@ const HomePage = () => {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {testimonials.slice(0, 3).map((testimonial, index) => (
-            <figure key={`${testimonial.author}-${index}`} className="rounded-3xl border border-white/10 bg-[#0B0B10] p-6 app-shadow">
+            <figure key={`${testimonial.author}-${index}`} className="surface p-6 app-shadow">
               <div className="mb-4 flex items-center justify-between">
                 <Quote className="text-gold" size={22} />
                 <div className="flex items-center gap-0.5">
@@ -587,8 +587,7 @@ const HomePage = () => {
 const QuickAction = ({ to, title, subtitle, icon: Icon, accent }) => (
   <Link
     to={to}
-    className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#0B0B10] p-4 transition-all active:scale-[0.98] sm:p-5"
-    style={{ boxShadow: `0 20px 50px -30px ${accent}` }}
+    className="surface group relative flex flex-col justify-between overflow-hidden p-4 transition-all hover:border-white/20 active:scale-[0.98] sm:p-6"
   >
     <div
       className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl sm:mb-8"
@@ -630,7 +629,7 @@ const EventCard = ({ event }) => {
   return (
     <Link
       to={eventPath}
-      className="group block overflow-hidden rounded-3xl border border-white/10 bg-[#0B0B10] transition-all hover:-translate-y-1 hover:border-gold/30 active:scale-[0.99]"
+      className="group block overflow-hidden surface transition-all hover:-translate-y-1 hover:border-gold/30 active:scale-[0.99]"
     >
       <div className="relative h-48 overflow-hidden sm:h-52">
         <img
