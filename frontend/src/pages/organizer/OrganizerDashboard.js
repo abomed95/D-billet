@@ -125,7 +125,7 @@ const OrganizerDashboard = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, index) => (
-          <div key={index} className="glass p-5 rounded-xl" data-testid={`stat-card-${index}`}>
+          <div key={index} className="panel p-5 rounded-xl" data-testid={`stat-card-${index}`}>
             <div className="flex items-center justify-between mb-3">
               <div className={`w-11 h-11 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
                 <stat.icon className={stat.color} size={22} />
@@ -139,7 +139,7 @@ const OrganizerDashboard = () => {
       </div>
 
       {/* Sales Chart */}
-      <div className="glass p-6 rounded-xl">
+      <div className="panel p-6 rounded-xl">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="font-unbounded font-semibold text-lg text-white">
@@ -187,12 +187,12 @@ const OrganizerDashboard = () => {
                 {/* Gradient definitions */}
                 <defs>
                   <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#00FF94" />
+                    <stop offset="0%" stopColor="#30D158" />
                     <stop offset="100%" stopColor="#22D3EE" />
                   </linearGradient>
                   <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#00FF94" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#00FF94" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#30D158" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#30D158" stopOpacity="0" />
                   </linearGradient>
                 </defs>
 
@@ -232,7 +232,7 @@ const OrganizerDashboard = () => {
                         cy={y}
                         r="6"
                         fill="#0A0A0F"
-                        stroke="#00FF94"
+                        stroke="#30D158"
                         strokeWidth="2"
                         vectorEffect="non-scaling-stroke"
                       />
@@ -275,7 +275,7 @@ const OrganizerDashboard = () => {
       </div>
 
       {/* Events Progress */}
-      <div className="glass p-6 rounded-xl">
+      <div className="panel p-6 rounded-xl">
         <h3 className="font-unbounded font-semibold text-lg text-white mb-6">
           Progression des Ventes par Événement
         </h3>
@@ -312,7 +312,7 @@ const OrganizerDashboard = () => {
 
       {/* Promo Codes Stats */}
       {stats.promo_codes?.length > 0 && (
-        <div className="glass p-6 rounded-xl">
+        <div className="panel p-6 rounded-xl">
           <h3 className="font-unbounded font-semibold text-lg text-white mb-6">
             Performance des Codes Promo
           </h3>

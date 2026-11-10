@@ -179,7 +179,7 @@ const AdminEvents = () => {
       </div>
 
       {/* Filters */}
-      <div className="glass p-4 rounded-xl">
+      <div className="panel p-4 rounded-xl">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -209,29 +209,29 @@ const AdminEvents = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <p className="text-gray-400 text-sm">Total</p>
           <p className="font-mono font-bold text-xl text-white">{events.length}</p>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <p className="text-gray-400 text-sm">Approuvés</p>
           <p className="font-mono font-bold text-xl text-green-400">
             {events.filter(e => e.status === 'approved' || !e.status).length}
           </p>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <p className="text-gray-400 text-sm">En attente</p>
           <p className="font-mono font-bold text-xl text-yellow-400">
             {events.filter(e => e.status === 'pending').length}
           </p>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <p className="text-gray-400 text-sm">Bloqués</p>
           <p className="font-mono font-bold text-xl text-red-400">
             {events.filter(e => e.status === 'blocked').length}
           </p>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <p className="text-gray-400 text-sm">À la une</p>
           <p className="font-mono font-bold text-xl text-yellow-400">
             {events.filter(e => e.featured).length}
@@ -247,7 +247,7 @@ const AdminEvents = () => {
           ))}
         </div>
       ) : filteredEvents.length === 0 ? (
-        <div className="glass p-12 rounded-xl text-center">
+        <div className="panel p-12 rounded-xl text-center">
           <Calendar className="mx-auto text-gray-500 mb-4" size={48} />
           <p className="text-gray-400">Aucun événement trouvé</p>
         </div>
@@ -256,7 +256,7 @@ const AdminEvents = () => {
           {filteredEvents.map((event) => (
             <div 
               key={event.id} 
-              className={`glass p-5 rounded-xl ${event.featured ? 'border-2 border-yellow-500/50' : ''} ${event.status === 'pending' ? 'border-2 border-yellow-500/30' : ''} ${event.status === 'blocked' ? 'opacity-60' : ''}`}
+              className={`panel p-5 rounded-xl ${event.featured ? 'border-2 border-yellow-500/50' : ''} ${event.status === 'pending' ? 'border-2 border-yellow-500/30' : ''} ${event.status === 'blocked' ? 'opacity-60' : ''}`}
             >
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {/* Event Image */}

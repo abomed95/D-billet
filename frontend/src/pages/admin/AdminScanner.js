@@ -68,7 +68,7 @@ const AdminScanner = () => {
       </div>
 
       {/* Scanner Area */}
-      <div className="glass-card p-8">
+      <div className="panel-card p-8">
         {!result ? (
           <>
             {/* Scanner Icon */}
@@ -130,7 +130,7 @@ const AdminScanner = () => {
                 <p className="text-green-400 font-medium mb-6">{result.message}</p>
                 
                 {result.ticket && (
-                  <div className="glass-card p-6 text-left mb-6">
+                  <div className="panel-card p-6 text-left mb-6">
                     <div className="space-y-3">
                       <div>
                         <p className="text-xs text-gray-500">Événement</p>
@@ -178,7 +178,7 @@ const AdminScanner = () => {
       </div>
 
       {/* Instructions */}
-      <div className="glass-card p-6">
+      <div className="panel-card p-6">
         <h3 className="font-unbounded font-semibold text-lg text-white mb-4 flex items-center gap-2">
           <AlertCircle className="text-primary" size={20} />
           Instructions

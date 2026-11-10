@@ -131,7 +131,7 @@ const OrganizerLiveDashboard = () => {
         {/* Main Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Entries */}
-          <div className="glass p-5 rounded-2xl relative overflow-hidden">
+          <div className="panel p-5 rounded-2xl relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent"></div>
             <div className="relative">
               <div className="flex items-center justify-between mb-2">
@@ -144,7 +144,7 @@ const OrganizerLiveDashboard = () => {
           </div>
           
           {/* Remaining */}
-          <div className="glass p-5 rounded-2xl relative overflow-hidden">
+          <div className="panel p-5 rounded-2xl relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent"></div>
             <div className="relative">
               <Ticket className="text-cyan-400 mb-2" size={24} />
@@ -154,7 +154,7 @@ const OrganizerLiveDashboard = () => {
           </div>
           
           {/* Entry Rate */}
-          <div className="glass p-5 rounded-2xl relative overflow-hidden">
+          <div className="panel p-5 rounded-2xl relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
             <div className="relative">
               <TrendingUp className="text-purple-400 mb-2" size={24} />
@@ -164,7 +164,7 @@ const OrganizerLiveDashboard = () => {
           </div>
           
           {/* Entry Speed */}
-          <div className="glass p-5 rounded-2xl relative overflow-hidden">
+          <div className="panel p-5 rounded-2xl relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent"></div>
             <div className="relative">
               <Zap className="text-orange-400 mb-2" size={24} />
@@ -175,7 +175,7 @@ const OrganizerLiveDashboard = () => {
         </div>
 
         {/* Progress Bar */}
-        <div className="glass p-5 rounded-2xl">
+        <div className="panel p-5 rounded-2xl">
           <div className="flex items-center justify-between mb-3">
             <span className="text-gray-400">Progression des entrées</span>
             <span className="text-white font-medium">
@@ -190,7 +190,7 @@ const OrganizerLiveDashboard = () => {
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Hourly Chart */}
-          <div className="glass p-5 rounded-2xl">
+          <div className="panel p-5 rounded-2xl">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="text-purple-400" size={20} />
               <h3 className="font-semibold text-white">Affluence par heure</h3>
@@ -212,7 +212,7 @@ const OrganizerLiveDashboard = () => {
           </div>
 
           {/* Ticket Type Breakdown */}
-          <div className="glass p-5 rounded-2xl">
+          <div className="panel p-5 rounded-2xl">
             <div className="flex items-center gap-2 mb-4">
               <Ticket className="text-cyan-400" size={20} />
               <h3 className="font-semibold text-white">Par type de billet</h3>
@@ -240,7 +240,7 @@ const OrganizerLiveDashboard = () => {
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Recent Entries */}
-          <div className="glass p-5 rounded-2xl lg:col-span-2">
+          <div className="panel p-5 rounded-2xl lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <CheckCircle className="text-green-400" size={20} />
               <h3 className="font-semibold text-white">Entrées récentes</h3>
@@ -274,7 +274,7 @@ const OrganizerLiveDashboard = () => {
           </div>
 
           {/* Staff Performance */}
-          <div className="glass p-5 rounded-2xl">
+          <div className="panel p-5 rounded-2xl">
             <div className="flex items-center gap-2 mb-4">
               <Shield className="text-orange-400" size={20} />
               <h3 className="font-semibold text-white">Performance Staff</h3>
@@ -309,7 +309,7 @@ const OrganizerLiveDashboard = () => {
 
         {/* Duplicate Alerts */}
         {data.duplicate_alerts.length > 0 && (
-          <div className="glass p-5 rounded-2xl border border-orange-500/50">
+          <div className="panel p-5 rounded-2xl border border-orange-500/50">
             <div className="flex items-center gap-2 mb-4">
               <AlertTriangle className="text-orange-400" size={20} />
               <h3 className="font-semibold text-orange-400">
@@ -340,7 +340,7 @@ const OrganizerLiveDashboard = () => {
         )}
 
         {/* Event Info */}
-        <div className="glass p-4 rounded-xl text-center">
+        <div className="panel p-4 rounded-xl text-center">
           <p className="text-gray-500 text-sm">
             {data.event.title} • {data.event.date} à {data.event.time} • {data.event.venue}
           </p>

@@ -8,11 +8,12 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                unbounded: ['Unbounded', 'sans-serif'],
-                display: ['Sora', 'Unbounded', 'sans-serif'],
-                sans: ['Plus Jakarta Sans', 'Manrope', 'system-ui', 'sans-serif'],
-                manrope: ['Manrope', 'sans-serif'],
-                mono: ['JetBrains Mono', 'monospace'],
+                // Every family resolves to the system stack declared in index.css.
+                unbounded: ['var(--font-display)'],
+                display: ['var(--font-display)'],
+                sans: ['var(--font-sans)'],
+                manrope: ['var(--font-sans)'],
+                mono: ['var(--font-mono)'],
             },
             borderRadius: {
                 lg: 'var(--radius)',
@@ -70,12 +71,12 @@ module.exports = {
                     900: '#312804',
                 },
                 // Category colors
-                cinema: '#FF0055',
+                cinema: '#FF375F',
                 football: '#D4AF37',
-                ferry: '#00F0FF',
-                train: '#FFD600',
-                concerts: '#7000FF',
-                conferences: '#FF5C00',
+                ferry: '#64D2FF',
+                train: '#FFD60A',
+                concerts: '#BF5AF2',
+                conferences: '#FF9F0A',
             },
             keyframes: {
                 'accordion-down': {

@@ -69,7 +69,7 @@ const PaymentResultPage = () => {
         </h1>
 
         {status === 'loading' && (
-          <div className="glass p-12 rounded-xl text-center">
+          <div className="panel p-12 rounded-xl text-center">
             <Loader2 className="w-16 h-16 mx-auto text-green-400 animate-spin mb-6" />
             <p className="text-gray-300">Vérification de votre paiement WaafiPay...</p>
           </div>
@@ -77,14 +77,14 @@ const PaymentResultPage = () => {
 
         {isPaid && (
           <div className="space-y-6 animate-fade-in">
-            <div className="glass p-12 rounded-xl text-center">
+            <div className="panel p-12 rounded-xl text-center">
               <div className="w-20 h-20 rounded-full bg-green-500/20 mx-auto mb-6 flex items-center justify-center">
                 <CheckCircle className="text-green-500" size={48} />
               </div>
               <h2 className="font-unbounded font-bold text-2xl text-white mb-3">Paiement réussi !</h2>
               <p className="text-gray-400 mb-6">Vos billets ont été générés avec succès</p>
               {payment?.amount != null && (
-                <div className="glass rounded-xl p-4 inline-block">
+                <div className="panel rounded-2xl p-4 inline-block">
                   <p className="text-sm text-gray-400">Montant payé</p>
                   <p className="font-mono font-bold text-2xl text-green-400">{formatPrice(payment.amount)}</p>
                 </div>
@@ -92,14 +92,14 @@ const PaymentResultPage = () => {
             </div>
 
             {paidTickets.length > 0 && (
-              <div className="glass p-6 rounded-xl">
+              <div className="panel p-6 rounded-xl">
                 <h3 className="font-unbounded font-semibold text-white mb-4">Vos billets</h3>
                 <div className="space-y-3">
                   {paidTickets.map((ticket) => (
                     <button
                       key={ticket.id}
                       onClick={() => navigate(`/ticket/${ticket.id}`)}
-                      className="w-full glass p-4 rounded-xl flex items-center justify-between hover:border-green-500/50 transition-colors border border-white/10"
+                      className="w-full panel p-4 rounded-xl flex items-center justify-between hover:border-green-500/50 transition-colors border border-white/10"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
@@ -124,7 +124,7 @@ const PaymentResultPage = () => {
         )}
 
         {isPending && status !== 'loading' && (
-          <div className="glass p-12 rounded-xl text-center space-y-6 animate-fade-in">
+          <div className="panel p-12 rounded-xl text-center space-y-6 animate-fade-in">
             <Loader2 className="w-16 h-16 mx-auto text-yellow-400 animate-spin" />
             <div>
               <h2 className="font-unbounded font-bold text-xl text-white mb-2">Paiement en attente</h2>
@@ -139,7 +139,7 @@ const PaymentResultPage = () => {
         )}
 
         {(status === 'cancelled' || status === 'error' || status === 'unknown') && !isPending && (
-          <div className="glass p-12 rounded-xl text-center space-y-6 animate-fade-in">
+          <div className="panel p-12 rounded-xl text-center space-y-6 animate-fade-in">
             <div className="w-20 h-20 rounded-full bg-red-500/20 mx-auto flex items-center justify-center">
               <XCircle className="text-red-500" size={48} />
             </div>

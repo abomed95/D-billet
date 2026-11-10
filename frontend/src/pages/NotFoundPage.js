@@ -19,7 +19,7 @@ const NotFoundPage = () => {
       />
 
       <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-[0.95fr_1.05fr] gap-8 items-start">
-        <section className="glass rounded-2xl p-8">
+        <section className="panel rounded-2xl p-8">
           <div className="w-14 h-14 rounded-2xl bg-red-500/15 flex items-center justify-center mb-6">
             <SearchX className="text-red-400" size={30} />
           </div>
@@ -33,7 +33,7 @@ const NotFoundPage = () => {
         </section>
 
         <section className="space-y-4">
-          <div className="glass rounded-2xl p-6">
+          <div className="panel rounded-2xl p-6">
             <h2 className="font-unbounded text-xl text-white mb-3">Liens utiles</h2>
             <div className="space-y-3">
               {quickLinks.map((link) => (
@@ -54,7 +54,7 @@ const NotFoundPage = () => {
             </div>
           </div>
 
-          <div className="glass rounded-2xl p-6">
+          <div className="panel rounded-2xl p-6">
             <h2 className="font-unbounded text-xl text-white mb-3">Pourquoi cette page est en noindex</h2>
             <p className="text-gray-300 leading-7">
               Cette page sert uniquement a gerer les erreurs de navigation. Elle aide les visiteurs a

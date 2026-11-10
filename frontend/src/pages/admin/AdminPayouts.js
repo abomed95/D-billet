@@ -173,7 +173,7 @@ const AdminPayouts = () => {
 
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass p-5 rounded-xl border-2 border-yellow-500/30">
+        <div className="panel p-5 rounded-xl border-2 border-yellow-500/30">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
               <Clock className="text-yellow-400" size={24} />
@@ -184,7 +184,7 @@ const AdminPayouts = () => {
           <p className="text-gray-500 text-xs mt-1">{pendingPayouts.length} demande(s)</p>
         </div>
 
-        <div className="glass p-5 rounded-xl">
+        <div className="panel p-5 rounded-xl">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
               <CheckCircle className="text-green-400" size={24} />
@@ -199,7 +199,7 @@ const AdminPayouts = () => {
           </p>
         </div>
 
-        <div className="glass p-5 rounded-xl">
+        <div className="panel p-5 rounded-xl">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
               <XCircle className="text-red-400" size={24} />
@@ -240,7 +240,7 @@ const AdminPayouts = () => {
           ))}
         </div>
       ) : payouts.length === 0 ? (
-        <div className="glass p-12 rounded-xl text-center">
+        <div className="panel p-12 rounded-xl text-center">
           <Wallet className="mx-auto text-gray-500 mb-4" size={48} />
           <p className="text-gray-400">Aucune demande de retrait</p>
         </div>
@@ -249,7 +249,7 @@ const AdminPayouts = () => {
           {payouts.map((payout) => (
             <div 
               key={payout.id} 
-              className={`glass p-5 rounded-xl ${payout.status === 'pending' ? 'border-2 border-yellow-500/30' : ''}`}
+              className={`panel p-5 rounded-xl ${payout.status === 'pending' ? 'border-2 border-yellow-500/30' : ''}`}
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">

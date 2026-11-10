@@ -34,7 +34,7 @@ const AdminSettings = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [categoryModal, setCategoryModal] = useState(false);
-  const [newCategory, setNewCategory] = useState({ name: '', color: '#00FF94' });
+  const [newCategory, setNewCategory] = useState({ name: '', color: '#30D158' });
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -81,7 +81,7 @@ const AdminSettings = () => {
       );
       toast.success('Catégorie ajoutée');
       setCategoryModal(false);
-      setNewCategory({ name: '', color: '#00FF94' });
+      setNewCategory({ name: '', color: '#30D158' });
       fetchSettings();
     } catch (error) {
       toast.error('Erreur');
@@ -126,7 +126,7 @@ const AdminSettings = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="glass flex-wrap">
+        <TabsList className="panel flex-wrap">
           <TabsTrigger value="general" className="data-[state=active]:bg-green-500 data-[state=active]:text-black">
             <Settings size={16} className="mr-2" />
             Général
@@ -147,7 +147,7 @@ const AdminSettings = () => {
 
         {/* General Settings */}
         <TabsContent value="general" className="space-y-6 mt-6">
-          <div className="glass p-6 rounded-xl space-y-6">
+          <div className="panel p-6 rounded-xl space-y-6">
             <h3 className="font-semibold text-lg text-white flex items-center gap-2">
               <Percent className="text-yellow-400" size={20} />
               Commission Plateforme
@@ -212,7 +212,7 @@ const AdminSettings = () => {
           </div>
 
           {/* Quick Stats */}
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <h3 className="font-semibold text-lg text-white mb-4">Aperçu des Paramètres</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-white/5">
@@ -239,7 +239,7 @@ const AdminSettings = () => {
 
         {/* Categories */}
         <TabsContent value="categories" className="space-y-6 mt-6">
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-lg text-white">Catégories d'Événements</h3>
               <Button 
@@ -285,7 +285,7 @@ const AdminSettings = () => {
 
         {/* Content */}
         <TabsContent value="content" className="space-y-6 mt-6">
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <h3 className="font-semibold text-lg text-white mb-4">Conditions Générales de Vente</h3>
             <Textarea
               defaultValue={settings.terms_content}
@@ -307,7 +307,7 @@ const AdminSettings = () => {
             </Button>
           </div>
 
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <h3 className="font-semibold text-lg text-white mb-4">Mentions Légales</h3>
             <Textarea
               defaultValue={settings.legal_content}
@@ -332,7 +332,7 @@ const AdminSettings = () => {
 
         {/* Banner */}
         <TabsContent value="banner" className="space-y-6 mt-6">
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="font-semibold text-lg text-white">Bannière d'Annonce</h3>
@@ -406,7 +406,7 @@ const AdminSettings = () => {
                 <Input
                   value={newCategory.color}
                   onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
-                  placeholder="#00FF94"
+                  placeholder="#30D158"
                   className="flex-1"
                 />
               </div>

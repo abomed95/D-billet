@@ -128,7 +128,7 @@ const OrganizerParticipants = () => {
       </div>
 
       {/* Filters */}
-      <div className="glass p-4 rounded-xl">
+      <div className="panel p-4 rounded-xl">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="flex-1 relative">
@@ -170,7 +170,7 @@ const OrganizerParticipants = () => {
           ))}
         </div>
       ) : participants.length === 0 ? (
-        <div className="glass p-12 rounded-xl text-center">
+        <div className="panel p-12 rounded-xl text-center">
           <Users className="mx-auto text-gray-500 mb-4" size={48} />
           <p className="text-gray-400 text-lg">Aucun participant trouvé</p>
           <p className="text-gray-500 text-sm mt-2">
@@ -182,7 +182,7 @@ const OrganizerParticipants = () => {
           {participants.map((participant, index) => (
             <div 
               key={participant.ticket_id} 
-              className="glass p-4 rounded-xl"
+              className="panel p-4 rounded-xl"
               data-testid={`participant-${index}`}
             >
               <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -260,7 +260,7 @@ const OrganizerParticipants = () => {
 
       {/* Stats Summary */}
       {participants.length > 0 && (
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <div className="flex flex-wrap gap-6 text-sm">
             <div>
               <span className="text-gray-500">Total affiché:</span>

@@ -127,13 +127,13 @@ const AdminOrganizers = () => {
       {/* Organizers List */}
       <div className="space-y-4">
         {organizers.length === 0 ? (
-          <div className="glass p-12 rounded-xl text-center">
+          <div className="panel p-12 rounded-xl text-center">
             <Users className="mx-auto text-gray-500 mb-4" size={48} />
             <p className="text-gray-400">Aucun organisateur. Créez le premier!</p>
           </div>
         ) : (
           organizers.map(org => (
-            <div key={org.id} className="glass p-5 rounded-xl flex items-center justify-between">
+            <div key={org.id} className="panel p-5 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center">
                   <Building className="text-purple-400" size={28} />

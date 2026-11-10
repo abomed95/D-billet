@@ -134,7 +134,7 @@ const AdminTransactions = () => {
       {/* Summary Cards */}
       {data && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="glass p-5 rounded-xl">
+          <div className="panel p-5 rounded-xl">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
                 <TrendingUp className="text-green-400" size={20} />
@@ -146,7 +146,7 @@ const AdminTransactions = () => {
           </div>
 
           {Object.entries(data.totals_by_method || {}).map(([method, stats]) => (
-            <div key={method} className="glass p-5 rounded-xl">
+            <div key={method} className="panel p-5 rounded-xl">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                   {getPaymentIcon(method)}
@@ -161,7 +161,7 @@ const AdminTransactions = () => {
       )}
 
       {/* Filters */}
-      <div className="glass p-4 rounded-xl">
+      <div className="panel p-4 rounded-xl">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -209,12 +209,12 @@ const AdminTransactions = () => {
           ))}
         </div>
       ) : filteredTransactions.length === 0 ? (
-        <div className="glass p-12 rounded-xl text-center">
+        <div className="panel p-12 rounded-xl text-center">
           <DollarSign className="mx-auto text-gray-500 mb-4" size={48} />
           <p className="text-gray-400">Aucune transaction trouvée</p>
         </div>
       ) : (
-        <div className="glass rounded-xl overflow-hidden">
+        <div className="panel rounded-2xl overflow-hidden">
           {/* Table Header */}
           <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-white/5 text-gray-400 text-sm font-medium">
             <div className="col-span-3">Événement</div>

@@ -214,7 +214,7 @@ const OrganizerStaff = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
               <User className="text-orange-400" size={20} />
@@ -225,7 +225,7 @@ const OrganizerStaff = () => {
             </div>
           </div>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
               <Activity className="text-green-400" size={20} />
@@ -238,7 +238,7 @@ const OrganizerStaff = () => {
             </div>
           </div>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
               <Calendar className="text-cyan-400" size={20} />
@@ -249,7 +249,7 @@ const OrganizerStaff = () => {
             </div>
           </div>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
               <Search className="text-purple-400" size={20} />
@@ -263,7 +263,7 @@ const OrganizerStaff = () => {
       </div>
 
       {/* Staff List */}
-      <div className="glass rounded-xl overflow-hidden">
+      <div className="panel rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-white/10">
           <h2 className="font-semibold text-white">Comptes Staff</h2>
         </div>
@@ -377,7 +377,7 @@ const OrganizerStaff = () => {
       </div>
 
       {/* Recent Scan Logs */}
-      <div className="glass rounded-xl overflow-hidden">
+      <div className="panel rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <h2 className="font-semibold text-white flex items-center gap-2">
             <Clock size={18} className="text-purple-400" />
