@@ -92,7 +92,7 @@ const MyTicketsPage = () => {
         {/* Filter */}
         <div className="mb-6">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48 glass border-white/10" data-testid="status-filter">
+            <SelectTrigger className="w-48 panel border-white/10" data-testid="status-filter">
               <Filter size={18} className="mr-2" />
               <SelectValue placeholder="Filtrer" />
             </SelectTrigger>
@@ -106,7 +106,7 @@ const MyTicketsPage = () => {
 
         {/* Tickets List */}
         {filteredTickets.length === 0 ? (
-          <div className="glass p-12 rounded-xl text-center">
+          <div className="panel p-12 rounded-xl text-center">
             <Ticket className="mx-auto text-gray-500 mb-6" size={64} />
             <h2 className="font-unbounded font-bold text-2xl text-white mb-3">
               {tickets.length === 0 ? 'Aucun billet' : 'Aucun résultat'}
@@ -139,7 +139,7 @@ const MyTicketsPage = () => {
                         <button
                           key={ticket.id}
                           onClick={() => navigate(`/ticket/${ticket.id}`)}
-                          className="w-full glass p-4 rounded-xl flex items-center gap-4 hover:border-green-500/30 transition-all text-left border border-white/10"
+                          className="w-full panel p-4 rounded-xl flex items-center gap-4 hover:border-green-500/30 transition-all text-left border border-white/10"
                           data-testid={`ticket-${ticket.id}`}
                         >
                           {/* Status Indicator */}

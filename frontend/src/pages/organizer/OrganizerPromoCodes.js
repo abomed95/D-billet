@@ -149,13 +149,13 @@ const OrganizerPromoCodes = () => {
       {/* Promo Codes List */}
       <div className="space-y-4">
         {promoCodes.length === 0 ? (
-          <div className="glass p-12 rounded-xl text-center">
+          <div className="panel p-12 rounded-xl text-center">
             <Tag className="mx-auto text-gray-500 mb-4" size={48} />
             <p className="text-gray-400">Aucun code promo. Créez-en un pour vos influenceurs!</p>
           </div>
         ) : (
           promoCodes.map(promo => (
-            <div key={promo.id} className="glass p-4 rounded-xl flex items-center justify-between">
+            <div key={promo.id} className="panel p-4 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => copyCode(promo.code)}

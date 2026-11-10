@@ -78,7 +78,7 @@ const AdminParticipants = () => {
       <div className="flex items-center gap-4">
         <Link
           to="/admin/events"
-          className="p-2 glass rounded-full"
+          className="p-2 panel rounded-full"
         >
           <ArrowLeft size={20} />
         </Link>
@@ -99,7 +99,7 @@ const AdminParticipants = () => {
       </div>
 
       {/* Participants Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="panel-card overflow-hidden">
         {data.participants.length === 0 ? (
           <div className="p-12 text-center">
             <Users className="mx-auto text-gray-500 mb-4" size={48} />

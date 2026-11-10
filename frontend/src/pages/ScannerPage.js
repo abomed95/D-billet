@@ -267,7 +267,7 @@ const ScannerPage = () => {
           {/* Manual Entry */}
           {mode === 'manual' && !result && (
             <form onSubmit={handleManualSubmit} className="space-y-4">
-              <div className="glass p-6 rounded-2xl">
+              <div className="panel p-6 rounded-2xl">
                 <div className="flex justify-center mb-6">
                   <div className="w-20 h-20 rounded-2xl bg-green-500/20 flex items-center justify-center">
                     <QrCode className="text-green-400" size={40} />
@@ -314,7 +314,7 @@ const ScannerPage = () => {
 
           {/* Instructions */}
           {!result && (
-            <div className="mt-8 glass p-4 rounded-xl">
+            <div className="mt-8 panel p-4 rounded-xl">
               <h3 className="text-white font-semibold mb-2">Instructions</h3>
               <ul className="text-gray-400 text-sm space-y-1">
                 <li>• Scannez le QR code du billet</li>
@@ -328,7 +328,7 @@ const ScannerPage = () => {
       </main>
 
       {/* Footer */}
-      <footer className="glass border-t border-white/10 p-4 text-center">
+      <footer className="panel border-t border-white/10 p-4 text-center">
         <p className="text-gray-500 text-sm">D-Billet Scanner v1.0</p>
       </footer>
     </div>

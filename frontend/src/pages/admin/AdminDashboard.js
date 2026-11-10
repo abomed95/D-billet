@@ -134,7 +134,7 @@ const AdminDashboard = () => {
 
       {/* Alerts Section */}
       {hasAlerts && (
-        <div className="glass p-5 rounded-2xl border-2 border-yellow-500/30 bg-gradient-to-r from-yellow-500/10 to-orange-500/10">
+        <div className="panel p-5 rounded-2xl border-2 border-yellow-500/30 bg-gradient-to-r from-yellow-500/10 to-orange-500/10">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
               <AlertTriangle className="text-yellow-400" size={22} />
@@ -187,7 +187,7 @@ const AdminDashboard = () => {
         {mainStats.map((stat, index) => (
           <div
             key={index}
-            className="glass p-5 rounded-2xl relative overflow-hidden group hover:border-white/20 transition-all"
+            className="panel p-5 rounded-2xl relative overflow-hidden group hover:border-white/20 transition-all"
             data-testid={`admin-stat-${index}`}
           >
             <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.color} opacity-10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:opacity-20 transition-opacity`} />
@@ -208,7 +208,7 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Link
           to="/admin/events"
-          className="glass p-5 rounded-2xl flex items-center gap-4 hover:border-green-500/30 transition-all border border-white/10 group"
+          className="panel p-5 rounded-2xl flex items-center gap-4 hover:border-green-500/30 transition-all border border-white/10 group"
         >
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Calendar className="text-green-400" size={28} />
@@ -222,7 +222,7 @@ const AdminDashboard = () => {
 
         <Link
           to="/admin/users"
-          className="glass p-5 rounded-2xl flex items-center gap-4 hover:border-cyan-500/30 transition-all border border-white/10 group"
+          className="panel p-5 rounded-2xl flex items-center gap-4 hover:border-cyan-500/30 transition-all border border-white/10 group"
         >
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Users className="text-cyan-400" size={28} />
@@ -236,7 +236,7 @@ const AdminDashboard = () => {
 
         <Link
           to="/admin/settings"
-          className="glass p-5 rounded-2xl flex items-center gap-4 hover:border-purple-500/30 transition-all border border-white/10 group"
+          className="panel p-5 rounded-2xl flex items-center gap-4 hover:border-purple-500/30 transition-all border border-white/10 group"
         >
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Star className="text-purple-400" size={28} />
@@ -250,7 +250,7 @@ const AdminDashboard = () => {
 
         <Link
           to="/admin/transport"
-          className="glass p-5 rounded-2xl flex items-center gap-4 hover:border-yellow-500/30 transition-all border border-white/10 group"
+          className="panel p-5 rounded-2xl flex items-center gap-4 hover:border-yellow-500/30 transition-all border border-white/10 group"
         >
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Train className="text-yellow-400" size={28} />
@@ -264,7 +264,7 @@ const AdminDashboard = () => {
 
         <Link
           to="/admin/transport"
-          className="glass p-5 rounded-2xl flex items-center gap-4 hover:border-blue-500/30 transition-all border border-white/10 group"
+          className="panel p-5 rounded-2xl flex items-center gap-4 hover:border-blue-500/30 transition-all border border-white/10 group"
         >
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Ship className="text-blue-400" size={28} />
@@ -278,7 +278,7 @@ const AdminDashboard = () => {
 
         <Link
           to="/admin/scanner"
-          className="glass p-5 rounded-2xl flex items-center gap-4 hover:border-pink-500/30 transition-all border border-white/10 group"
+          className="panel p-5 rounded-2xl flex items-center gap-4 hover:border-pink-500/30 transition-all border border-white/10 group"
         >
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500/20 to-red-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Ticket className="text-pink-400" size={28} />
@@ -292,7 +292,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Revenue by Event */}
-      <div className="glass p-6 rounded-2xl">
+      <div className="panel p-6 rounded-2xl">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-unbounded font-semibold text-lg text-white">
             Top Événements par Revenus

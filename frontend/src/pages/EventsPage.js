@@ -24,10 +24,10 @@ import { absoluteUrl, slugify } from '../lib/seo';
 const API = API_BASE;
 
 const CATEGORIES = [
-  { id: 'cinema', label: 'Cinéma', icon: Film, color: '#FF0055' },
+  { id: 'cinema', label: 'Cinéma', icon: Film, color: '#FF375F' },
   { id: 'football', label: 'Football', icon: Trophy, color: '#D4AF37' },
-  { id: 'concerts', label: 'Concerts', icon: Music, color: '#7000FF' },
-  { id: 'conferences', label: 'Conférences', icon: Mic2, color: '#FF5C00' },
+  { id: 'concerts', label: 'Concerts', icon: Music, color: '#BF5AF2' },
+  { id: 'conferences', label: 'Conférences', icon: Mic2, color: '#FF9F0A' },
 ];
 
 const CATEGORY_LABELS = {
@@ -39,10 +39,10 @@ const CATEGORY_LABELS = {
 
 const getCategoryColor = (category) =>
   ({
-    cinema: '#FF0055',
+    cinema: '#FF375F',
     football: '#D4AF37',
-    concerts: '#7000FF',
-    conferences: '#FF5C00',
+    concerts: '#BF5AF2',
+    conferences: '#FF9F0A',
   }[category] || '#D4AF37');
 
 const getCategoryLabel = (category) => CATEGORY_LABELS[category] || 'Événement';

@@ -140,7 +140,7 @@ const SearchPage = () => {
                 className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm
                   ${dateFilter === filter.id 
                     ? 'bg-primary text-white neon-glow' 
-                    : 'glass text-gray-300 hover:text-white'}`}
+                    : 'panel text-gray-300 hover:text-white'}`}
                 data-testid={`filter-date-${filter.id}`}
               >
                 {filter.label}
@@ -157,7 +157,7 @@ const SearchPage = () => {
                 className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm
                   ${category === cat.id 
                     ? 'bg-accent-pink text-white neon-glow-pink' 
-                    : 'glass text-gray-300 hover:text-white'}`}
+                    : 'panel text-gray-300 hover:text-white'}`}
                 data-testid={`filter-category-${cat.id}`}
               >
                 {cat.label}
@@ -193,7 +193,7 @@ const SearchPage = () => {
             ))}
           </div>
         ) : events.length === 0 ? (
-          <div className="glass-card p-12 text-center">
+          <div className="panel-card p-12 text-center">
             <Search className="mx-auto text-gray-500 mb-4" size={48} />
             <h3 className="font-unbounded font-bold text-xl text-white mb-2">Aucun résultat</h3>
             <p className="text-gray-400 mb-4">

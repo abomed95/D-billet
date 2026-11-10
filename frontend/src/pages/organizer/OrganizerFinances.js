@@ -184,7 +184,7 @@ const OrganizerFinances = () => {
 
       {/* Finance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass p-5 rounded-xl">
+        <div className="panel p-5 rounded-xl">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
               <DollarSign className="text-green-400" size={20} />
@@ -194,7 +194,7 @@ const OrganizerFinances = () => {
           <p className="font-mono font-bold text-xl text-white">{formatPrice(finances.total_revenue)}</p>
         </div>
 
-        <div className="glass p-5 rounded-xl">
+        <div className="panel p-5 rounded-xl">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
               <span className="text-yellow-400 font-bold text-sm">8%</span>
@@ -204,7 +204,7 @@ const OrganizerFinances = () => {
           <p className="font-mono font-bold text-xl text-yellow-400">-{formatPrice(finances.commission)}</p>
         </div>
 
-        <div className="glass p-5 rounded-xl">
+        <div className="panel p-5 rounded-xl">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
               <ArrowUpRight className="text-cyan-400" size={20} />
@@ -214,7 +214,7 @@ const OrganizerFinances = () => {
           <p className="font-mono font-bold text-xl text-white">{formatPrice(finances.total_withdrawn)}</p>
         </div>
 
-        <div className="glass p-5 rounded-xl border-2 border-green-500/50">
+        <div className="panel p-5 rounded-xl border-2 border-green-500/50">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
               <Wallet className="text-green-400" size={20} />
@@ -231,7 +231,7 @@ const OrganizerFinances = () => {
       </div>
 
       {/* Withdrawal History */}
-      <div className="glass p-6 rounded-xl">
+      <div className="panel p-6 rounded-xl">
         <h3 className="font-unbounded font-semibold text-lg text-white mb-6">
           Historique des Retraits
         </h3>
@@ -268,7 +268,7 @@ const OrganizerFinances = () => {
       </div>
 
       {/* Info Box */}
-      <div className="glass p-4 rounded-xl border border-green-500/30">
+      <div className="panel p-4 rounded-xl border border-green-500/30">
         <h4 className="text-green-400 font-semibold mb-2">Informations sur les retraits</h4>
         <ul className="text-gray-400 text-sm space-y-1">
           <li>• Retrait minimum: <span className="text-white">1 000 DJF</span></li>

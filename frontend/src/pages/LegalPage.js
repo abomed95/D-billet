@@ -176,7 +176,7 @@ const LegalPage = () => {
           </div>
         </div>
 
-        <div className="glass rounded-[28px] p-6 md:p-8">
+        <div className="panel rounded-[28px] p-6 md:p-8">
           {(content?.content || '').split('\n').map((line, index) => renderLine(line, index))}
         </div>
 

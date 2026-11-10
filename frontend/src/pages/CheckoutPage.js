@@ -105,7 +105,7 @@ const CheckoutPage = () => {
           {step < 3 && (
             <button
               onClick={() => step > 1 ? setStep(1) : navigate('/cart')}
-              className="p-2 glass rounded-full"
+              className="p-2 panel rounded-full"
               data-testid="back-btn"
             >
               <ArrowLeft size={20} />
@@ -130,7 +130,7 @@ const CheckoutPage = () => {
                   onClick={() => method.available && setPaymentMethod(method.id)}
                   disabled={!method.available}
                   aria-disabled={!method.available}
-                  className={`glass p-5 rounded-xl flex items-center gap-4 transition-all border
+                  className={`panel p-5 rounded-xl flex items-center gap-4 transition-all border
                     ${!method.available
                       ? 'border-white/10 opacity-50 cursor-not-allowed'
                       : paymentMethod === method.id
@@ -171,7 +171,7 @@ const CheckoutPage = () => {
             </div>
 
             {/* Order Summary */}
-            <div className="glass p-6 rounded-xl">
+            <div className="panel p-6 rounded-xl">
               <h3 className="font-unbounded font-semibold text-white mb-4">Récapitulatif</h3>
               {cart.items.map((item) => (
                 <div key={item.event_id} className="flex justify-between py-2 border-b border-white/10">
@@ -186,7 +186,7 @@ const CheckoutPage = () => {
             </div>
 
             {paymentMethod === 'waafi' && (
-              <div className="glass p-5 rounded-xl space-y-2">
+              <div className="panel p-5 rounded-xl space-y-2">
                 <label htmlFor="waafi-phone" className="block text-sm font-semibold text-white">
                   Numéro Waafi à débiter
                 </label>
@@ -226,7 +226,7 @@ const CheckoutPage = () => {
 
         {/* Step 2: Processing */}
         {step === 2 && (
-          <div className="glass p-12 rounded-xl text-center animate-fade-in">
+          <div className="panel p-12 rounded-xl text-center animate-fade-in">
             <Loader2 className="w-16 h-16 mx-auto text-green-400 animate-spin mb-6" />
             <h2 className="font-unbounded font-bold text-2xl text-white mb-3">
               Confirmez sur votre téléphone
@@ -241,7 +241,7 @@ const CheckoutPage = () => {
         {/* Step 3: Success */}
         {step === 3 && result && (
           <div className="space-y-6 animate-fade-in">
-            <div className="glass p-12 rounded-xl text-center">
+            <div className="panel p-12 rounded-xl text-center">
               <div className="w-20 h-20 rounded-full bg-green-500/20 mx-auto mb-6 flex items-center justify-center">
                 <CheckCircle className="text-green-500" size={48} />
               </div>
@@ -251,7 +251,7 @@ const CheckoutPage = () => {
               <p className="text-gray-400 mb-6">
                 Vos billets ont été générés avec succès
               </p>
-              <div className="glass rounded-xl p-4 inline-block">
+              <div className="panel rounded-2xl p-4 inline-block">
                 <p className="text-sm text-gray-400">Montant payé</p>
                 <p className="font-mono font-bold text-2xl text-green-400">
                   {formatPrice(result.total)}
@@ -259,14 +259,14 @@ const CheckoutPage = () => {
               </div>
             </div>
 
-            <div className="glass p-6 rounded-xl">
+            <div className="panel p-6 rounded-xl">
               <h3 className="font-unbounded font-semibold text-white mb-4">Vos billets</h3>
               <div className="space-y-3">
                 {result.tickets.map((ticket, index) => (
                   <button
                     key={ticket.id}
                     onClick={() => navigate(`/ticket/${ticket.id}`)}
-                    className="w-full glass p-4 rounded-xl flex items-center justify-between hover:border-green-500/50 transition-colors border border-white/10"
+                    className="w-full panel p-4 rounded-xl flex items-center justify-between hover:border-green-500/50 transition-colors border border-white/10"
                     data-testid={`view-ticket-${index}`}
                   >
                     <div className="flex items-center gap-3">

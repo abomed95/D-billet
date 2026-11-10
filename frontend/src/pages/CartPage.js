@@ -32,7 +32,7 @@ const CartPage = () => {
   if (cart.items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
-        <div className="glass p-12 rounded-2xl text-center max-w-md">
+        <div className="panel p-12 rounded-2xl text-center max-w-md">
           <ShoppingBag className="mx-auto text-gray-500 mb-6" size={64} />
           <h2 className="font-unbounded font-bold text-2xl text-white mb-3">Panier vide</h2>
           <p className="text-gray-400 mb-6">
@@ -68,7 +68,7 @@ const CartPage = () => {
           {cart.items.map((item) => (
             <div
               key={item.event_id}
-              className="glass p-4 rounded-xl flex gap-4"
+              className="panel p-4 rounded-xl flex gap-4"
               data-testid={`cart-item-${item.event_id}`}
             >
               {/* Image */}
@@ -114,7 +114,7 @@ const CartPage = () => {
         </div>
 
         {/* Summary */}
-        <div className="glass p-6 rounded-xl">
+        <div className="panel p-6 rounded-xl">
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-400">Sous-total</span>
             <span className="text-white font-mono font-medium">{formatPrice(cart.total)}</span>

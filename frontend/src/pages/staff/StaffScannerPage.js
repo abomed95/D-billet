@@ -649,7 +649,7 @@ const StaffScannerPage = () => {
             {showManual ? (
               /* Manual Input */
               <form onSubmit={handleManualSubmit} className="space-y-4">
-                <div className="glass p-6 rounded-2xl">
+                <div className="panel p-6 rounded-2xl">
                   <p className="text-gray-400 text-sm mb-4">Entrez le code QR manuellement:</p>
                   <Input
                     value={manualCode}

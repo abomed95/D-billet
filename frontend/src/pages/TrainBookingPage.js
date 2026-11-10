@@ -216,7 +216,7 @@ const TrainBookingPage = () => {
         </div>
 
         {/* Date Selection */}
-        <div className="glass p-6 rounded-2xl mb-6">
+        <div className="panel p-6 rounded-2xl mb-6">
           <Label className="text-white mb-2 block">Sélectionnez votre date de voyage</Label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={20} />
@@ -281,7 +281,7 @@ const TrainBookingPage = () => {
               <div
                 key={index}
                 onClick={() => setSelectedTrip(trip)}
-                className={`glass p-5 rounded-xl cursor-pointer transition-all ${
+                className={`panel p-5 rounded-xl cursor-pointer transition-all ${
                   selectedTrip === trip 
                     ? 'border-2 border-train neon-glow' 
                     : 'border border-white/10 hover:border-train/50'
@@ -308,7 +308,7 @@ const TrainBookingPage = () => {
             ))}
           </div>
         ) : selectedDate && !tripInfo?.is_holiday ? (
-          <div className="text-center py-12 glass rounded-xl">
+          <div className="text-center py-12 panel rounded-2xl">
             <p className="text-gray-400">Aucun départ n'est disponible pour cette date.</p>
           </div>
         ) : null}
@@ -333,7 +333,7 @@ const TrainBookingPage = () => {
             </div>
 
             {passengers.map((passenger, index) => (
-              <div key={index} className="glass p-5 rounded-xl">
+              <div key={index} className="panel p-5 rounded-xl">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-white font-semibold">Voyageur {index + 1}</span>
                   {passengers.length > 1 && (
@@ -393,7 +393,7 @@ const TrainBookingPage = () => {
             ))}
 
             {/* Payment Method */}
-            <div className="glass p-5 rounded-xl">
+            <div className="panel p-5 rounded-xl">
               <div className="mb-5">
                 <Label className="text-gray-400 mb-2 block">Code promo (optionnel)</Label>
                 <div className="flex flex-col md:flex-row gap-3">
@@ -481,7 +481,7 @@ const TrainBookingPage = () => {
             </div>
 
             {/* Total & Book Button */}
-            <div className="glass p-5 rounded-xl">
+            <div className="panel p-5 rounded-xl">
               <div className="space-y-2 mb-4">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Sous-total ({passengers.length} voyageur{passengers.length > 1 ? 's' : ''})</span>
@@ -521,7 +521,7 @@ const TrainBookingPage = () => {
         )}
 
         {/* Info Box */}
-        <div className="mt-8 glass p-5 rounded-xl border border-train/30">
+        <div className="mt-8 panel p-5 rounded-xl border border-train/30">
           <h3 className="text-train font-semibold mb-3">Avant votre départ</h3>
           <ul className="text-gray-400 text-sm space-y-2">
             <li>• <strong className="text-white">Jours pairs :</strong> départs de Nagad vers l'Est (Holl-Holl, Ali-Sabieh, Dire-Dawa)</li>
@@ -532,7 +532,7 @@ const TrainBookingPage = () => {
         </div>
 
         <section className="mt-8 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
-          <div className="glass p-6 rounded-2xl">
+          <div className="panel p-6 rounded-2xl">
             <h2 className="font-unbounded text-2xl text-white mb-4">Voyagez en train avec D-BILLET</h2>
             <div className="space-y-4 text-gray-300 leading-7">
               <p>
@@ -548,7 +548,7 @@ const TrainBookingPage = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
-            <div className="glass p-5 rounded-2xl">
+            <div className="panel p-5 rounded-2xl">
               <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">SERVICE</p>
               <h3 className="font-unbounded text-white text-lg mb-2">Direction du service</h3>
               <p className="text-gray-400 text-sm leading-6">
@@ -556,7 +556,7 @@ const TrainBookingPage = () => {
                 un départ et une arrivée faciles à identifier.
               </p>
             </div>
-            <div className="glass p-5 rounded-2xl">
+            <div className="panel p-5 rounded-2xl">
               <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">RÉSERVATION</p>
               <h3 className="font-unbounded text-white text-lg mb-2">Billet immédiat</h3>
               <p className="text-gray-400 text-sm leading-6">
@@ -564,7 +564,7 @@ const TrainBookingPage = () => {
                 numérique avec QR code après confirmation.
               </p>
             </div>
-            <div className="glass p-5 rounded-2xl">
+            <div className="panel p-5 rounded-2xl">
               <p className="text-xs uppercase tracking-[0.18em] text-train mb-2">EMBARQUEMENT</p>
               <h3 className="font-unbounded text-white text-lg mb-2">Contrôle rapide</h3>
               <p className="text-gray-400 text-sm leading-6">

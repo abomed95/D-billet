@@ -608,7 +608,7 @@ const TransportOrganizerDashboard = () => {
         </div>
 
         {credentialsNotice && (
-          <div className="glass p-4 rounded-xl border border-green-500/30 bg-green-500/10">
+          <div className="panel p-4 rounded-xl border border-green-500/30 bg-green-500/10">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <p className="text-green-400 font-semibold flex items-center gap-2">
@@ -640,7 +640,7 @@ const TransportOrganizerDashboard = () => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-          <div className="glass p-5 rounded-xl">
+          <div className="panel p-5 rounded-xl">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-400 text-sm">Aujourd hui</span>
               <Users className="text-ferry" size={20} />
@@ -654,7 +654,7 @@ const TransportOrganizerDashboard = () => {
             )}
           </div>
 
-          <div className="glass p-5 rounded-xl">
+          <div className="panel p-5 rounded-xl">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-400 text-sm">Cette semaine</span>
               <Calendar className="text-green-400" size={20} />
@@ -667,7 +667,7 @@ const TransportOrganizerDashboard = () => {
             <p className="text-gray-500 text-sm">passagers</p>
           </div>
 
-          <div className="glass p-5 rounded-xl">
+          <div className="panel p-5 rounded-xl">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-400 text-sm">Revenu total</span>
               <DollarSign className="text-gold" size={20} />
@@ -676,7 +676,7 @@ const TransportOrganizerDashboard = () => {
             <p className="text-gray-500 text-sm">FDJ</p>
           </div>
 
-          <div className="glass p-5 rounded-xl">
+          <div className="panel p-5 rounded-xl">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-400 text-sm">Revenu net</span>
               <TrendingUp className="text-green-400" size={20} />
@@ -689,7 +689,7 @@ const TransportOrganizerDashboard = () => {
             </p>
           </div>
 
-          <div className="glass p-5 rounded-xl">
+          <div className="panel p-5 rounded-xl">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-400 text-sm">Codes promo</span>
               <TicketPercent className="text-cyan-400" size={20} />
@@ -718,7 +718,7 @@ const TransportOrganizerDashboard = () => {
           ))}
         </div>
 
-        <div className="glass p-6 rounded-xl">
+        <div className="panel p-6 rounded-xl">
           {activeTab === 'overview' && (
             <div className="space-y-8">
               <div>
@@ -1569,7 +1569,7 @@ const TransportOrganizerDashboard = () => {
         </div>
 
         {transportType === 'ferry' && dashboardData.revenue.vehicle_revenue > 0 && (
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <h3 className="text-lg font-semibold text-white mb-4">Repartition des revenus</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-white/5 rounded-lg">

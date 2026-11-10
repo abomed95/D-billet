@@ -196,13 +196,13 @@ const OrganizerEvents = () => {
       {/* Events List */}
       <div className="space-y-4">
         {events.length === 0 ? (
-          <div className="glass p-12 rounded-xl text-center">
+          <div className="panel p-12 rounded-xl text-center">
             <Calendar className="mx-auto text-gray-500 mb-4" size={48} />
             <p className="text-gray-400">Aucun événement. Créez votre premier!</p>
           </div>
         ) : (
           events.map(event => (
-            <div key={event.id} className="glass p-4 rounded-xl">
+            <div key={event.id} className="panel p-4 rounded-xl">
               <div className="flex gap-4">
                 <img
                   src={event.image_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=200'}
@@ -390,7 +390,7 @@ const OrganizerEvents = () => {
 
               <div className="space-y-4">
                 {formData.ticket_types.map((tt, index) => (
-                  <div key={index} className="glass p-4 rounded-xl">
+                  <div key={index} className="panel p-4 rounded-xl">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-white font-medium">Type {index + 1}</span>
                       {formData.ticket_types.length > 1 && (

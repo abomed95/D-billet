@@ -127,7 +127,7 @@ const TicketViewPage = () => {
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 glass rounded-full"
+            className="p-2 panel rounded-full"
             data-testid="back-btn"
           >
             <ArrowLeft size={20} />
@@ -136,7 +136,7 @@ const TicketViewPage = () => {
           <div className="flex gap-2">
             <button
               onClick={shareNative}
-              className="p-2 glass rounded-full hover:bg-white/10"
+              className="p-2 panel rounded-full hover:bg-white/10"
               title="Partager"
             >
               <Share2 size={20} className="text-gray-400" />

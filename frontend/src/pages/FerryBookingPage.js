@@ -335,7 +335,7 @@ const FerryBookingPage = () => {
         </div>
 
         {/* Price Info Banner */}
-        <div className="glass p-4 rounded-xl mb-6 border border-ferry/30">
+        <div className="panel p-4 rounded-xl mb-6 border border-ferry/30">
           <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <User size={16} className="text-ferry" />
@@ -349,7 +349,7 @@ const FerryBookingPage = () => {
         </div>
 
         {/* Date Selection */}
-        <div className="glass p-6 rounded-2xl mb-6">
+        <div className="panel p-6 rounded-2xl mb-6">
           <Label className="text-white mb-2 block">Choisissez votre date de traversée</Label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gold" size={20} />
@@ -431,7 +431,7 @@ const FerryBookingPage = () => {
               <div
                 key={index}
                 onClick={() => setSelectedTrip(trip)}
-                className={`glass p-5 rounded-xl cursor-pointer transition-all ${
+                className={`panel p-5 rounded-xl cursor-pointer transition-all ${
                   selectedTrip === trip 
                     ? 'border-2 border-ferry neon-glow-green' 
                     : 'border border-white/10 hover:border-ferry/50'
@@ -462,7 +462,7 @@ const FerryBookingPage = () => {
             ))}
           </div>
         ) : selectedDate && tripInfo?.has_service ? (
-          <div className="text-center py-12 glass rounded-xl">
+          <div className="text-center py-12 panel rounded-2xl">
             <p className="text-gray-400">Aucune traversée n'est disponible pour cette date.</p>
           </div>
         ) : null}
@@ -472,7 +472,7 @@ const FerryBookingPage = () => {
           <div className="space-y-6">
             {/* Guest Checkout Option */}
             {!user && (
-              <div className="glass p-5 rounded-xl border border-yellow-500/30 bg-yellow-500/10">
+              <div className="panel p-5 rounded-xl border border-yellow-500/30 bg-yellow-500/10">
                 <div className="flex items-start gap-3">
                   <Info className="text-yellow-400 mt-1" size={20} />
                   <div className="flex-1">
@@ -543,7 +543,7 @@ const FerryBookingPage = () => {
             </div>
 
             {passengers.map((passenger, index) => (
-              <div key={index} className="glass p-5 rounded-xl">
+              <div key={index} className="panel p-5 rounded-xl">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-white font-semibold">Voyageur {index + 1}</span>
                   {passengers.length > 1 && (
@@ -634,14 +634,14 @@ const FerryBookingPage = () => {
             </div>
 
             {vehicles.length === 0 ? (
-              <div className="glass p-4 rounded-xl text-center text-gray-400">
+              <div className="panel p-4 rounded-xl text-center text-gray-400">
                 <Car size={32} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Aucun véhicule ajouté</p>
                 <p className="text-xs text-gray-500">Ajoutez un véhicule uniquement si vous voyagez avec un véhicule à bord.</p>
               </div>
             ) : (
               vehicles.map((vehicle, index) => (
-                <div key={index} className="glass p-5 rounded-xl">
+                <div key={index} className="panel p-5 rounded-xl">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-white font-semibold">Véhicule {index + 1}</span>
                     <Button
@@ -685,7 +685,7 @@ const FerryBookingPage = () => {
             )}
 
             {/* Payment Method */}
-            <div className="glass p-5 rounded-xl">
+            <div className="panel p-5 rounded-xl">
               <div className="mb-5">
                 <Label className="text-gray-400 mb-2 block">Code promo (optionnel)</Label>
                 <div className="flex flex-col md:flex-row gap-3">
@@ -770,7 +770,7 @@ const FerryBookingPage = () => {
             </div>
 
             {/* Total & Book */}
-            <div className="glass p-5 rounded-xl">
+            <div className="panel p-5 rounded-xl">
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-gray-400">
                   <span>Voyageurs ({passengers.filter(p => !p.age || p.age >= childFreeAge).length} adultes)</span>
@@ -822,7 +822,7 @@ const FerryBookingPage = () => {
         )}
 
         {/* Weekly Schedule */}
-        <div className="mt-8 glass p-6 rounded-2xl border border-ferry/30">
+        <div className="mt-8 panel p-6 rounded-2xl border border-ferry/30">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-ferry/20 flex items-center justify-center">
               <Calendar className="text-ferry" size={20} />
@@ -902,7 +902,7 @@ const FerryBookingPage = () => {
         </div>
 
         <section className="mt-8 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
-          <div className="glass p-6 rounded-2xl">
+          <div className="panel p-6 rounded-2xl">
             <h2 className="font-unbounded text-2xl text-white mb-4">Voyagez en ferry avec D-BILLET</h2>
             <div className="space-y-4 text-gray-300 leading-7">
               <p>
@@ -918,7 +918,7 @@ const FerryBookingPage = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4">
-            <div className="glass p-5 rounded-2xl">
+            <div className="panel p-5 rounded-2xl">
               <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">DESTINATIONS</p>
               <h3 className="font-unbounded text-white text-lg mb-2">Rotations hebdomadaires</h3>
               <p className="text-gray-400 text-sm leading-6">
@@ -926,7 +926,7 @@ const FerryBookingPage = () => {
                 disponibles selon la destination choisie.
               </p>
             </div>
-            <div className="glass p-5 rounded-2xl">
+            <div className="panel p-5 rounded-2xl">
               <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">RÉSERVATION</p>
               <h3 className="font-unbounded text-white text-lg mb-2">Passagers et véhicules</h3>
               <p className="text-gray-400 text-sm leading-6">
@@ -934,7 +934,7 @@ const FerryBookingPage = () => {
                 utiles au contrôle avant l'embarquement.
               </p>
             </div>
-            <div className="glass p-5 rounded-2xl">
+            <div className="panel p-5 rounded-2xl">
               <p className="text-xs uppercase tracking-[0.18em] text-ferry mb-2">EMBARQUEMENT</p>
               <h3 className="font-unbounded text-white text-lg mb-2">Arrivée à l'escale</h3>
               <p className="text-gray-400 text-sm leading-6">

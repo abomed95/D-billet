@@ -133,7 +133,7 @@ const AdminUsers = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="glass">
+        <TabsList className="panel">
           <TabsTrigger value="all" className="data-[state=active]:bg-green-500 data-[state=active]:text-black">
             Tous
           </TabsTrigger>
@@ -162,23 +162,23 @@ const AdminUsers = () => {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <p className="text-gray-400 text-sm">Total Utilisateurs</p>
           <p className="font-mono font-bold text-xl text-white">{users.length}</p>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <p className="text-gray-400 text-sm">Organisateurs</p>
           <p className="font-mono font-bold text-xl text-purple-400">
             {users.filter(u => u.role === 'organizer').length}
           </p>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <p className="text-gray-400 text-sm">Clients</p>
           <p className="font-mono font-bold text-xl text-cyan-400">
             {users.filter(u => u.role === 'user').length}
           </p>
         </div>
-        <div className="glass p-4 rounded-xl">
+        <div className="panel p-4 rounded-xl">
           <p className="text-gray-400 text-sm">Achats Totaux</p>
           <p className="font-mono font-bold text-xl text-green-400">
             {formatPrice(users.reduce((sum, u) => sum + (u.total_spent || 0), 0))}
@@ -194,7 +194,7 @@ const AdminUsers = () => {
           ))}
         </div>
       ) : filteredUsers.length === 0 ? (
-        <div className="glass p-12 rounded-xl text-center">
+        <div className="panel p-12 rounded-xl text-center">
           <Users className="mx-auto text-gray-500 mb-4" size={48} />
           <p className="text-gray-400">Aucun utilisateur trouvé</p>
         </div>
@@ -204,7 +204,7 @@ const AdminUsers = () => {
             <div
               key={user.id}
               onClick={() => handleUserClick(user)}
-              className="glass p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:border-white/20 transition-all"
+              className="panel p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:border-white/20 transition-all"
               data-testid={`user-row-${user.id}`}
             >
               <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
@@ -287,7 +287,7 @@ const AdminUsers = () => {
           ) : userDetail && (
             <div className="space-y-6 mt-4">
               {/* User Info */}
-              <div className="glass p-4 rounded-xl space-y-3">
+              <div className="panel p-4 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Rôle</span>
                   {getRoleBadge(userDetail.role)}
@@ -346,7 +346,7 @@ const AdminUsers = () => {
                   </h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {userDetail.purchase_history.map((ticket) => (
-                      <div key={ticket.id} className="glass p-3 rounded-lg flex items-center justify-between">
+                      <div key={ticket.id} className="panel p-3 rounded-lg flex items-center justify-between">
                         <div>
                           <p className="text-white text-sm">{ticket.event_title}</p>
                           <p className="text-gray-500 text-xs">{ticket.event_date} • {ticket.ticket_type}</p>
@@ -372,7 +372,7 @@ const AdminUsers = () => {
                   </h4>
                   <div className="space-y-2">
                     {userDetail.events.map((event) => (
-                      <div key={event.id} className="glass p-3 rounded-lg flex items-center justify-between">
+                      <div key={event.id} className="panel p-3 rounded-lg flex items-center justify-between">
                         <div>
                           <p className="text-white text-sm">{event.title}</p>
                           <p className="text-gray-500 text-xs">{event.date} • {event.venue}</p>

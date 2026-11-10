@@ -30,10 +30,10 @@ import { absoluteUrl, slugify } from '../lib/seo';
 const API = API_BASE;
 
 const CATEGORY_COLORS = {
-  cinema: '#FF0055',
-  football: '#00FF94',
-  concerts: '#7000FF',
-  conferences: '#FF5C00',
+  cinema: '#FF375F',
+  football: '#30D158',
+  concerts: '#BF5AF2',
+  conferences: '#FF9F0A',
 };
 
 const CATEGORY_LABELS = {
@@ -211,7 +211,7 @@ const EventDetailPage = () => {
 
   if (!event) return null;
 
-  const categoryColor = CATEGORY_COLORS[event.category] || '#7000FF';
+  const categoryColor = CATEGORY_COLORS[event.category] || '#BF5AF2';
   const categoryLabel = CATEGORY_LABELS[event.category] || 'Événement';
   const eventDateTime = event.time ? `${event.date}T${event.time}` : event.date;
 
@@ -272,7 +272,7 @@ const EventDetailPage = () => {
 
         <button
           onClick={() => navigate(-1)}
-          className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full glass"
+          className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full panel"
           data-testid="back-btn"
         >
           <ArrowLeft size={20} />
@@ -294,7 +294,7 @@ const EventDetailPage = () => {
       </div>
 
       <div className="relative z-10 mx-auto -mt-20 max-w-4xl px-4">
-        <div className="glass space-y-6 rounded-2xl p-6 md:p-8">
+        <div className="panel space-y-6 rounded-2xl p-6 md:p-8">
           <div>
             <h1 className="mb-2 font-unbounded text-2xl font-bold text-white md:text-3xl" data-testid="event-title">
               {event.title}
@@ -309,17 +309,17 @@ const EventDetailPage = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="glass rounded-xl p-4">
+            <div className="panel rounded-2xl p-4">
               <Calendar className="mb-2 text-green-400" size={20} />
               <p className="text-xs text-gray-400">Date</p>
               <p className="font-medium text-white">{formatDate(event.date)}</p>
             </div>
-            <div className="glass rounded-xl p-4">
+            <div className="panel rounded-2xl p-4">
               <Clock className="mb-2 text-green-400" size={20} />
               <p className="text-xs text-gray-400">Heure</p>
               <p className="font-medium text-white">{event.time}</p>
             </div>
-            <div className="glass rounded-xl p-4">
+            <div className="panel rounded-2xl p-4">
               <MapPin className="mb-2 text-green-400" size={20} />
               <p className="text-xs text-gray-400">Lieu</p>
               <p className="font-medium text-white">{event.venue}</p>
@@ -345,7 +345,7 @@ const EventDetailPage = () => {
                     key={ticketType.id}
                     onClick={() => !isSoldOut && setSelectedTicketType(ticketType)}
                     disabled={isSoldOut}
-                    className={`glass rounded-xl p-4 text-left transition-all ${
+                    className={`panel rounded-2xl p-4 text-left transition-all ${
                       isSelected
                         ? 'border-2 border-green-500 bg-green-500/10'
                         : isSoldOut
@@ -397,7 +397,7 @@ const EventDetailPage = () => {
             </div>
           </div>
 
-          <div className="glass rounded-xl p-4">
+          <div className="panel rounded-2xl p-4">
             <label className="mb-2 flex items-center gap-2 text-sm text-gray-400">
               <Tag size={16} />
               Code avantage (optionnel)
@@ -434,7 +434,7 @@ const EventDetailPage = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="flex h-10 w-10 items-center justify-center rounded-full glass hover:bg-white/10"
+                className="flex h-10 w-10 items-center justify-center rounded-full panel hover:bg-white/10"
                 disabled={quantity <= 1}
                 data-testid="decrease-qty"
               >
@@ -453,7 +453,7 @@ const EventDetailPage = () => {
                     )
                   )
                 }
-                className="flex h-10 w-10 items-center justify-center rounded-full glass hover:bg-white/10"
+                className="flex h-10 w-10 items-center justify-center rounded-full panel hover:bg-white/10"
                 data-testid="increase-qty"
               >
                 <Plus size={18} />

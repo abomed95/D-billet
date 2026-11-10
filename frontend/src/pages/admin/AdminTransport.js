@@ -352,7 +352,7 @@ const AdminTransport = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="glass">
+        <TabsList className="panel">
           <TabsTrigger value="train" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black gap-2">
             <Train size={18} />
             Train
@@ -370,7 +370,7 @@ const AdminTransport = () => {
         {/* Train Settings */}
         <TabsContent value="train" className="space-y-6 mt-6">
           {/* Status Card */}
-          <div className={`glass p-6 rounded-xl border-2 ${settings.train.active ? 'border-green-500/30' : 'border-red-500/30'}`}>
+          <div className={`panel p-6 rounded-xl border-2 ${settings.train.active ? 'border-green-500/30' : 'border-red-500/30'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${settings.train.active ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
@@ -394,7 +394,7 @@ const AdminTransport = () => {
           </div>
 
           {/* Train Schedule Info */}
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <h3 className="font-semibold text-lg text-white mb-4 flex items-center gap-2">
               <Clock className="text-yellow-400" size={20} />
               Horaires & Planning
@@ -435,7 +435,7 @@ const AdminTransport = () => {
           </div>
 
           {/* Train Routes */}
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-lg text-white flex items-center gap-2">
                 <MapPin className="text-yellow-400" size={20} />
@@ -501,7 +501,7 @@ const AdminTransport = () => {
         {/* Ferry Settings */}
         <TabsContent value="ferry" className="space-y-6 mt-6">
           {/* Status Card */}
-          <div className={`glass p-6 rounded-xl border-2 ${settings.ferry.active ? 'border-green-500/30' : 'border-red-500/30'}`}>
+          <div className={`panel p-6 rounded-xl border-2 ${settings.ferry.active ? 'border-green-500/30' : 'border-red-500/30'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${settings.ferry.active ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
@@ -525,7 +525,7 @@ const AdminTransport = () => {
           </div>
 
           {/* Ferry Schedule */}
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <h3 className="font-semibold text-lg text-white mb-4 flex items-center gap-2">
               <Clock className="text-blue-400" size={20} />
               Horaires
@@ -579,7 +579,7 @@ const AdminTransport = () => {
           </div>
 
           {/* Ferry Weekly Schedule - Editable */}
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-lg text-white flex items-center gap-2">
                 <Calendar className="text-blue-400" size={20} />
@@ -685,7 +685,7 @@ const AdminTransport = () => {
           </div>
 
           {/* Ferry Routes */}
-          <div className="glass p-6 rounded-xl">
+          <div className="panel p-6 rounded-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-lg text-white flex items-center gap-2">
                 <MapPin className="text-blue-400" size={20} />
@@ -770,22 +770,22 @@ const AdminTransport = () => {
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="glass p-4 rounded-xl text-center">
+            <div className="panel p-4 rounded-xl text-center">
               <p className="text-3xl font-bold text-white">{transportStaff.length}</p>
               <p className="text-gray-400 text-sm">Total Agents</p>
             </div>
-            <div className="glass p-4 rounded-xl text-center">
+            <div className="panel p-4 rounded-xl text-center">
               <p className="text-3xl font-bold text-green-400">{transportStaff.filter(s => s.active).length}</p>
               <p className="text-gray-400 text-sm">Actifs</p>
             </div>
-            <div className="glass p-4 rounded-xl text-center">
+            <div className="panel p-4 rounded-xl text-center">
               <p className="text-3xl font-bold text-red-400">{transportStaff.filter(s => !s.active).length}</p>
               <p className="text-gray-400 text-sm">Inactifs</p>
             </div>
           </div>
 
           {/* Staff List */}
-          <div className="glass rounded-xl overflow-hidden">
+          <div className="panel rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-white/10">
               <h3 className="font-semibold text-white">Liste des agents</h3>
             </div>
