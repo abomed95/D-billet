@@ -112,7 +112,10 @@ GCP), `docs/`. **Ne pas deplacer cette arborescence** sans accord explicite.
   `frontend/src/index.css` (`--background`, `--card`, `--primary`...). **Aucune
   police web** : toutes les familles Tailwind pointent vers la pile systeme
   (`--font-sans`, `--font-display`, `--font-mono`). Conteneurs a reutiliser :
-  `.container-page` (largeur de page), `.surface` (carte), `.surface-inset`.
+  `.container-page` (largeur de page), `.panel` (carte opaque, rayon libre),
+  `.surface` (carte arrondie), `.surface-inset`. `.glass` (flou d'arriere-plan)
+  est reserve aux barres et aux calques : le flou coute cher sur les
+  telephones d'entree de gamme, ne pas l'utiliser pour des cartes.
 - Le service worker (`frontend/public/service-worker.js`) est ecrit a la main :
   incrementer `CACHE_VERSION` a chaque changement de strategie.
 

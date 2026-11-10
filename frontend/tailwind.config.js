@@ -71,12 +71,12 @@ module.exports = {
                     900: '#312804',
                 },
                 // Category colors
-                cinema: '#FF0055',
+                cinema: '#FF375F',
                 football: '#D4AF37',
-                ferry: '#00F0FF',
-                train: '#FFD600',
-                concerts: '#7000FF',
-                conferences: '#FF5C00',
+                ferry: '#64D2FF',
+                train: '#FFD60A',
+                concerts: '#BF5AF2',
+                conferences: '#FF9F0A',
             },
             keyframes: {
                 'accordion-down': {
