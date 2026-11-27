@@ -26,6 +26,7 @@ from routes.transport_organizer import router as transport_organizer_router
 from config import (
     AUTO_SEED_DEMO_DATA,
     BACKEND_CORS_ORIGINS,
+    CANONICAL_HOST,
     CONTENT_SECURITY_POLICY,
     ENABLE_GZIP,
     FRONTEND_BUILD_DIR,
@@ -36,6 +37,7 @@ from config import (
     IS_PRODUCTION,
 )
 from services import seed_demo_data, ensure_indexes
+from canonical import CanonicalHostMiddleware
 from compression import SelectiveGZipMiddleware
 from spa import CachedStaticFiles, mount_spa
 
@@ -171,6 +173,13 @@ async def add_process_time_header(request: Request, call_next):
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = str(round(process_time * 1000, 2)) + "ms"
     return response
+
+
+# Canonical host redirect (`www.` -> bare domain). Added last, which makes it
+# the OUTERMOST middleware: a `www.` request is answered before anything else
+# runs. Off when CANONICAL_HOST is empty.
+if CANONICAL_HOST:
+    app.add_middleware(CanonicalHostMiddleware, canonical_host=CANONICAL_HOST)
 
 
 # Global error handler - never leak internals in production
