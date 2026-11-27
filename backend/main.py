@@ -2,6 +2,7 @@
 D-Billet API - Billetterie Djibouti
 Main application entry point with full OpenAPI documentation
 """
+import asyncio
 import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -26,6 +27,7 @@ from routes.transport_organizer import router as transport_organizer_router
 from config import (
     AUTO_SEED_DEMO_DATA,
     BACKEND_CORS_ORIGINS,
+    CANONICAL_HOST,
     CONTENT_SECURITY_POLICY,
     ENABLE_GZIP,
     FRONTEND_BUILD_DIR,
@@ -35,7 +37,8 @@ from config import (
     UPLOAD_DIR,
     IS_PRODUCTION,
 )
-from services import seed_demo_data, ensure_indexes
+from services import seed_demo_data, ensure_indexes_in_background
+from canonical import CanonicalHostMiddleware
 from compression import SelectiveGZipMiddleware
 from spa import CachedStaticFiles, mount_spa
 
@@ -173,6 +176,13 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
+# Canonical host redirect (`www.` -> bare domain). Added last, which makes it
+# the OUTERMOST middleware: a `www.` request is answered before anything else
+# runs. Off when CANONICAL_HOST is empty.
+if CANONICAL_HOST:
+    app.add_middleware(CanonicalHostMiddleware, canonical_host=CANONICAL_HOST)
+
+
 # Global error handler - never leak internals in production
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -219,17 +229,14 @@ app.include_router(setup_router, prefix="/api")
 app.include_router(payments_router, prefix="/api")
 
 
-@app.on_event("startup")
-async def on_startup():
-    """
-    Bootstrap routine:
-    - Create MongoDB indexes (idempotent, no-op on local-json backend).
-    - Seed demo accounts only in development/test environments.
-    """
-    try:
-        await ensure_indexes()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Could not ensure MongoDB indexes: %s", exc)
+# Background bootstrap task, kept referenced so it is not garbage-collected
+# mid-run and can be cancelled on shutdown.
+_bootstrap_task: asyncio.Task | None = None
+
+
+async def _bootstrap() -> None:
+    """Create indexes, then seed demo data (development only)."""
+    await ensure_indexes_in_background()
 
     if AUTO_SEED_DEMO_DATA:
         try:
@@ -242,9 +249,33 @@ async def on_startup():
             )
 
 
+@app.on_event("startup")
+async def on_startup():
+    """
+    Start the bootstrap routine without waiting for it.
+
+    Awaiting it here held the server closed until MongoDB answered: with the
+    database unreachable that took minutes, long enough for Cloud Run to
+    answer 5xx while the instance was still starting.
+    """
+    global _bootstrap_task
+    _bootstrap_task = asyncio.create_task(_bootstrap())
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    if _bootstrap_task and not _bootstrap_task.done():
+        _bootstrap_task.cancel()
+
+
 # ============== ROOT ENDPOINTS ==============
 
-@app.get("/", tags=["Health"], include_in_schema=not SERVE_FRONTEND)
+@app.api_route(
+    "/",
+    methods=["GET", "HEAD"],
+    tags=["Health"],
+    include_in_schema=not SERVE_FRONTEND,
+)
 async def root():
     """API root. Serves the React shell when this container hosts the frontend."""
     if SERVE_FRONTEND:
@@ -264,10 +295,13 @@ async def root():
     }
 
 
-@app.get("/health", tags=["Health"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["Health"])
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "D-Billet API", "version": "2.1.0"}
+    """Health check endpoint. Kept out of search results via X-Robots-Tag."""
+    return JSONResponse(
+        {"status": "healthy", "service": "D-Billet API", "version": "2.1.0"},
+        headers={"X-Robots-Tag": "noindex"},
+    )
 
 
 @app.get("/api", tags=["Health"])

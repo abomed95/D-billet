@@ -129,6 +129,13 @@ SERVE_FRONTEND = _env_flag(
     (FRONTEND_BUILD_DIR / "index.html").is_file(),
 )
 
+# ============== Canonical host ==============
+# Bare domain the site is published under, e.g. `d-billet.com`. When set,
+# requests for `www.<CANONICAL_HOST>` are permanently redirected to it, so
+# search engines index one copy of each page. Empty disables the redirect
+# (development, `*.run.app` previews). Nginx handles this on the Droplet.
+CANONICAL_HOST = os.environ.get("CANONICAL_HOST", "").strip().lower()
+
 # ============== Response compression ==============
 # Nginx compresses on the Droplet, so this can be turned off there
 # (ENABLE_GZIP=false). On Cloud Run nothing else compresses, so it defaults on.

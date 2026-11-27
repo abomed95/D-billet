@@ -283,6 +283,26 @@ Ce rebuild fige aussi les vraies donnees de pre-rendu SEO : au tout premier
 build l'API n'existait pas encore, `generate-prerender-data.js` est donc
 tombe sur ses valeurs par defaut.
 
+### Une seule adresse par page : `www` et barre oblique finale
+
+Les deux mappings servent le meme conteneur, et Cloud Run ne sait pas
+rediriger un domaine vers un autre. C'est donc l'application qui le fait :
+
+- `CANONICAL_HOST=d-billet.com` (pose par le script) : toute requete sur
+  `www.d-billet.com` recoit une redirection permanente vers `d-billet.com`,
+  chemin et parametres conserves (301 en GET/HEAD, 308 sinon pour garder le
+  corps d'un POST). L'URL `*.run.app` n'est pas redirigee.
+- `/terms/` redirige en 301 vers `/terms`, la forme du sitemap et des balises
+  canoniques. Les chemins `/api/` ne sont pas concernes.
+
+Sans ces deux regles, chaque page existe en quatre exemplaires pour Google
+(`www` ou non, barre finale ou non). Verification apres deploiement :
+
+```bash
+curl -sI https://www.d-billet.com/terms/ | grep -i '^location'
+# location: https://d-billet.com/terms/   (puis /terms au saut suivant)
+```
+
 ---
 
 ## Phase 6 - Cloud Armor (rate-limiting)
