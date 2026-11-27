@@ -280,8 +280,11 @@ async def root():
 
 @app.api_route("/health", methods=["GET", "HEAD"], tags=["Health"])
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "D-Billet API", "version": "2.1.0"}
+    """Health check endpoint. Kept out of search results via X-Robots-Tag."""
+    return JSONResponse(
+        {"status": "healthy", "service": "D-Billet API", "version": "2.1.0"},
+        headers={"X-Robots-Tag": "noindex"},
+    )
 
 
 @app.get("/api", tags=["Health"])
