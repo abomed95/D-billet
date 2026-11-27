@@ -255,11 +255,6 @@ const HomePage = () => {
           url: absoluteUrl('/'),
           inLanguage: 'fr-DJ',
           publisher: { '@id': absoluteUrl('/#organization') },
-          potentialAction: {
-            '@type': 'SearchAction',
-            target: { '@type': 'EntryPoint', urlTemplate: absoluteUrl('/events?q={search_term_string}') },
-            'query-input': 'required name=search_term_string',
-          },
         },
         {
           '@type': 'WebPage',
