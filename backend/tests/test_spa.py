@@ -64,3 +64,24 @@ def test_api_paths_never_fall_back_to_html(client, method):
 
 def test_path_traversal_is_rejected(client):
     assert client.get("/..%2f..%2fetc/passwd").status_code == 404
+
+
+@pytest.mark.parametrize("path, location", [
+    ("/terms/", "/terms"),
+    ("/legal/support/", "/legal/support"),
+    ("/events/?q=concert", "/events?q=concert"),
+    ("/ferry//", "/ferry"),
+    # An encoded leading slash decodes to `//evil.example/`: the redirect
+    # must stay a local path, never become an off-site URL.
+    ("/%2Fevil.example/", "/evil.example"),
+])
+@pytest.mark.parametrize("method", ["get", "head"])
+def test_trailing_slash_redirects_to_canonical_path(client, path, location, method):
+    response = getattr(client, method)(path, follow_redirects=False)
+    assert response.status_code == 301
+    assert response.headers["location"] == location
+
+
+def test_api_paths_keep_their_trailing_slash(client):
+    response = client.get("/api/events/", follow_redirects=False)
+    assert response.status_code == 404

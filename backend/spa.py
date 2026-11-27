@@ -6,6 +6,7 @@ On Cloud Run there is no Nginx: the same container serves both, so the React
 build is mounted here, behind the API routes.
 
 Route resolution order (first match wins):
+  0. a trailing slash          -> 301 to the same path without it
   1. an existing file          -> `/favicon.ico`, `/asset-manifest.json`...
   2. `<path>/index.html`       -> pages pre-rendered by react-snap
   3. `index.html`              -> client-side routing fallback
@@ -14,8 +15,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 # Hashed CRA bundles (`/static/js/main.<hash>.js`) can be cached forever.
@@ -96,11 +97,21 @@ def mount_spa(app: FastAPI, build_dir: Path) -> None:
     @app.api_route(
         "/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False
     )
-    async def serve_spa(full_path: str):  # noqa: ANN202
+    async def serve_spa(full_path: str, request: Request):  # noqa: ANN202
         # API paths never fall through to the SPA: a missing endpoint must
         # stay a JSON 404 instead of returning the HTML shell.
         if full_path.startswith(("api/", "uploads/")):
             raise HTTPException(status_code=404, detail="Not Found")
+
+        # `/terms/` and `/terms` serve the same page: redirect to the form the
+        # sitemap and canonical tags use, so crawlers see one URL per page.
+        # Rebuilt as a local path so `//evil.example/` cannot become an
+        # off-site redirect.
+        if full_path.endswith("/"):
+            location = "/" + "/".join(p for p in full_path.split("/") if p)
+            if request.url.query:
+                location = f"{location}?{request.url.query}"
+            return RedirectResponse(location, status_code=301)
 
         if full_path:
             target = _safe_join(build_dir, full_path)
