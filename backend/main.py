@@ -244,7 +244,12 @@ async def on_startup():
 
 # ============== ROOT ENDPOINTS ==============
 
-@app.get("/", tags=["Health"], include_in_schema=not SERVE_FRONTEND)
+@app.api_route(
+    "/",
+    methods=["GET", "HEAD"],
+    tags=["Health"],
+    include_in_schema=not SERVE_FRONTEND,
+)
 async def root():
     """API root. Serves the React shell when this container hosts the frontend."""
     if SERVE_FRONTEND:
@@ -264,7 +269,7 @@ async def root():
     }
 
 
-@app.get("/health", tags=["Health"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["Health"])
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "D-Billet API", "version": "2.1.0"}

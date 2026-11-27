@@ -90,7 +90,12 @@ def mount_spa(app: FastAPI, build_dir: Path) -> None:
             name="spa-static",
         )
 
-    @app.get("/{full_path:path}", include_in_schema=False)
+    # HEAD is accepted alongside GET: crawlers, link checkers and uptime
+    # monitors probe pages with HEAD, and a 405 there reads as a broken page.
+    # FileResponse already sends headers only for HEAD requests.
+    @app.api_route(
+        "/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False
+    )
     async def serve_spa(full_path: str):  # noqa: ANN202
         # API paths never fall through to the SPA: a missing endpoint must
         # stay a JSON 404 instead of returning the HTML shell.
