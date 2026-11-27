@@ -17,7 +17,7 @@ from .qr import (
     public_key_b64 as ticket_public_key,
 )
 from .rate_limit import rate_limited
-from .indexes import ensure_indexes
+from .indexes import ensure_indexes, ensure_indexes_in_background
 from . import waafipay
 from .payments import start_waafi_payment, resolve_waafi_payment, pay_with_waafi_wallet
 
@@ -34,7 +34,7 @@ __all__ = [
     'ticket_public_key',
     'reserve_event_seats',
     'release_event_seats',
-    'ensure_indexes',
+    'ensure_indexes', 'ensure_indexes_in_background',
     'waafipay',
     'start_waafi_payment', 'resolve_waafi_payment', 'pay_with_waafi_wallet',
 ]

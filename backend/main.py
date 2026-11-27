@@ -2,6 +2,7 @@
 D-Billet API - Billetterie Djibouti
 Main application entry point with full OpenAPI documentation
 """
+import asyncio
 import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -36,7 +37,7 @@ from config import (
     UPLOAD_DIR,
     IS_PRODUCTION,
 )
-from services import seed_demo_data, ensure_indexes
+from services import seed_demo_data, ensure_indexes_in_background
 from canonical import CanonicalHostMiddleware
 from compression import SelectiveGZipMiddleware
 from spa import CachedStaticFiles, mount_spa
@@ -228,17 +229,14 @@ app.include_router(setup_router, prefix="/api")
 app.include_router(payments_router, prefix="/api")
 
 
-@app.on_event("startup")
-async def on_startup():
-    """
-    Bootstrap routine:
-    - Create MongoDB indexes (idempotent, no-op on local-json backend).
-    - Seed demo accounts only in development/test environments.
-    """
-    try:
-        await ensure_indexes()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Could not ensure MongoDB indexes: %s", exc)
+# Background bootstrap task, kept referenced so it is not garbage-collected
+# mid-run and can be cancelled on shutdown.
+_bootstrap_task: asyncio.Task | None = None
+
+
+async def _bootstrap() -> None:
+    """Create indexes, then seed demo data (development only)."""
+    await ensure_indexes_in_background()
 
     if AUTO_SEED_DEMO_DATA:
         try:
@@ -249,6 +247,25 @@ async def on_startup():
                 "Demo seed skipped because MongoDB is unreachable or not ready: %s",
                 exc,
             )
+
+
+@app.on_event("startup")
+async def on_startup():
+    """
+    Start the bootstrap routine without waiting for it.
+
+    Awaiting it here held the server closed until MongoDB answered: with the
+    database unreachable that took minutes, long enough for Cloud Run to
+    answer 5xx while the instance was still starting.
+    """
+    global _bootstrap_task
+    _bootstrap_task = asyncio.create_task(_bootstrap())
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    if _bootstrap_task and not _bootstrap_task.done():
+        _bootstrap_task.cancel()
 
 
 # ============== ROOT ENDPOINTS ==============

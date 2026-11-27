@@ -2,10 +2,19 @@
 Create MongoDB indexes at application startup.
 
 Skipped silently for the local-json fallback (which does not understand indexes).
+
+Startup must not wait on this: with MongoDB unreachable, every index used to
+wait for its own server-selection timeout (34 x 5 s in production, close to
+three minutes) before the app accepted a single request. `ensure_indexes`
+now probes the server once and gives up at once if it is not there, and
+`ensure_indexes_in_background` retries later without blocking startup.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+
+from pymongo.errors import ConnectionFailure
 
 from config import db, DB_BACKEND
 
@@ -75,11 +84,22 @@ _INDEX_SPEC = {
 }
 
 
-async def ensure_indexes() -> None:
-    """Create all collection indexes. Idempotent."""
+async def ensure_indexes() -> bool:
+    """Create all collection indexes. Idempotent.
+
+    Returns True when the database answered (even if a single index failed),
+    False when it could not be reached, so the caller can retry later.
+    """
     if DB_BACKEND != "mongo":
         logger.info("Skipping index creation - running on local-json backend")
-        return
+        return True
+
+    # One probe instead of one timeout per index.
+    try:
+        await db.command("ping")
+    except ConnectionFailure as exc:
+        logger.warning("MongoDB unreachable, indexes not ensured: %s", exc)
+        return False
 
     created = 0
     for collection_name, specs in _INDEX_SPEC.items():
@@ -88,6 +108,11 @@ async def ensure_indexes() -> None:
             try:
                 await collection.create_index(fields, **options)
                 created += 1
+            except ConnectionFailure as exc:
+                # The server went away mid-run: stop, the next attempt redoes
+                # everything (create_index is idempotent).
+                logger.warning("MongoDB lost while creating indexes: %s", exc)
+                return False
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "Could not create index %s on %s: %s",
@@ -95,3 +120,32 @@ async def ensure_indexes() -> None:
                 )
 
     logger.info("MongoDB indexes ensured (%d total)", created)
+    return True
+
+
+# Delays between attempts when MongoDB is unreachable, in seconds.
+RETRY_DELAYS = (15, 30, 60, 120, 300)
+
+
+async def ensure_indexes_in_background(delays=RETRY_DELAYS) -> bool:
+    """Run `ensure_indexes`, retrying with backoff while MongoDB is unreachable.
+
+    Meant to be scheduled with `asyncio.create_task` at startup, so the app
+    serves requests (static pages, health checks) while the database warms up.
+    """
+    for attempt, delay in enumerate((0, *delays)):
+        if delay:
+            await asyncio.sleep(delay)
+        try:
+            if await ensure_indexes():
+                return True
+        except Exception:  # noqa: BLE001
+            logger.exception("Unexpected error while ensuring indexes")
+        logger.info("Index creation attempt %d failed", attempt + 1)
+
+    logger.error(
+        "MongoDB indexes still not ensured after %d attempts; they will be "
+        "created on the next restart.",
+        len(delays) + 1,
+    )
+    return False
